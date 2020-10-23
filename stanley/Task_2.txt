@@ -1,0 +1,2 @@
+lossfn, epochs, batch_size, test_loss, r_2_score, mae, mse
+mean_squared_error,1,1000,3.370873212814331,-0.020341658406385132,1.5848785175232842,3.3708755102410843
