@@ -77,6 +77,7 @@ class NN_aco_angle_1:
         self.train(loss_function, epochs, batch_size)
     
     def plotLoss(self):
+        plt.clf()
         # Extract number of run epochs from the training history
         epochs = range(1, len(self.history.history["loss"])+1)
         # Extract loss on training and validation ddataset and plot them together
@@ -85,7 +86,7 @@ class NN_aco_angle_1:
         plt.xlabel("Epochs"), plt.ylabel("Loss")
         # plt.yscale("log")
         plt.legend()
-        plt.savefig(f'task2/loss_{self.epochs}_{self.batch_size}_{self.loss_function}')
+        plt.savefig(f'./task2/loss_{self.epochs}_{self.batch_size}_{self.loss_function}')
         plt.show()
     
     def evaluation(self, write=True, verbose=False):
@@ -110,6 +111,7 @@ class NN_aco_angle_1:
             f.close()
 
     def plotDistribution(self, bins=100, sample_num=5000):
+        plt.clf()
         X_ps, y_ps = self.parseData(self.df_rho_ps_clean.sample(sample_num))
         X_sm , y_sm = self.parseData(self.df_rho_ps_clean.sample(sample_num))
         ps = self.model.predict(X_ps).flatten()
@@ -129,7 +131,7 @@ class NN_aco_angle_1:
         ax3.set_ylabel('freq')
         ax3.set_xlabel(r'$\phi_{CP}$')
         plt.tight_layout()
-        plt.savefig(f"task2/angledist_{self.epochs}_{self.batch_size}_{self.loss_function}")
+        plt.savefig(f"./task2/angledist_{self.epochs}_{self.batch_size}_{self.loss_function}")
 
     def lbn_model(self, loss_fn):
         input_shape = (4, 4)
@@ -137,8 +139,8 @@ class NN_aco_angle_1:
         model = tf.keras.models.Sequential()
         model.add(LBNLayer(input_shape, n_particles=4, boost_mode=LBN.PAIRS, features=LBN_output_features))
         model.add(BatchNormalization())
-        model.add(tf.keras.layers.Dense(100, kernel_initializer='normal', activation='relu'))
-        model.add(tf.keras.layers.Dense(100, kernel_initializer='normal', activation='relu'))
+        model.add(tf.keras.layers.Dense(300, kernel_initializer='normal', activation='relu'))
+        model.add(tf.keras.layers.Dense(300, kernel_initializer='normal', activation='relu'))
         model.add(tf.keras.layers.Dense(1))
         if not loss_fn:
             loss_fn = 'mean_squared_error'
@@ -175,28 +177,36 @@ def loss_0(y_true, y_pred):
 
 def loss_1(y_true, y_pred):
     # loss function of 2(1-cos(y_true - y_pred))
-    return tf.math.reduce_mean(tf.multiply(tf.add(tf.constant([-1], dtype=tf.float32), tf.math.cos(y_true-y_pred)), 2))
+    return tf.math.reduce_mean(tf.multiply(tf.add(tf.constant([1], dtype=tf.float32), -tf.math.cos(y_true-y_pred)), 2))
 
 def loss_2(y_true, y_pred):
     # loss function of sqrt(2(1-cos(y_true - y_pred)))
-    return tf.math.sqrt(tf.math.reduce_mean(tf.multiply(tf.add(tf.constant([-1], dtype=tf.float32), tf.math.cos(y_true-y_pred)), 2)))
+    return tf.math.sqrt(tf.math.reduce_mean(tf.multiply(tf.add(tf.constant([1], dtype=tf.float32), -tf.math.cos(y_true-y_pred)), 2)))
 
 def loss_3(y_true, y_pred):
     # loss function of arctan(sin(y_true - y_pred)/cos(y_true - y_pred))
-    return tf.reduce_mean(tf.abs(tf.atan2(tf.sin(y_true - y_pred), tf.cos(y_true - y_pred))))
+    return tf.math.reduce_mean(tf.math.abs(tf.math.atan2(tf.math.sin(y_true - y_pred), tf.math.cos(y_true - y_pred))))
 
 
 if __name__ == '__main__':
+    # set up NN
     NN = NN_aco_angle_1()
     NN.readData()
     NN.cleanData()
     NN.createTrainTestData()
-
-    # NN.train(loss_function=loss_0, epochs=50, batch_size=1000)
-    NN.train(epochs=1, batch_size=1000)
+    # MSE loss
+    NN.train(epochs=50, batch_size=1000)
     NN.plotLoss()
     NN.evaluation(write=True, verbose=True)
     NN.plotDistribution()
+    # custom loss fns
+    loss_fns = [loss_1, loss_2, loss_3]
+    for _ in loss_fns:
+        NN.train(loss_function=_, epochs=50, batch_size=1000)
+        NN.plotLoss()
+        NN.evaluation(write=True, verbose=True)
+        NN.plotDistribution()
+    
 
     # loss_fn_list = [None, loss_1, loss3]
     # for loss_fn in loss_fn_list:
