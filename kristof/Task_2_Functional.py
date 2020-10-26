@@ -1,3 +1,8 @@
+"""
+Includes all additions to-date additions of the advanced functional architecture.
+Using inheritance to make code cleaner.
+"""
+
 import uproot 
 import math
 import numpy as np
@@ -56,28 +61,14 @@ class NN_aco_angle_1:
         self.X, self.y = self.parseData(self.df_rho_clean)
         self.X_train, self.X_test, self.y_train, self.y_test  = train_test_split(self.X, self.y, test_size=0.2, random_state=123456)
     
-    def train(self, loss_function='mean_squared_error', epochs=50, batch_size=1000, patience=10, mode='sequential'):
+    def train(self, loss_function='mean_squared_error', epochs=50, batch_size=1000, patience=10):
         self.epochs = epochs
         self.batch_size = batch_size
         if isinstance(loss_function, str):
             self.loss_function = loss_function
         else:
             self.loss_function = loss_function.__name__
-        if mode == 'sequential':
-            self.model = self.lbn_model(loss_function)
-        elif mode == 'functional_kingsley':
-            self.model = self.functional_model_kingsley(loss_function)
-        elif mode == 'functional_basic':
-            self.model = self.functional_model_basic(loss_function)
-            self.simpler_shape = True
-        elif mode == 'functional':
-            self.model = self.functional_model(loss_function)
-            #self.simpler_shape = True
-        elif mode == 'functional_advanced':
-            self.model = self.functional_model_advanced(loss_function)
-            #self.simpler_shape = True
-        else:
-            raise Exception('mode not understood!!!')
+        self.model = self.lbn_model(loss_function)
         if self.simpler_shape:
             self.X_train = np.reshape(self.X_train, (-1, 16))
             self.X_test = np.reshape(self.X_test, (-1, 16))
@@ -155,70 +146,6 @@ class NN_aco_angle_1:
         ax3.set_xlabel(r'$\phi_{CP}$')
         plt.tight_layout()
         plt.savefig(f"./task2/angledist_{self.epochs}_{self.batch_size}_{self.loss_function}")
-
-    def functional_model_kingsley(self, loss_fn):
-        tf_zmf_momenta = tf.keras.Input(shape=(4,4))
-        
-        #Can I combine these 2 somehow?:
-        tf_pi0_1_trans = tf.math.l2_normalize(tf.linalg.cross(tf_zmf_momenta[:,2,1:], tf_zmf_momenta[:,0,1:]), axis=1)
-        tf_pi0_2_trans = tf.math.l2_normalize(tf.linalg.cross(tf_zmf_momenta[:,3,1:], tf_zmf_momenta[:,1,1:]), axis=1)
-        tf_phi_shift_0 = tf.math.acos(tf.reduce_sum(tf.math.multiply(tf_pi0_1_trans, tf_pi0_2_trans), axis=1))
-        tf_big_O = tf.math.reduce_sum(tf.math.multiply(tf.linalg.cross(tf_pi0_1_trans, tf_pi0_2_trans), tf_zmf_momenta[:,1,1:]), axis=1)
-        tf_phi_shift_1 = tf.where(tf_big_O<0, tf_phi_shift_0, 2*np.pi-tf_phi_shift_0)
-        tf_y_1 = (tf_zmf_momenta[:,0,0] - tf_zmf_momenta[:,2,0])/(tf_zmf_momenta[:,0,0] + tf_zmf_momenta[:,2,0])
-        yf_y_2 = (tf_zmf_momenta[:,1,0] - tf_zmf_momenta[:,3,0])/(tf_zmf_momenta[:,1,0] + tf_zmf_momenta[:,3,0])
-        tf_y_tau = tf_y_1*yf_y_2
-        tf_phi_shift_2 = tf.where(tf_y_tau<0, tf_phi_shift_1, tf.where(tf_phi_shift_1<np.pi, tf_phi_shift_1+np.pi, tf_phi_shift_1-np.pi))
-        
-        model = tf.keras.Model(inputs=tf_zmf_momenta, outputs=tf_phi_shift_2)
-        model.compile(optimizer='adam', loss=loss_fn, metrics=['mae'])
-        return model
-        
-    def functional_model_basic(self, loss_fn):
-        inputs = tf.keras.Input(shape=(16,))
-        x = tf.keras.layers.Dense(64, activation="relu")(inputs)
-        x = tf.keras.layers.Dense(64, activation="relu")(x)
-        outputs = tf.keras.layers.Dense(1)(x)
-        
-        model = tf.keras.Model(inputs=inputs, outputs=outputs)
-        model.compile(optimizer='adam', loss=loss_fn, metrics=['mae'])
-        return model
-    
-    def functional_model(self, loss_fn):
-        inputs = tf.keras.Input(shape=(4,4))
-        input_shape = (4, 4)
-        LBN_output_features = ["E", "px", "py", "pz", "m", "pair_dy", "pair_cos"]
-        x = LBNLayer(input_shape, n_particles=4, boost_mode=LBN.PAIRS, features=LBN_output_features)(inputs)
-        x = tf.keras.layers.Dense(300, activation="relu")(x)
-        x = tf.keras.layers.Dense(300, activation="relu")(x)
-        outputs = tf.keras.layers.Dense(1)(x)
-        
-        model = tf.keras.Model(inputs=inputs, outputs=outputs)
-        model.compile(optimizer='adam', loss=loss_fn, metrics=['mae'])
-        return model
-    
-    def functional_model_advanced(self, loss_fn):
-        #first lbn layer does the lorentz boost
-        inputs = tf.keras.Input(shape=(4, 4))
-        input_shape = (4, 4)
-        LBN_output_features = ["E", "px", "py", "pz"]
-        x = LBNLayer(input_shape, n_particles=4, boost_mode=LBN.PAIRS, features=LBN_output_features)(inputs)
-        x = tf.keras.layers.Dense(64, activation="relu")(x)
-        boosted = tf.keras.layers.Dense(16)(x)
-        
-        model1 = tf.keras.Model(inputs=inputs, outputs=boosted)
-        #model1.compile(optimizer='adam', loss=loss_fn, metrics=['mae'])
-        
-        #second layer does the cross-product
-        LBN_output_features = ["E", "px", "py", "pz", "m", "pair_dy", "pair_cos"] #should have a cross-product feature in here
-        x = tf.keras.layers.Reshape((4, 4))(boosted)
-        x = LBNLayer((4, 4), n_particles=4, boost_mode=LBN.PAIRS, features=LBN_output_features, name='LBN2')(x)
-        x = tf.keras.layers.Dense(64, activation="relu")(x)
-        lambdas = tf.keras.layers.Dense(1)(x)
-        
-        model2 = tf.keras.Model(inputs=inputs, outputs=lambdas)
-        model2.compile(optimizer='adam', loss=loss_fn, metrics=['mae'])
-        return model2
         
     def lbn_model(self, loss_fn):
         input_shape = (4, 4)
@@ -274,6 +201,158 @@ def loss_3(y_true, y_pred):
     # loss function of arctan(sin(y_true - y_pred)/cos(y_true - y_pred))
     return tf.math.reduce_mean(tf.math.abs(tf.math.atan2(tf.math.sin(y_true - y_pred), tf.math.cos(y_true - y_pred))))
 
+
+class NN_functional(NN_aco_angle_1):
+    
+    def __init__(self):
+        super().__init__()
+    
+    def train(self, loss_function='mean_squared_error', epochs=50, batch_size=1000, patience=10, mode='sequential'):
+        self.epochs = epochs
+        self.batch_size = batch_size
+        if isinstance(loss_function, str):
+            self.loss_function = loss_function
+        else:
+            self.loss_function = loss_function.__name__
+        if mode == 'sequential':
+            self.model = self.lbn_model(loss_function)
+        elif mode == 'functional_kingsley':
+            self.model = self.functional_model_kingsley(loss_function)
+        elif mode == 'functional_basic':
+            self.model = self.functional_model_basic(loss_function)
+            self.simpler_shape = True
+        elif mode == 'functional':
+            self.model = self.functional_model(loss_function)
+            #self.simpler_shape = True
+        elif mode == 'functional_advanced':
+            self.model = self.functional_model_advanced(loss_function)
+            #self.simpler_shape = True
+        else:
+            raise Exception('mode not understood!!!')
+        if self.simpler_shape:
+            self.X_train = np.reshape(self.X_train, (-1, 16))
+            self.X_test = np.reshape(self.X_test, (-1, 16))
+        self.history = tf.keras.callbacks.History()
+        early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=patience)
+
+        self.model.fit(self.X_train, self.y_train, epochs=self.epochs, batch_size=self.batch_size, callbacks=[self.history,early_stop], validation_data=(self.X_test, self.y_test))
+        
+    def functional_model_kingsley(self, loss_fn):
+        tf_zmf_momenta = tf.keras.Input(shape=(4,4))
+        
+        #Can I combine these 2 somehow?:
+        tf_pi0_1_trans = tf.math.l2_normalize(tf.linalg.cross(tf_zmf_momenta[:,2,1:], tf_zmf_momenta[:,0,1:]), axis=1)
+        tf_pi0_2_trans = tf.math.l2_normalize(tf.linalg.cross(tf_zmf_momenta[:,3,1:], tf_zmf_momenta[:,1,1:]), axis=1)
+        tf_phi_shift_0 = tf.math.acos(tf.reduce_sum(tf.math.multiply(tf_pi0_1_trans, tf_pi0_2_trans), axis=1))
+        tf_big_O = tf.math.reduce_sum(tf.math.multiply(tf.linalg.cross(tf_pi0_1_trans, tf_pi0_2_trans), tf_zmf_momenta[:,1,1:]), axis=1)
+        tf_phi_shift_1 = tf.where(tf_big_O<0, tf_phi_shift_0, 2*np.pi-tf_phi_shift_0)
+        tf_y_1 = (tf_zmf_momenta[:,0,0] - tf_zmf_momenta[:,2,0])/(tf_zmf_momenta[:,0,0] + tf_zmf_momenta[:,2,0])
+        yf_y_2 = (tf_zmf_momenta[:,1,0] - tf_zmf_momenta[:,3,0])/(tf_zmf_momenta[:,1,0] + tf_zmf_momenta[:,3,0])
+        tf_y_tau = tf_y_1*yf_y_2
+        tf_phi_shift_2 = tf.where(tf_y_tau<0, tf_phi_shift_1, tf.where(tf_phi_shift_1<np.pi, tf_phi_shift_1+np.pi, tf_phi_shift_1-np.pi))
+        
+        model = tf.keras.Model(inputs=tf_zmf_momenta, outputs=tf_phi_shift_2)
+        model.compile(optimizer='adam', loss=loss_fn, metrics=['mae'])
+        return model
+        
+    def functional_model_basic(self, loss_fn):
+        inputs = tf.keras.Input(shape=(16,))
+        x = tf.keras.layers.Dense(64, activation="relu")(inputs)
+        x = tf.keras.layers.Dense(64, activation="relu")(x)
+        outputs = tf.keras.layers.Dense(1)(x)
+        
+        model = tf.keras.Model(inputs=inputs, outputs=outputs)
+        model.compile(optimizer='adam', loss=loss_fn, metrics=['mae'])
+        return model
+    
+    def functional_model(self, loss_fn):
+        inputs = tf.keras.Input(shape=(4,4))
+        input_shape = (4, 4)
+        LBN_output_features = ["E", "px", "py", "pz", "m", "pair_dy", "pair_cos"]
+        x = LBNLayer(input_shape, n_particles=4, boost_mode=LBN.PAIRS, features=LBN_output_features)(inputs)
+        x = tf.keras.layers.Dense(300, activation="relu")(x)
+        x = tf.keras.layers.Dense(300, activation="relu")(x)
+        outputs = tf.keras.layers.Dense(1)(x)
+        
+        model = tf.keras.Model(inputs=inputs, outputs=outputs)
+        model.compile(optimizer='adam', loss=loss_fn, metrics=['mae'])
+        return model
+    
+    def functional_model_advanced_old(self, loss_fn):
+        #first lbn layer does the lorentz boost
+        inputs = tf.keras.Input(shape=(4, 4))
+        input_shape = (4, 4)
+        LBN_output_features = ["E", "px", "py", "pz"]
+        x = LBNLayer(input_shape, n_particles=4, boost_mode=LBN.PAIRS, features=LBN_output_features)(inputs)
+        x = tf.keras.layers.Dense(64, activation="relu")(x)
+        boosted = tf.keras.layers.Dense(16)(x)
+        
+        model1 = tf.keras.Model(inputs=inputs, outputs=boosted)
+        #model1.compile(optimizer='adam', loss=loss_fn, metrics=['mae'])
+        
+        #second layer does the cross-product
+        LBN_output_features = ["E", "px", "py", "pz", "m", "pair_dy", "pair_cos"] #should have a cross-product feature in here
+        x = tf.keras.layers.Reshape((4, 4))(boosted)
+        x = LBNLayer((4, 4), n_particles=4, boost_mode=LBN.PAIRS, features=LBN_output_features, name='LBN2')(x)
+        x = tf.keras.layers.Dense(64, activation="relu")(x)
+        lambdas = tf.keras.layers.Dense(1)(x)
+        
+        model2 = tf.keras.Model(inputs=inputs, outputs=lambdas)
+        model2.compile(optimizer='adam', loss=loss_fn, metrics=['mae'])
+        return model2
+    
+    def functional_model_advanced(self, loss_fn):
+        #first lbn layer does the lorentz boost
+        inputs = tf.keras.Input(shape=(4, 4))
+        input_shape = (4, 4)
+        LBN_output_features = ["E", "px", "py", "pz"]
+        x = LBNLayer(input_shape, n_particles=4, boost_mode=LBN.PAIRS, features=LBN_output_features)(inputs)
+        #x = tf.keras.layers.Dense(64, activation="relu")(x) #not sure whether it's better to add in extra Dense layers or not
+        boosted = tf.keras.layers.Dense(16)(x)
+        
+        #second layer A calculates y_1_2 and y_1_1 using Dense
+        y = tf.keras.layers.Dense(64, activation='relu')(boosted)
+        #y = tf.keras.layers.Dense(64, activation="relu")(y) #not sure whether it's better to add in extra Dense layers or not
+        y = tf.keras.layers.Dense(2)(y)
+        
+        #second layer B does y perp (the cross-product) using formulas
+        boosted_4by4 = tf.keras.layers.Reshape((4, 4))(boosted)
+        lambda_plus = tf.math.l2_normalize(tf.linalg.cross(boosted_4by4[:,2,1:], boosted_4by4[:,0,1:]), axis=1)
+        lambda_minus = tf.math.l2_normalize(tf.linalg.cross(boosted_4by4[:,3,1:], boosted_4by4[:,1,1:]), axis=1)
+        
+        #third layer concatenate ys and lambdas
+        y_and_lambdas = tf.keras.layers.Concatenate()([y, lambda_plus, lambda_minus])
+        #print('THE SHAPE IS', y_and_lambdas.shape)
+        #print(type(y_and_lambdas))
+        
+        #fourth layer A calculate phi CP unshifted and y_t using Dense
+        phi_y = tf.keras.layers.Dense(64, activation='relu')(y_and_lambdas)
+        #phi_y = tf.keras.layers.Dense(64, activation="relu")(phi_y) #not sure whether it's better to add in extra Dense layers or not
+        phi_cp_un = tf.keras.layers.Dense(2)(phi_y)
+        
+        #fourth layer B calculate O star (cross-product) using formulas
+        O = tf.math.reduce_sum(tf.math.multiply(tf.linalg.cross(lambda_plus, lambda_minus), boosted_4by4[:,1,1:]), axis=1)
+        O = tf.keras.layers.Reshape((1,))(O)
+        
+        #print('SHAPES COMING:')
+        #print(lambda_plus.shape)
+        #print(lambda_minus.shape)
+        #print(boosted_4by4[:,1,1:].shape)
+        #print(phi_cp_un.shape)
+        #print(O.shape)
+        
+        #fifth layer concatenate phi_cp_un and O, and one more dense layer to combine them
+        phi_O = tf.keras.layers.Concatenate()([phi_cp_un, O])
+        #phi_O = tf.keras.layers.Dense(64, activation="relu")(phi_O) #not sure whether it's better to add in extra Dense layers or not        
+        phi_O_finished = tf.keras.layers.Dense(64, activation='relu')(phi_O)
+        
+        outputs = tf.keras.layers.Dense(1)(phi_O_finished)
+        
+        model = tf.keras.Model(inputs=inputs, outputs=outputs)
+        model.compile(optimizer='adam', loss=loss_fn, metrics=['mae'])
+        return model    
+
+
 def main():
     # set up NN
     NN = NN_aco_angle_1()
@@ -300,7 +379,7 @@ def main():
 
 def main2():
     # set up NN
-    NN = NN_aco_angle_1()
+    NN = NN_functional()
     NN.readData()
     print('Reading done')
     NN.cleanData()
