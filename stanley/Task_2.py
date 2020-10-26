@@ -14,7 +14,10 @@ from lbn import LBN, LBNLayer
 class NN_aco_angle_1:
     
     def __init__(self):
-        pass
+        self.epochs = 0
+        self.batch_size = 0
+        self.batch_norm = ''
+        self.loss_function = ''
         
     def readData(self):
         self.tree_tt = uproot.open("/eos/user/s/stcheung/SWAN_projects/Masters_CP/MVAFILE_AllHiggs_tt.root")["ntuple"]
@@ -56,17 +59,24 @@ class NN_aco_angle_1:
         self.X, self.y = self.parseData(self.df_rho_clean)
         self.X_train, self.X_test, self.y_train, self.y_test  = train_test_split(self.X, self.y, test_size=0.2, random_state=123456)
     
-    def train(self, loss_function='mean_squared_error', epochs=50, batch_size=1000, patience=10):
-        self.epochs = epochs
-        self.batch_size = batch_size
+    def createConfigStr(self, loss_function, batch_norm):
+        if batch_norm:
+            self.batch_norm = 'norm'
+        else:
+            self.batch_norm = 'nonorm'
         if isinstance(loss_function, str):
             self.loss_function = loss_function
         else:
             self.loss_function = loss_function.__name__
-        self.model = self.lbn_model(loss_function)
+        return f'{self.epochs}_{self.batch_size}_{self.loss_function}_{self.batch_norm}'
+
+    def train(self, loss_function='mean_squared_error', epochs=50, batch_size=1000, patience=10, batch_norm=False):
+        self.epochs = epochs
+        self.batch_size = batch_size
+        self.config_str = self.createConfigStr(loss_function, batch_norm)
+        self.model = self.lbn_model(loss_function, batch_norm)
         self.history = tf.keras.callbacks.History()
         early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=patience)
-
         self.model.fit(self.X_train, self.y_train, epochs=self.epochs, batch_size=self.batch_size, callbacks=[self.history,early_stop], validation_data=(self.X_test, self.y_test))
     
     def run(self, loss_function, epochs=50, batch_size=1000):
@@ -81,18 +91,20 @@ class NN_aco_angle_1:
         # Extract number of run epochs from the training history
         epochs = range(1, len(self.history.history["loss"])+1)
         # Extract loss on training and validation ddataset and plot them together
+        plt.figure(figsize=(10,8))
         plt.plot(epochs, self.history.history["loss"], "o-", label="Training")
         plt.plot(epochs, self.history.history["val_loss"], "o-", label="Test")
         plt.xlabel("Epochs"), plt.ylabel("Loss")
         # plt.yscale("log")
         plt.legend()
-        plt.savefig(f'./task2/loss_{self.epochs}_{self.batch_size}_{self.loss_function}')
+        plt.savefig(f'./task2/loss_{self.config_str}')
         plt.show()
     
     def evaluation(self, write=True, verbose=False):
         prediction = self.model.predict(self.X_test).flatten()
         # df_y = pd.DataFrame(self.y_test, columns=['aco_angle_1'])
         # df_y['prediction'] = prediction
+        prediction = np.remainder(prediction, 2*np.pi)
         self.test_loss = self.model.evaluate(self.X_test, self.y_test)
         self.r_2_score = r2_score(self.y_test, prediction)
         self.mae = mean_absolute_error(self.y_test, prediction)
@@ -116,7 +128,8 @@ class NN_aco_angle_1:
         X_sm , y_sm = self.parseData(self.df_rho_ps_clean.sample(sample_num))
         ps = self.model.predict(X_ps).flatten()
         sm = self.model.predict(X_sm).flatten()
-        fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(18,6))
+        ps, sm = np.remainder(ps, 2*np.pi), np.remainder(sm, 2*np.pi)
+        fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(15,5))
         ax1.hist(ps, bins=bins)
         ax1.hist(sm, bins=bins)
         ax1.set_ylabel('freq')
@@ -131,14 +144,15 @@ class NN_aco_angle_1:
         ax3.set_ylabel('freq')
         ax3.set_xlabel(r'$\phi_{CP}$')
         plt.tight_layout()
-        plt.savefig(f"./task2/angledist_{self.epochs}_{self.batch_size}_{self.loss_function}")
+        plt.savefig(f"./task2/angledist_{self.config_str}")
 
-    def lbn_model(self, loss_fn):
+    def lbn_model(self, loss_fn, batch_norm):
         input_shape = (4, 4)
         LBN_output_features = ["E", "px", "py", "pz", "m", "pair_dy", "pair_cos"]
         model = tf.keras.models.Sequential()
         model.add(LBNLayer(input_shape, n_particles=4, boost_mode=LBN.PAIRS, features=LBN_output_features))
-        model.add(BatchNormalization())
+        if batch_norm:
+            model.add(BatchNormalization())
         model.add(tf.keras.layers.Dense(300, kernel_initializer='normal', activation='relu'))
         model.add(tf.keras.layers.Dense(300, kernel_initializer='normal', activation='relu'))
         model.add(tf.keras.layers.Dense(1))
@@ -170,22 +184,39 @@ def custom_mse_example(y_true, y_pred):
 
 def loss_0(y_true, y_pred):
     # WORK IN PROGRESS
+    # floor mod automatically sets results to positive
+    def true_fn():
+        return tf.constant([2*math.pi], dtype=tf.float32)-dist
+    def false_fn():
+        return dist
     rem_true = tf.math.floormod(y_true, 2*math.pi)
     rem_pred = tf.math.floormod(y_pred, 2*math.pi)
-    if rem_true < 0: rem_true = tf.math.add(rem_true, 2*math.pi)
-    if rem_pred < 0: rem_pred += 2*math.pi
+    dist = tf.math.abs(rem_true-rem_pred)
+    # print(tf.cond(dist>math.pi, true_fn, false_fn))
+    return tf.math.reduce_mean(tf.square(dist))
+
 
 def loss_1(y_true, y_pred):
     # loss function of 2(1-cos(y_true - y_pred))
-    return tf.math.reduce_mean(tf.multiply(tf.add(tf.constant([1], dtype=tf.float32), -tf.math.cos(y_true-y_pred)), 2))
+    return tf.math.reduce_mean(2*(tf.constant([1], dtype=tf.float32)-tf.math.cos(y_true-y_pred)))
 
 def loss_2(y_true, y_pred):
     # loss function of sqrt(2(1-cos(y_true - y_pred)))
-    return tf.math.sqrt(tf.math.reduce_mean(tf.multiply(tf.add(tf.constant([1], dtype=tf.float32), -tf.math.cos(y_true-y_pred)), 2)))
+    # NaNing for no reason
+    return tf.math.reduce_mean(tf.math.sqrt(tf.math.abs(2*(tf.constant([1], dtype=tf.float32)-tf.math.cos(y_true-y_pred)))))
 
 def loss_3(y_true, y_pred):
     # loss function of arctan(sin(y_true - y_pred)/cos(y_true - y_pred))
     return tf.math.reduce_mean(tf.math.abs(tf.math.atan2(tf.math.sin(y_true - y_pred), tf.math.cos(y_true - y_pred))))
+
+def loss_4(y_true, y_pred):
+    # loss function of |cos(y_true) - cos(y_pred)|
+    return tf.math.reduce_mean(tf.math.abs(tf.math.cos(y_true)-tf.math.cos(y_pred)))
+
+def loss_5(y_true, y_pred):
+    # https://discuss.pytorch.org/t/custom-loss-function-for-discontinuous-angle-calculation/58579
+    return tf.math.reduce_mean(tf.math.floormod(y_true - y_pred + tf.constant([math.pi], dtype=tf.float32), 2*math.pi) - tf.constant([math.pi], dtype=tf.float32))
+    
 
 
 if __name__ == '__main__':
@@ -195,18 +226,19 @@ if __name__ == '__main__':
     NN.cleanData()
     NN.createTrainTestData()
     # MSE loss
-    NN.train(epochs=50, batch_size=1000)
-    NN.plotLoss()
-    NN.evaluation(write=True, verbose=True)
-    NN.plotDistribution()
+    # NN.train(epochs=50, batch_size=1000)
+    # NN.plotLoss()
+    # NN.evaluation(write=True, verbose=True)
+    # NN.plotDistribution()
     # custom loss fns
-    loss_fns = [loss_1, loss_2, loss_3]
+    # loss_fns = [loss_0, loss_1, loss_2, loss_3, loss_4, loss_5]
+    loss_fns = [loss_2]
     for _ in loss_fns:
-        NN.train(loss_function=_, epochs=50, batch_size=1000)
+        print(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~TRAINING {_.__name__}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+        NN.train(loss_function=_, epochs=50, batch_size=1000, batch_norm=False)
         NN.plotLoss()
         NN.evaluation(write=True, verbose=True)
         NN.plotDistribution()
-    
 
     # loss_fn_list = [None, loss_1, loss3]
     # for loss_fn in loss_fn_list:
