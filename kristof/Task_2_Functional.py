@@ -72,12 +72,12 @@ class NN_aco_angle_1:
             self.simpler_shape = True
         elif mode == 'functional':
             self.model = self.functional_model(loss_function)
-            self.simpler_shape = True
+            #self.simpler_shape = True
         elif mode == 'functional_advanced':
             self.model = self.functional_model_advanced(loss_function)
-            self.simpler_shape = True
+            #self.simpler_shape = True
         else:
-            raise Exception('Mode not well understood!!!')
+            raise Exception('mode not understood!!!')
         if self.simpler_shape:
             self.X_train = np.reshape(self.X_train, (-1, 16))
             self.X_test = np.reshape(self.X_test, (-1, 16))
@@ -207,15 +207,16 @@ class NN_aco_angle_1:
         boosted = tf.keras.layers.Dense(16)(x)
         
         model1 = tf.keras.Model(inputs=inputs, outputs=boosted)
-        model1.compile(optimizer='adam', loss=loss_fn, metrics=['mae'])
+        #model1.compile(optimizer='adam', loss=loss_fn, metrics=['mae'])
         
         #second layer does the cross-product
         LBN_output_features = ["E", "px", "py", "pz", "m", "pair_dy", "pair_cos"] #should have a cross-product feature in here
-        x = LBNLayer((16,), n_particles=4, boost_mode=LBN.PAIRS, features=LBN_output_features)(boosted)
+        x = tf.keras.layers.Reshape((4, 4))(boosted)
+        x = LBNLayer((4, 4), n_particles=4, boost_mode=LBN.PAIRS, features=LBN_output_features, name='LBN2')(x)
         x = tf.keras.layers.Dense(64, activation="relu")(x)
         lambdas = tf.keras.layers.Dense(1)(x)
         
-        model2 = tf.keras.Model(inputs=boosted, outputs=lambdas)
+        model2 = tf.keras.Model(inputs=inputs, outputs=lambdas)
         model2.compile(optimizer='adam', loss=loss_fn, metrics=['mae'])
         return model2
         
@@ -306,7 +307,7 @@ def main2():
     NN.createTrainTestData()
     print('Train test split done')
     
-    NN.train(epochs=50, batch_size=1000, mode='functional_basic')
+    NN.train(epochs=5, batch_size=1000, mode='functional_advanced')
     print('Training done')
     
     NN.plotLoss()
