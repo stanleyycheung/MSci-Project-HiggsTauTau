@@ -1,6 +1,7 @@
 """
 Includes all additions to-date additions of the advanced functional architecture.
 Using inheritance to make code cleaner.
+It also includes Stanley's new loss functions.
 """
 
 import uproot 
@@ -13,13 +14,16 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
 import tensorflow as tf
 from tensorflow.keras.layers import BatchNormalization
+#from lbn_modified_Alie import LBN, LBNLayer
 from lbn import LBN, LBNLayer
+from datetime import datetime
 
 
 class NN_aco_angle_1:
     
     def __init__(self):
-        self.simpler_shape = False #this is true if we want the data in shape of (16,). If false, then want shape (4,4)
+        self.simpler_shape = False #KEEP THIS FALSE! this is true if we want the data in shape of (16,). If false, then want shape (4,4)
+        self.want_datetime = False #should datetime be added to the figure output filename? - adding it can help to avoid overwriting
         
     def readData(self):
         self.tree_tt = uproot.open("/eos/user/k/kgalambo/SWAN_projects/Masters_CP_Kristof_2/MVAFILE_AllHiggs_tt.root")["ntuple"]
@@ -145,7 +149,10 @@ class NN_aco_angle_1:
         ax3.set_ylabel('freq')
         ax3.set_xlabel(r'$\phi_{CP}$')
         plt.tight_layout()
-        plt.savefig(f"./task2/angledist_{self.epochs}_{self.batch_size}_{self.loss_function}")
+        if not self.want_datetime:
+            plt.savefig(f"./task2/angledist_{self.epochs}_{self.batch_size}_{self.loss_function}")
+        else:
+            plt.savefig(f"./task2/angledist_{self.epochs}_{self.batch_size}_{self.loss_function}_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
         
     def lbn_model(self, loss_fn):
         input_shape = (4, 4)
@@ -184,22 +191,38 @@ def custom_mse_example(y_true, y_pred):
 
 def loss_0(y_true, y_pred):
     # WORK IN PROGRESS
+    # floor mod automatically sets results to positive
+    def true_fn():
+        return tf.constant([2*math.pi], dtype=tf.float32)-dist
+    def false_fn():
+        return dist
     rem_true = tf.math.floormod(y_true, 2*math.pi)
     rem_pred = tf.math.floormod(y_pred, 2*math.pi)
-    if rem_true < 0: rem_true = tf.math.add(rem_true, 2*math.pi)
-    if rem_pred < 0: rem_pred += 2*math.pi
+    dist = tf.math.abs(rem_true-rem_pred)
+    # print(tf.cond(dist>math.pi, true_fn, false_fn))
+    return tf.math.reduce_mean(tf.square(dist))
+
 
 def loss_1(y_true, y_pred):
     # loss function of 2(1-cos(y_true - y_pred))
-    return tf.math.reduce_mean(tf.multiply(tf.add(tf.constant([1], dtype=tf.float32), -tf.math.cos(y_true-y_pred)), 2))
+    return tf.math.reduce_mean(2*(tf.constant([1], dtype=tf.float32)-tf.math.cos(y_true-y_pred)))
 
 def loss_2(y_true, y_pred):
     # loss function of sqrt(2(1-cos(y_true - y_pred)))
-    return tf.math.sqrt(tf.math.reduce_mean(tf.multiply(tf.add(tf.constant([1], dtype=tf.float32), -tf.math.cos(y_true-y_pred)), 2)))
+    # NaNing for no reason
+    return tf.math.reduce_mean(tf.math.sqrt(tf.math.abs(2*(tf.constant([1], dtype=tf.float32)-tf.math.cos(y_true-y_pred)))))
 
 def loss_3(y_true, y_pred):
     # loss function of arctan(sin(y_true - y_pred)/cos(y_true - y_pred))
     return tf.math.reduce_mean(tf.math.abs(tf.math.atan2(tf.math.sin(y_true - y_pred), tf.math.cos(y_true - y_pred))))
+
+def loss_4(y_true, y_pred):
+    # loss function of |cos(y_true) - cos(y_pred)|
+    return tf.math.reduce_mean(tf.math.abs(tf.math.cos(y_true)-tf.math.cos(y_pred)))
+
+def loss_5(y_true, y_pred):
+    # https://discuss.pytorch.org/t/custom-loss-function-for-discontinuous-angle-calculation/58579
+    return tf.math.reduce_mean(tf.math.floormod(y_true - y_pred + tf.constant([math.pi], dtype=tf.float32), 2*math.pi) - tf.constant([math.pi], dtype=tf.float32))
 
 
 class NN_functional(NN_aco_angle_1):
@@ -393,6 +416,31 @@ def main2():
     NN.evaluation(write=True, verbose=True)
     NN.plotDistribution()
     
+def main3():
+    for mode in ['sequential', 'functional_kingsley', 'functional', 'functional_advanced']:
+        #if mode != 'functional_advanced':
+        #    continue
+        for loss in ['mean_squared_error', loss_0, loss_1, loss_3, loss_4, loss_5]:
+            try:
+                NN = NN_functional()
+                NN.readData()
+                print('Reading done')
+                NN.cleanData()
+                NN.createTrainTestData()
+                print('Train test split done')
+
+                NN.train(epochs=50, batch_size=1000, loss_function=loss, mode=mode)
+                print('Training done')
+
+                NN.plotLoss()
+                NN.evaluation(write=True, verbose=True)
+                NN.plotDistribution()
+            except Exception as e:
+                with open('error_log.txt', 'a+') as f:
+                    f.write('Exception - ' + mode + ' - ' + str(loss) + '\n')
+                    f.write(str(e) + '\n')
+    
 if __name__ == '__main__':
     #main()
-    main2()
+    #main2()
+    main3()
