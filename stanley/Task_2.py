@@ -100,10 +100,11 @@ class NN_aco_angle_1:
         plt.savefig(f'./task2/loss_{self.config_str}')
         plt.show()
     
-    def evaluation(self, write=True, verbose=False):
+    def evaluation(self, save_df=False, write=True, verbose=False):
         prediction = self.model.predict(self.X_test).flatten()
-        # df_y = pd.DataFrame(self.y_test, columns=['aco_angle_1'])
-        # df_y['prediction'] = prediction
+        df_y = pd.DataFrame(self.y_test, columns=['aco_angle_1'])
+        df_y['prediction'] = prediction
+        df_y.to_pickle("loss_1_pred.pkl")
         prediction = np.remainder(prediction, 2*np.pi)
         self.test_loss = self.model.evaluate(self.X_test, self.y_test)
         self.r_2_score = r2_score(self.y_test, prediction)
@@ -232,7 +233,7 @@ if __name__ == '__main__':
     # NN.plotDistribution()
     # custom loss fns
     # loss_fns = [loss_0, loss_1, loss_2, loss_3, loss_4, loss_5]
-    loss_fns = [loss_2]
+    loss_fns = [loss_0]
     for _ in loss_fns:
         print(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~TRAINING {_.__name__}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
         NN.train(loss_function=_, epochs=50, batch_size=1000, batch_norm=False)
