@@ -9,7 +9,7 @@ from sklearn.preprocessing import MinMaxScaler
 from pylorentz import Momentum4
 from lbn_modified import LBN, LBNLayer
 from Task_2 import NN_aco_angle_1 as NN_base
-from sklearn.metrics import classification_report, roc_curve, roc_auc_score
+from sklearn.metrics import  roc_curve, roc_auc_score
 
 
 class Potential2016(NN_base):
@@ -100,14 +100,11 @@ class Potential2016(NN_base):
             print('Wrong config input number')
             exit(-1)
         self.y = (self.w_a/(self.w_a+self.w_b))
-        self.X_train, self.X_test, self.y_train, self.y_test = self.normaliseTrainTestData(self.X, self.y)
-
-    def normaliseTrainTestData(self, X, y, test_size=0.2):
-        scaler_x = MinMaxScaler()
-        scaler_x.fit(X)
-        X = scaler_x.transform(X)
-        X_train, X_test, y_train, y_test  = train_test_split(X, y, test_size=test_size, random_state=123456,)
-        return X_train, X_test, y_train, y_test
+        # scaler_x = MinMaxScaler()
+        # scaler_x.fit(self.X)
+        # self.X = scaler_x.transform(self.X)
+        self.X_train, self.X_test, self.y_train, self.y_test  = train_test_split(self.X, self.y, test_size=0.2, random_state=123456,)
+        return self.X_train, self.X_test, self.y_train, self.y_test
    
     def createConfigStr(self):
         # TODO: include batch norm
@@ -126,6 +123,7 @@ class Potential2016(NN_base):
                         epochs=self.epochs,
                         callbacks=[self.history,early_stop],
                         validation_data=(self.X_test, self.y_test))
+        # self.model.save(f'{self.save_dir}/NN_1')
 
     def evaluation(self, write=True):
         y_pred = self.model.predict(self.X)
@@ -138,7 +136,6 @@ class Potential2016(NN_base):
         custom_auc = roc_auc_score(y_label_roc, y_pred_roc, sample_weight=w_roc)
         fpr, tpr, _ = roc_curve(y_label_roc, y_pred_roc, sample_weight=w_roc)
         self.plot_roc_curve(fpr, tpr, custom_auc)
-
         if write:
             file = f'{self.write_dir}/{self.write_filename}.txt'
             with open(file, 'a+') as f:
@@ -148,7 +145,8 @@ class Potential2016(NN_base):
             f.close()
 
     def func_model(self, units=[300,300], activations=['relu', 'relu']):
-        # TODO: make batch normalisation configurations
+        # TODO: make batch normalisation configurations and dropout
+        # paper uses batch normalisation before activation
         if len(units) != len(activations):
             print('units and activations have different lengths')
             exit(-1)
@@ -215,11 +213,16 @@ if __name__ == '__main__':
         NN.readData()
         NN.cleanData()
         NN.createTrainTestData()
-    if read:
+    else:
         NN.readTrainTestData()
-    NN.configTrainTestData(6)
+    # NN.configTrainTestData(6)
+    # NN.train(epochs=10, batch_size=1000)
+    # NN.evaluation(write=True)
+    # NN.plotLoss()
     print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Finished NN setup~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-    NN.train(epochs=10, batch_size=1000)
-    NN.evaluation(write=True)
-    NN.plotLoss()
+    for i in range(1, 7):
+        NN.configTrainTestData(i)
+        NN.train(epochs=50, batch_size=1000)
+        NN.evaluation(write=True)
+        NN.plotLoss()
     print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Finished~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
