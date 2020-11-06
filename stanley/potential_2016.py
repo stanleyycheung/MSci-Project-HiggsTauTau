@@ -46,14 +46,13 @@ class Potential2016(NN_base):
         rho_1_boosted_rot = []
         rho_2_boosted_rot = []
         for i in range(pi_1_boosted[:].shape[1]):
-            rot_mat_1 = self.rotation_matrix_from_vectors(rho_1_boosted[1:, i], [0,0,1])
-            rot_mat_2 = self.rotation_matrix_from_vectors(rho_2_boosted[1:, i], [0,0,1])
-            pi_1_boosted_rot.append(rot_mat_1.dot(pi_1_boosted[1:, i]))
-            pi0_1_boosted_rot.append(rot_mat_1.dot(pi0_1_boosted[1:, i]))
-            pi_2_boosted_rot.append(rot_mat_2.dot(pi_2_boosted[1:, i]))
-            pi0_2_boosted_rot.append(rot_mat_2.dot(pi0_2_boosted[1:, i]))
-            rho_1_boosted_rot.append(rot_mat_1.dot(rho_1_boosted[1:, i]))
-            rho_2_boosted_rot.append(rot_mat_2.dot(rho_2_boosted[1:, i]))
+            rot_mat = self.rotation_matrix_from_vectors(rho_1_boosted[1:, i], [0,0,1])
+            pi_1_boosted_rot.append(rot_mat.dot(pi_1_boosted[1:, i]))
+            pi0_1_boosted_rot.append(rot_mat.dot(pi0_1_boosted[1:, i]))
+            pi_2_boosted_rot.append(rot_mat.dot(pi_2_boosted[1:, i]))
+            pi0_2_boosted_rot.append(rot_mat.dot(pi0_2_boosted[1:, i]))
+            rho_1_boosted_rot.append(rot_mat.dot(rho_1_boosted[1:, i]))
+            rho_2_boosted_rot.append(rot_mat.dot(rho_2_boosted[1:, i]))
             if i%100000==0:
                 print('finished getting rotated 4-vector', i)
         self.pi_1_transformed = np.c_[pi_1_boosted[0], np.array(pi_1_boosted_rot)]
@@ -93,6 +92,7 @@ class Potential2016(NN_base):
             4: np.c_[self.pi_1_transformed, self.pi_2_transformed, self.pi0_1_transformed, self.pi0_2_transformed, self.rho_1_transformed, self.rho_2_transformed, self.aco_angle_1],
             5: np.c_[self.aco_angle_1, self.y_1_1, self.y_1_2, self.m_1, self.m_2],
             6: np.c_[self.pi_1_transformed, self.pi_2_transformed, self.pi0_1_transformed, self.pi0_2_transformed, self.rho_1_transformed, self.rho_2_transformed, self.aco_angle_1 , self.y_1_1, self.y_1_2, self.m_1, self.m_2],
+            7: np.c_[self.pi_1_transformed, self.pi_2_transformed, self.pi0_1_transformed, self.pi0_2_transformed, self.rho_1_transformed, self.rho_2_transformed, self.y_1_1, self.y_1_2, self.m_1, self.m_2],
         }
         try:
             self.X = config_map[self.config_num]
@@ -144,7 +144,7 @@ class Potential2016(NN_base):
             print('Finish writing')
             f.close()
 
-    def func_model(self, units=[300,300], activations=['relu', 'relu']):
+    def func_model(self, units=[300,300,300,300], activations=['relu','relu','relu','relu']):
         # TODO: make batch normalisation configurations and dropout
         # paper uses batch normalisation before activation
         if len(units) != len(activations):
@@ -215,12 +215,13 @@ if __name__ == '__main__':
         NN.createTrainTestData()
     else:
         NN.readTrainTestData()
-    # NN.configTrainTestData(6)
+    print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Finished NN setup~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+    # NN.configTrainTestData(7)
     # NN.train(epochs=10, batch_size=1000)
     # NN.evaluation(write=True)
     # NN.plotLoss()
-    print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Finished NN setup~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
     for i in range(1, 7):
+        print(f'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Training config {i}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
         NN.configTrainTestData(i)
         NN.train(epochs=50, batch_size=1000)
         NN.evaluation(write=True)
