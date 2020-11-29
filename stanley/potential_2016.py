@@ -1,18 +1,29 @@
+# set same seed
+seed_value= 0
+# 1. Set the `PYTHONHASHSEED` environment variable at a fixed value
+import os
+os.environ['PYTHONHASHSEED']=str(seed_value)
+# 2. Set the `python` built-in pseudo-random generator at a fixed value
+import random
+random.seed(seed_value)
+# 3. Set the `numpy` pseudo-random generator at a fixed value
 import numpy as np
-import pandas as pd
+np.random.seed(seed_value)
+# 4. Set the `tensorflow` pseudo-random generator at a fixed value
 import tensorflow as tf
+# for later versions: 
+tf.compat.v1.set_random_seed(seed_value)
+import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
-from scipy.spatial.transform import Rotation as R
-# from sklearn.preprocessing import MinMaxScaler
 from pylorentz import Momentum4
-# from Task_2 import NN_aco_angle_1 as NN_base
-from NN_base import NN_base
+from stanley.NN_base import NN_base
 from sklearn.metrics import  roc_curve, roc_auc_score
 from datetime import datetime
 
+
 class Potential2016(NN_base):
-    def __init__(self, binary, write_filename='potential_2016'):
+    def __init__(self, binary, alt_label=False, write_filename='potential_2016'):
         super().__init__()
         self.save_dir = "potential_2016"
         self.load_dir = "potential_2016"
@@ -27,6 +38,7 @@ class Potential2016(NN_base):
         self.binary = binary
         self.write_filename = write_filename
         self.model_str = None
+        self.alt_label = alt_label
         if self.binary:
             self.write_filename += '_binary'
 
@@ -95,15 +107,17 @@ class Potential2016(NN_base):
         self.w_b = self.df_rho['wt_cp_ps'].to_numpy()
         self.m_1 = rho_1.m
         self.m_2 = rho_2.m
-        # self.E_miss = df['met']
-        # self.E_miss_x = df['metx']
-        # self.E_miss_y = df['mety']
-        if save:
-            print('Saving train/test data to file')
-            to_save = [self.pi_1_transformed, self.pi_2_transformed, self.pi0_1_transformed, self.pi0_2_transformed, 
+        to_save = [self.pi_1_transformed, self.pi_2_transformed, self.pi0_1_transformed, self.pi0_2_transformed, 
                        self.rho_1_transformed, self.rho_2_transformed, self.aco_angle_1, self.y_1_1, self.y_1_2, 
                        self.m_1, self.m_2, self.w_a, self.w_b, self.E_miss, self.E_miss_x, self.E_miss_y,
                        self.aco_angle_5, self.aco_angle_6, self.aco_angle_7]
+        extra_to_save = self.createExtraData(df, boost)
+        if extra_to_save is not None:
+            to_save += extra_to_save
+            print('Extra data loaded')
+
+        if save:
+            print('Saving train/test data to file')
             if self.binary:
                 to_save += [self.y]
             for i in range(len(to_save)):
@@ -112,6 +126,7 @@ class Potential2016(NN_base):
                 else:
                     save_name = f'{self.save_dir}/{self.file_names[i]}'
                 np.save(save_name, to_save[i], allow_pickle=True)
+                print(f"Saving {save_name}")
             print('Saved train/test data')
 
     def readTrainTestData(self):
@@ -148,11 +163,12 @@ class Potential2016(NN_base):
             4: np.c_[self.pi_1_transformed, self.pi_2_transformed, self.pi0_1_transformed, self.pi0_2_transformed, self.aco_angle_1],
             5: np.c_[self.aco_angle_1, self.y_1_1, self.y_1_2, self.m_1**2, self.m_2**2],
             6: np.c_[self.pi_1_transformed, self.pi_2_transformed, self.pi0_1_transformed, self.pi0_2_transformed, self.aco_angle_1, self.y_1_1, self.y_1_2, self.m_1**2, self.m_2**2],
+            # adding extra aco angles
             7: np.c_[self.pi_1_transformed, self.pi_2_transformed, self.pi0_1_transformed, self.pi0_2_transformed, self.aco_angle_1, self.y_1_1, self.y_1_2, self.m_1**2, self.m_2**2, self.aco_angle_5, self.aco_angle_6, self.aco_angle_7],
             8: np.c_[self.aco_angle_5, self.aco_angle_6, self.aco_angle_7],
             9: np.c_[self.pi_1_transformed, self.pi_2_transformed, self.pi0_1_transformed, self.pi0_2_transformed, self.aco_angle_1, self.aco_angle_5, self.aco_angle_6, self.aco_angle_7],
-            10: np.c_[self.pi_1_transformed, self.pi_2_transformed, self.pi0_1_transformed, self.pi0_2_transformed, self.E_miss, self.E_miss_x, self.E_miss_y],
-            11: np.c_[self.pi_1_transformed, self.pi_2_transformed, self.pi0_1_transformed, self.pi0_2_transformed, self.aco_angle_1, self.y_1_1, self.y_1_2, self.m_1**2, self.m_2**2, self.aco_angle_5, self.aco_angle_6, self.aco_angle_7, self.E_miss, self.E_miss_x, self.E_miss_y],
+            10: np.c_[self.pi_1_transformed, self.pi_2_transformed, self.pi0_1_transformed, self.pi0_2_transformed, self.E_miss],
+            11: np.c_[self.pi_1_transformed, self.pi_2_transformed, self.pi0_1_transformed, self.pi0_2_transformed, self.aco_angle_1, self.y_1_1, self.y_1_2, self.m_1**2, self.m_2**2, self.aco_angle_5, self.aco_angle_6, self.aco_angle_7, self.E_miss],
         }
         config_map_onlyrho = {
             1: np.c_[self.aco_angle_1], 
@@ -164,8 +180,9 @@ class Potential2016(NN_base):
         }
         mode_map = [config_map_orig, config_map_norho, config_map_onlyrho,]
         additional_configs = self.addConfigs()
-        if additional_configs:
+        if additional_configs is not None:
             mode_map += additional_configs
+        print(f'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Loadeded in mode {mode}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
         return mode_map[mode]
 
     def configTrainTestData(self, config_num, mode=1):
@@ -180,7 +197,10 @@ class Potential2016(NN_base):
             # self.y.astype(int) # probably doesn't matter
             self.X_train, self.X_test, self.y_train, self.y_test  = train_test_split(self.X, self.y, test_size=0.2, random_state=123456, stratify=self.y,)
         else:
-            self.y = (self.w_a/(self.w_a+self.w_b))
+            if self.alt_label:
+                self.y = (self.w_a > self.w_b).astype(int)
+            else:
+                self.y = (self.w_a/(self.w_a+self.w_b))
             # self.y = np.load('./potential_2016/y_kristof.npy', allow_pickle=True) #kristof's method
             self.X_train, self.X_test, self.y_train, self.y_test  = train_test_split(self.X, self.y, test_size=0.2, random_state=123456,)
         
@@ -195,7 +215,6 @@ class Potential2016(NN_base):
 
     def trainRepeated(self, repeated_num, config, arch_str, time_str, external_model, epochs, batch_size, patience=10):
         auc_score_arr = []
-        file = f'{self.write_dir}/{self.write_filename}.txt'
         for i in range(repeated_num):
             print(f'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Training {i+1} out of {repeated_num} times~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
             self.seq_model(*config)
@@ -203,7 +222,10 @@ class Potential2016(NN_base):
             auc_score = self.evaluation(write=False)
             auc_score_arr.append(auc_score)
         auc_avg = np.average(auc_score_arr)
-        auc_error = np.std(auc_score_arr, ddof=1)
+        if repeated_num == 1:
+            auc_error = 0
+        else:
+            auc_error = np.std(auc_score_arr, ddof=1)
         self.writeMessage(f'{time_str}-{arch_str}-{auc_avg}-{auc_error}-{self.config_num}-{self.layers}-{self.epochs}-{self.batch_size}-{self.binary}')
         
     def train(self, external_model=False, epochs=50, batch_size=1024, patience=10):
@@ -246,7 +268,7 @@ class Potential2016(NN_base):
         if write:
             file = f'{self.write_dir}/{self.write_filename}.txt'
             with open(file, 'a+') as f:
-                print('Writing to file')
+                print(f'Writing to {file}')
                 f.write(f'{auc},{self.config_num},{self.layers},{self.epochs},{self.batch_size},{self.binary},{self.model_str}\n')
             print('Finish writing')
             f.close()
@@ -329,8 +351,7 @@ class Potential2016(NN_base):
             f.write(f'{message}\n')
         print('Finish writing')
         f.close()
-
-        
+ 
     def aucTest(self):
         # TODO: change w_roc
         # theroetical limit (non-binary labels)
@@ -354,12 +375,14 @@ class Potential2016(NN_base):
 
     def addConfigs(self):
         return []
-
+        
+    def createExtraData(self, df, boost):
+        return []
 
 def initNN(NN, read=True):
     print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Setting up NN~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
     if not read:
-        NN.readData()
+        NN.readData(from_pickle=True)
         NN.cleanData()
         NN.createTrainTestData()
     else:
@@ -368,14 +391,16 @@ def initNN(NN, read=True):
 
 def runNN(NN, config_num, epochs, batch_size, mode=1):
     print(f'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Training config {config_num}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-    NN.setModel(NN.seq_model())
+    NN.seq_model()
     NN.configTrainTestData(config_num, mode)
     NN.train(external_model=True, epochs=epochs, batch_size=batch_size)
     # NN.aucTest()
     NN.evaluation(write=True)
-    NN.plotLoss()
+    # NN.plotLoss()
+    plt.close()
 
 def runConfigsNN(NN, start, end, epochs=50, batch_size=10000, mode=1):
+    # TODO: accept arb NN config 
     for i in range(start, end+1):
         print(f'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Training config {i}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
         # NN.writeMessage('')
@@ -408,15 +433,23 @@ def getNN_config(layers, dropout=0.2):
             [layer_config, True, dropout],]
 
 
+def runScriptArchitectures():
+    NN = Potential2016(binary=True, write_filename='potential_2016_archs')
+    initNN(NN, read=True)
+    NN_config = getNN_config(6)
+    runArchitecturesNN(NN, NN_config, 1, epochs=50, batch_size=100000)
+
 if __name__ == '__main__':
     NN = Potential2016(binary=True, write_filename='potential_2016')
+    # NN = Potential2016(binary=False, alt_label=True, write_filename='potential_2016')
+    # NN = Potential2016(binary=True, write_filename='potential_2016_archs')
     # set up NN
-    initNN(NN, read=True)
-    # runNN(NN, 3)
-
-    # TODO: run 100k batch_size
-    # NN_config = getNN_config(2)
-    # runArchitecturesNN(NN, NN_config, 3, epochs=50, batch_size=100000)
-    runConfigsNN(NN, 1, 11, epochs=100, batch_size=100000)
+    initNN(NN, read=False)
+    # runNN(NN, 3, 50, 100000)
+    # runNN(NN, 3, 50, 100000)
+    # NN_config = getNN_config(6)
+    # NN_config = [[[300]*6, True, 0.2]]
+    # runArchitecturesNN(NN, NN_config, 1, epochs=200, batch_size=100000)
+    # runConfigsNN(NN, 1, 11, epochs=100, batch_size=10000)
 
     print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Finished~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')

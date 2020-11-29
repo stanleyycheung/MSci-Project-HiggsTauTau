@@ -23,13 +23,16 @@ class NN_base:
         self.save_dir = ""
         self.config_str = ""
 
-    def readData(self):
-        self.tree_tt = uproot.open("/eos/user/s/stcheung/SWAN_projects/Masters_CP/MVAFILE_AllHiggs_tt.root")["ntuple"]
-        # self.tree_et = uproot.open("/eos/user/s/stcheung/SWAN_projects/Masters_CP/MVAFILE_AllHiggs_et.root")["ntuple"]
-        # self.tree_mt = uproot.open("/eos/user/s/stcheung/SWAN_projects/Masters_CP/MVAFILE_AllHiggs_mt.root")["ntuple"]
-    
+    def readData(self, from_pickle=False):
+        if not from_pickle:
+            self.tree_tt = uproot.open("/eos/user/s/stcheung/SWAN_projects/Masters_CP/MVAFILE_AllHiggs_tt.root")["ntuple"]
+            # self.tree_et = uproot.open("/eos/user/s/stcheung/SWAN_projects/Masters_CP/MVAFILE_AllHiggs_et.root")["ntuple"]
+            # self.tree_mt = uproot.open("/eos/user/s/stcheung/SWAN_projects/Masters_CP/MVAFILE_AllHiggs_mt.root")["ntuple"]
+            self.df = self.tree_tt.pandas.df(self.variables)
+        else:
+            self.df = pd.read_pickle('./df_tt.pkl')
+
     def cleanData(self):
-        self.df = self.tree_tt.pandas.df(self.variables)
         # select only rho-rho events
         self.df_rho = self.df[(self.df['mva_dm_1']==1) & (self.df['mva_dm_2']==1) & (self.df["tau_decay_mode_1"] == 1) & (self.df["tau_decay_mode_2"] == 1)]
         # select ps and sm data
