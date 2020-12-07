@@ -1,7 +1,6 @@
 import numpy as np
 from potential_2016 import Potential2016, initNN, runNN, runConfigsNN, runArchitecturesNN, getNN_config, Momentum4
 
-
 class Potential2016_Neutrino(Potential2016):
     def __init__(self, binary, write_filename='potential_2016_neutrino'):
         super().__init__(binary, write_filename)

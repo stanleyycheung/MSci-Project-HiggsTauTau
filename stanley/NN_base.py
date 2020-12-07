@@ -25,7 +25,7 @@ class NN_base:
 
     def readData(self, from_pickle=False):
         if not from_pickle:
-            self.tree_tt = uproot.open("MVAFILE_AllHiggs_tt_new.root")["ntuple"]
+            self.tree_tt = uproot.open("../MVAFILE_AllHiggs_tt_new.root")["ntuple"]
             # self.tree_et = uproot.open("/eos/user/s/stcheung/SWAN_projects/Masters_CP/MVAFILE_AllHiggs_et.root")["ntuple"]
             # self.tree_mt = uproot.open("/eos/user/s/stcheung/SWAN_projects/Masters_CP/MVAFILE_AllHiggs_mt.root")["ntuple"]
             self.df = self.tree_tt.pandas.df(self.variables)

@@ -18,7 +18,6 @@ random.seed(seed_value)
 # 3. Set the `numpy` pseudo-random generator at a fixed value
 np.random.seed(seed_value)
 # 4. Set the `tensorflow` pseudo-random generator at a fixed value
-# for later versions:
 tf.compat.v1.set_random_seed(seed_value)
 
 
