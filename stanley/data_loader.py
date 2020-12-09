@@ -12,7 +12,15 @@ class DataLoader:
         self.reco_df_path = './df_tt.pkl'
         self.input_df_save_dir = './input_df'
 
-    def loadRecoData(self, binary,  from_pickle=True, addons=[]):
+    def loadRecoData(self, binary):
+        print('Reading df pkl file')
+        pickle_file_name = f'{self.input_df_save_dir}/input_{self.channel}'
+        if binary:
+            pickle_file_name += '_b'
+        df_inputs = pd.read_pickle(pickle_file_name+'.pkl')
+        return df_inputs
+
+    def createRecoData(self, binary,  from_pickle=True, addons=[]):
         print('Loading .root info')
         df = self.readRecoData(from_pickle=from_pickle)
         print('Cleaning data')
@@ -53,11 +61,11 @@ class DataLoader:
 
     def createTrainTestData(self, df, df_ps, df_sm, binary, save=True, addons=[]):
         if binary:
+            print('In binary mode')
             y_sm = pd.DataFrame(np.ones(df_sm.shape[0]))
             y_ps = pd.DataFrame(np.zeros(df_ps.shape[0]))
             y = pd.concat([y_sm, y_ps]).to_numpy()
-            df = pd.concat([df_sm, df_ps]).drop(["wt_cp_sm", "wt_cp_ps", "wt_cp_mm", "rand",
-                                                 "tau_decay_mode_1", "tau_decay_mode_2", "mva_dm_1", "mva_dm_2", ], axis=1).reset_index(drop=True)
+            df = pd.concat([df_sm, df_ps])
         if self.channel == 'rho_rho':
             df_inputs_data, boost = self.calculateRhoRhoData(df)
         elif self.channel == 'rho_a1':
@@ -66,11 +74,20 @@ class DataLoader:
             # no need to check here as checked in cleanRecoData
             df_inputs_data, boost = self.calculateA1A1Data(df)
         df_inputs = pd.DataFrame(df_inputs_data)
+        if binary:
+            df_inputs['y'] = y
+        else:
+            df_inputs['w_a']: df.wt_cp_sm
+            df_inputs['w_b']: df.wt_cp_ps
+
         if not addons:
             self.createAddons(addons, df, df_inputs, boost=boost)
         if save:
             print('Saving df to pickle')
-            df_inputs.to_pickle(f'{self.input_df_save_dir}/input.pkl')
+            pickle_file_name = f'{self.input_df_save_dir}/input_{self.channel}'
+            if binary:
+                pickle_file_name += '_b'
+            df_inputs.to_pickle(pickle_file_name+'.pkl')
         return df_inputs
 
     def calculateRhoRhoData(self, df):
@@ -137,8 +154,6 @@ class DataLoader:
             'aco_angle_1': df['aco_angle_1'],
             'y_1_1': df['y_1_1'],
             'y_1_2': df['y_1_2'],
-            'w_a': df['wt_cp_sm'],
-            'w_b': df['wt_cp_ps'],
             'm_1': rho_1.m,
             'm_2': rho_2.m,
         }
@@ -213,4 +228,4 @@ if __name__ == '__main__':
         #             'sv_x_1', 'sv_y_1', 'sv_z_1', 'sv_x_2', 'sv_y_2','sv_z_2'
     ]
     DL = DataLoader(variables)
-    DL.loadRecoData(binary=False, addons=['met'])
+    DL.createRecoData(binary=True, addons=['met'])
