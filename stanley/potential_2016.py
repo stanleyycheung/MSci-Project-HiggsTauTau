@@ -10,7 +10,7 @@ import tensorflow as tf
 import numpy as np
 import random
 import os
-seed_value = 0
+seed_value = 1
 # 1. Set the `PYTHONHASHSEED` environment variable at a fixed value
 os.environ['PYTHONHASHSEED'] = str(seed_value)
 # 2. Set the `python` built-in pseudo-random generator at a fixed value
@@ -86,8 +86,7 @@ class Potential2016(NN_base):
         rho_1_boosted_rot = []
         rho_2_boosted_rot = []
         for i in range(pi_1_boosted[:].shape[1]):
-            rot_mat = self.rotation_matrix_from_vectors(
-                rho_1_boosted[1:, i], [0, 0, 1])
+            rot_mat = self.rotation_matrix_from_vectors(rho_1_boosted[1:, i], [0, 0, 1])
             pi_1_boosted_rot.append(rot_mat.dot(pi_1_boosted[1:, i]))
             pi0_1_boosted_rot.append(rot_mat.dot(pi0_1_boosted[1:, i]))
             pi_2_boosted_rot.append(rot_mat.dot(pi_2_boosted[1:, i]))
@@ -96,18 +95,12 @@ class Potential2016(NN_base):
             rho_2_boosted_rot.append(rot_mat.dot(rho_2_boosted[1:, i]))
             if i % 100000 == 0:
                 print('finished getting rotated 4-vector', i)
-        self.pi_1_transformed = np.c_[
-            pi_1_boosted[0], np.array(pi_1_boosted_rot)]
-        self.pi_2_transformed = np.c_[
-            pi_2_boosted[0], np.array(pi_2_boosted_rot)]
-        self.pi0_1_transformed = np.c_[
-            pi0_1_boosted[0], np.array(pi0_1_boosted_rot)]
-        self.pi0_2_transformed = np.c_[
-            pi0_2_boosted[0], np.array(pi0_2_boosted_rot)]
-        self.rho_1_transformed = np.c_[
-            rho_1_boosted[0], np.array(rho_1_boosted_rot)]
-        self.rho_2_transformed = np.c_[
-            rho_2_boosted[0], np.array(rho_2_boosted_rot)]
+        self.pi_1_transformed = np.c_[pi_1_boosted[0], np.array(pi_1_boosted_rot)]
+        self.pi_2_transformed = np.c_[pi_2_boosted[0], np.array(pi_2_boosted_rot)]
+        self.pi0_1_transformed = np.c_[pi0_1_boosted[0], np.array(pi0_1_boosted_rot)]
+        self.pi0_2_transformed = np.c_[pi0_2_boosted[0], np.array(pi0_2_boosted_rot)]
+        self.rho_1_transformed = np.c_[rho_1_boosted[0], np.array(rho_1_boosted_rot)]
+        self.rho_2_transformed = np.c_[rho_2_boosted[0], np.array(rho_2_boosted_rot)]
         self.aco_angle_1 = df['aco_angle_1'].to_numpy()
         self.aco_angle_5 = df['aco_angle_5'].to_numpy()
         self.aco_angle_6 = df['aco_angle_6'].to_numpy()
@@ -170,7 +163,8 @@ class Potential2016(NN_base):
         config_map_norho = {
             1: np.c_[self.aco_angle_1],
             2: np.c_[self.aco_angle_1, self.y_1_1, self.y_1_2],
-            3: np.c_[self.pi_1_transformed, self.pi_2_transformed, self.pi0_1_transformed, self.pi0_2_transformed],
+            # 3: np.c_[self.pi_1_transformed, self.pi_2_transformed, self.pi0_1_transformed, self.pi0_2_transformed],
+            3: np.c_[self.pi0_1_transformed, self.pi0_2_transformed, self.pi_1_transformed, self.pi_2_transformed],
             4: np.c_[self.pi_1_transformed, self.pi_2_transformed, self.pi0_1_transformed, self.pi0_2_transformed, self.aco_angle_1],
             5: np.c_[self.aco_angle_1, self.y_1_1, self.y_1_2, self.m_1**2, self.m_2**2],
             6: np.c_[self.pi_1_transformed, self.pi_2_transformed, self.pi0_1_transformed, self.pi0_2_transformed, self.aco_angle_1, self.y_1_1, self.y_1_2, self.m_1**2, self.m_2**2],
@@ -205,19 +199,17 @@ class Potential2016(NN_base):
             print('Wrong config input number')
             exit(-1)
         self.X = config_map[self.config_num]
+        np.save('testing/X.npy', self.X, allow_pickle=True)
         if self.binary:
             # self.y.astype(int) # probably doesn't matter
-            self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
-                self.X, self.y, test_size=0.2, random_state=123456, stratify=self.y,)
+            self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(self.X, self.y, test_size=0.2, random_state=123456, stratify=self.y,)
         else:
             if self.alt_label:
                 self.y = (self.w_a > self.w_b).astype(int)
             else:
                 self.y = (self.w_a/(self.w_a+self.w_b))
             # self.y = np.load('./potential_2016/y_kristof.npy', allow_pickle=True) #kristof's method
-            self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
-                self.X, self.y, test_size=0.2, random_state=123456,)
-
+            self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(self.X, self.y, test_size=0.2, random_state=123456,)
         return self.X_train, self.X_test, self.y_train, self.y_test
 
     def createConfigStr(self):
@@ -259,8 +251,7 @@ class Potential2016(NN_base):
         #     self.model = self.func_model(units, activations)
         self.config_str = self.createConfigStr()
         self.history = tf.keras.callbacks.History()
-        early_stop = tf.keras.callbacks.EarlyStopping(
-            monitor='val_loss', patience=patience)
+        early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=patience)
         self.model.fit(self.X_train, self.y_train,
                        batch_size=self.batch_size,
                        epochs=self.epochs,
@@ -279,20 +270,16 @@ class Potential2016(NN_base):
             self.plot_roc_curve(fpr, tpr, auc)
         else:
             y_pred_test = self.model.predict(self.X_test)
-            _, w_a_test, _, w_b_test = train_test_split(
-                self.w_a, self.w_b, test_size=0.2, random_state=123456)
-            auc, y_label_roc, y_pred_roc = self.custom_auc_score(
-                y_pred_test, w_a_test, w_b_test)
-            fpr, tpr, _ = roc_curve(
-                y_label_roc, y_pred_roc, sample_weight=np.r_[w_a_test, w_b_test])
+            _, w_a_test, _, w_b_test = train_test_split(self.w_a, self.w_b, test_size=0.2, random_state=123456)
+            auc, y_label_roc, y_pred_roc = self.custom_auc_score(y_pred_test, w_a_test, w_b_test)
+            fpr, tpr, _ = roc_curve(y_label_roc, y_pred_roc, sample_weight=np.r_[w_a_test, w_b_test])
             self.plot_roc_curve(fpr, tpr, auc)
 
         if write:
             file = f'{self.write_dir}/{self.write_filename}.txt'
             with open(file, 'a+') as f:
                 print(f'Writing to {file}')
-                f.write(
-                    f'{auc},{self.config_num},{self.layers},{self.epochs},{self.batch_size},{self.binary},{self.model_str}\n')
+                f.write(f'{auc},{self.config_num},{self.layers},{self.epochs},{self.batch_size},{self.binary},{self.model_str}\n')
             print('Finish writing')
             f.close()
         return auc
@@ -351,15 +338,14 @@ class Potential2016(NN_base):
         if dimensions == -1:
             dimensions = self.X.shape[1]
         # create model
-        self.model = tf.keras.models.Sequential()
-        self.model.add(tf.keras.layers.Dense(
-            38, input_dim=dimensions, kernel_initializer='normal', activation='relu'))
-        self.model.add(tf.keras.layers.Dense(
-            100, kernel_initializer='normal', activation='relu'))
-        self.model.add(tf.keras.layers.Dense(1, activation="sigmoid"))
-        self.model.compile(loss='binary_crossentropy', optimizer='adam')
-        self.model_str = "kristof_model"
-        return self.model
+        model = tf.keras.models.Sequential()
+        model.add(tf.keras.layers.Dense(300, input_dim=dimensions,
+                                        kernel_initializer='normal', activation='relu'))
+        model.add(tf.keras.layers.Dense(
+            300, kernel_initializer='normal', activation='relu'))
+        model.add(tf.keras.layers.Dense(1, activation="sigmoid"))
+        model.compile(loss='binary_crossentropy', optimizer='adam')
+        return model
 
     def writeMessage(self, message, file=None):
         if file is None:
@@ -425,7 +411,8 @@ def runNN(NN, config_num, epochs, batch_size, mode=1):
         f'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Training config {config_num}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
     NN.seq_model()
     NN.configTrainTestData(config_num, mode)
-    NN.train(external_model=True, epochs=epochs, batch_size=batch_size)
+    NN.train(external_model=False, epochs=epochs, batch_size=batch_size)
+    # NN.train(external_model=True, epochs=epochs, batch_size=batch_size)
     # NN.aucTest()
     NN.evaluation(write=True)
     # NN.plotLoss()
@@ -483,8 +470,8 @@ if __name__ == '__main__':
     # NN = Potential2016(binary=False, alt_label=True, write_filename='potential_2016')
     # NN = Potential2016(binary=True, write_filename='potential_2016_archs')
     # set up NN
-    initNN(NN, read=False)
-    # runNN(NN, 3, 50, 100000)
+    initNN(NN, read=True)
+    runNN(NN, 3, 30, 1000)
     # runNN(NN, 3, 50, 100000)
     # NN_config = getNN_config(6)
     # NN_config = [[[300]*6, True, 0.2]]
