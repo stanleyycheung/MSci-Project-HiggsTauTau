@@ -40,15 +40,13 @@ class ConfigLoader:
             raise ValueError('Wrong config input number')
         X = config_map[config_num]
         if binary:
-            # self.y.astype(int) # probably doesn't matter
             y = self.df['y']
-            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=123456, stratify=self.y,)
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=123456, stratify=y)
         else:
             if alt_label:
                 y = (self.df.w_a > self.df.w_b).astype(int)
             else:
                 y = (self.df.w_a/(self.df.w_a+self.df.w_b))
-            # self.y = np.load('./potential_2016/y_kristof.npy', allow_pickle=True) #kristof's method
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=123456,)
         return X_train, X_test, y_train, y_test
 

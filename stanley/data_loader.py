@@ -5,12 +5,12 @@ from pylorentz import Momentum4
 
 
 class DataLoader:
-    def __init__(self, variables, channel='rho_rho',):
+    def __init__(self, variables, channel, input_df_save_dir='./input_df'):
         self.channel = channel
         self.variables = variables
         self.reco_root_path = "../MVAFILE_AllHiggs_tt_new.root"
         self.reco_df_path = './df_tt.pkl'
-        self.input_df_save_dir = './input_df'
+        self.input_df_save_dir = input_df_save_dir
 
     def loadRecoData(self, binary):
         print('Reading df pkl file')
@@ -26,7 +26,8 @@ class DataLoader:
         print('Cleaning data')
         df_clean, df_ps_clean, df_sm_clean = self.cleanRecoData(df)
         print('Creating input data')
-        self.createTrainTestData(df_clean, df_ps_clean, df_sm_clean, binary, addons)
+        df_inputs = self.createTrainTestData(df_clean, df_ps_clean, df_sm_clean, binary, addons)
+        return df_inputs
 
     def readRecoData(self, from_pickle=False):
         if not from_pickle:
@@ -76,10 +77,6 @@ class DataLoader:
         df_inputs = pd.DataFrame(df_inputs_data)
         if binary:
             df_inputs['y'] = y
-        else:
-            df_inputs['w_a']: df.wt_cp_sm
-            df_inputs['w_b']: df.wt_cp_ps
-
         if not addons:
             self.createAddons(addons, df, df_inputs, boost=boost)
         if save:
@@ -154,6 +151,8 @@ class DataLoader:
             'aco_angle_1': df['aco_angle_1'],
             'y_1_1': df['y_1_1'],
             'y_1_2': df['y_1_2'],
+            'w_a': df.wt_cp_sm,
+            'w_b': df.wt_cp_ps,
             'm_1': rho_1.m,
             'm_2': rho_2.m,
         }
@@ -227,5 +226,5 @@ if __name__ == '__main__':
         'metcov00', 'metcov01', 'metcov10', 'metcov11',
         #             'sv_x_1', 'sv_y_1', 'sv_z_1', 'sv_x_2', 'sv_y_2','sv_z_2'
     ]
-    DL = DataLoader(variables)
+    DL = DataLoader(variables, 'rho_rho')
     DL.createRecoData(binary=True, addons=['met'])
