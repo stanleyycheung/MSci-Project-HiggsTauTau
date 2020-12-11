@@ -6,6 +6,7 @@ import os
 import random
 import numpy as np
 import datetime
+import kerastuner as kt
 seed_value = 1
 # 1. Set the `PYTHONHASHSEED` environment variable at a fixed value
 os.environ['PYTHONHASHSEED'] = str(seed_value)
@@ -16,6 +17,7 @@ np.random.seed(seed_value)
 # 4. Set the `tensorflow` pseudo-random generator at a fixed value
 tf.compat.v1.set_random_seed(seed_value)
 
+
 class NeuralNetwork:
     """
     Features
@@ -25,6 +27,7 @@ class NeuralNetwork:
     Notes:
     - Supports Tensorboard
     """
+
     def __init__(self,  channel, binary, write_filename, show_graph=False):
         self.show_graph = show_graph
         self.channel = channel
@@ -73,6 +76,29 @@ class NeuralNetwork:
                 w_b = df.w_b
                 auc = self.evaluate(model, X_test, y_test, self.history, w_a, w_b)
             self.write(auc)
+
+    def runHPTuning(self, config_num, read=True, from_pickle=True, epochs=50, tuner_epochs=50, addons=[]):
+        df = self.initalize(addons, read=read, from_pickle=from_pickle)
+        X_train, X_test, y_train, y_test = self.configure(df, config_num)
+        print(f'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Tuning on config {config_num}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+        best_hps, tuner = self.tuneHP(self.hyperModel, X_train, X_test, y_train, y_test, tuner_epochs=tuner_epochs)
+        print(best_hps)
+        model = tuner.hypermodel.build(best_hps[0])
+        model.fit(X_train, y_train, epochs=epochs, validation_data = (X_test, y_test))
+
+
+    def tuneHP(self, hyperModel, X_train, X_test, y_train, y_test, tuner_epochs=10):
+        tuner = kt.Hyperband(hyperModel,
+                             objective='val_accuracy',
+                             max_epochs=50,
+                             factor=3,
+                             seed=seed_value,
+                             directory='tuning',
+                             project_name='test')
+        tuner.search(X_train, y_train, epochs=tuner_epochs, validation_data=(X_test, y_test))
+        best_hps = tuner.get_best_hyperparameters(num_trials=1)
+        print(tuner.search_space_summary())
+        return best_hps, tuner
 
     def initalize(self, addons=[], read=True, from_pickle=True):
         self.DL = DataLoader(self.variables_rho_rho, self.channel)
@@ -150,6 +176,18 @@ class NeuralNetwork:
         self.model_str = "seq_model"
         return self.model
 
+    def hyperModel(self, hp):
+        self.model = tf.keras.models.Sequential()
+        hp_units = hp.Int('units', min_value=128, max_value=256, step=64)
+        self.layers = hp_units
+        self.model.add(tf.keras.layers.Dense(units=hp_units, activation='relu', kernel_initializer='normal'))
+        self.model.add(tf.keras.layers.Dense(units=hp_units, activation='relu', kernel_initializer='normal'))
+        self.model.add(tf.keras.layers.Dense(1, activation="sigmoid"))
+        metrics = ['AUC', 'accuracy']
+        self.model.compile(loss='binary_crossentropy', optimizer='adam', metrics=metrics)
+        self.model_str = "hyper_model"
+        return self.model
+
     def kristof_model(self, dimensions):
         # model by kristof
         model = tf.keras.models.Sequential()
@@ -165,6 +203,7 @@ class NeuralNetwork:
 
 if __name__ == '__main__':
     NN = NeuralNetwork(channel='rho_rho', binary=True, write_filename='potential_2016', show_graph=False)
-    NN.run(3, read=True, from_pickle=True, epochs=50, batch_size=10000)
+    # NN.run(3, read=True, from_pickle=True, epochs=50, batch_size=10000)
     # configs = [1,2,3,4,5,6]
     # NN.runMultiple(configs, epochs=1, batch_size=10000)
+    NN.runHPTuning(3, read=True, from_pickle=True, epochs=50, tuner_epochs=50)

@@ -2,6 +2,7 @@ from multiprocessing import Value
 import numpy as np
 from sklearn.model_selection import train_test_split
 
+
 class ConfigLoader:
     """
     ConfigLoader class
@@ -9,16 +10,17 @@ class ConfigLoader:
     - Loads specific configurations given a df of possible NN inputs
     - Splits the input events into testing and training set
     """
+
     def __init__(self, df_inputs):
         # error in pandas is KeyError
         self.df = df_inputs
 
     def chooseConfigMap(self, mode=0):
         # TODO: fail safe for extra information
-        pi_1_transformed = np.c_[self.df.pi_E_1_br, self.df.pi_px_1_br, self.df.pi_py_1_br, self.df.pi_pz_1_br,]
-        pi_2_transformed = np.c_[self.df.pi_E_2_br, self.df.pi_px_2_br, self.df.pi_py_2_br, self.df.pi_pz_2_br,]
-        pi0_1_transformed = np.c_[self.df.pi0_E_1_br, self.df.pi0_px_1_br, self.df.pi0_py_1_br, self.df.pi0_pz_1_br,]
-        pi0_2_transformed = np.c_[self.df.pi0_E_2_br, self.df.pi0_px_2_br, self.df.pi0_py_2_br, self.df.pi0_pz_2_br,]
+        pi_1_transformed = np.c_[self.df.pi_E_1_br, self.df.pi_px_1_br, self.df.pi_py_1_br, self.df.pi_pz_1_br, ]
+        pi_2_transformed = np.c_[self.df.pi_E_2_br, self.df.pi_px_2_br, self.df.pi_py_2_br, self.df.pi_pz_2_br, ]
+        pi0_1_transformed = np.c_[self.df.pi0_E_1_br, self.df.pi0_px_1_br, self.df.pi0_py_1_br, self.df.pi0_pz_1_br, ]
+        pi0_2_transformed = np.c_[self.df.pi0_E_2_br, self.df.pi0_px_2_br, self.df.pi0_py_2_br, self.df.pi0_pz_2_br, ]
         config_map_norho = {
             1: np.c_[self.df.aco_angle_1],
             2: np.c_[self.df.aco_angle_1, self.df.y_1_1, self.df.y_1_2],
@@ -37,7 +39,7 @@ class ConfigLoader:
         # can add more config maps
         mode_map = [config_map_norho]
         print(f'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Loadeded in mode {mode}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-        return mode_map[mode] 
+        return mode_map[mode]
 
     def configTrainTestData(self, config_num, binary, mode=0, alt_label=False):
         try:

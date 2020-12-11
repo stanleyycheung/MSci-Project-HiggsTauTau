@@ -17,11 +17,12 @@ class DataLoader:
     - Add in functions to read gen data
     - Add in neutrino data
     """
+
     def __init__(self, variables, channel, input_df_save_dir='./input_df'):
         self.channel = channel
         self.variables = variables
         self.reco_root_path = "./MVAFILE_AllHiggs_tt_new.root"
-        self.reco_df_path = './df_tt.pkl'
+        self.reco_df_path = './df_tt'
         self.input_df_save_dir = input_df_save_dir
 
     def loadRecoData(self, binary):
@@ -38,7 +39,7 @@ class DataLoader:
         print('Cleaning data')
         df_clean, df_ps_clean, df_sm_clean = self.cleanRecoData(df)
         print('Creating input data')
-        df_inputs = self.createTrainTestData(df_clean, df_ps_clean, df_sm_clean, binary, addons)
+        df_inputs = self.createTrainTestData(df_clean, df_ps_clean, df_sm_clean, binary, addons, save=True)
         return df_inputs
 
     def readRecoData(self, from_pickle=False):
@@ -47,8 +48,9 @@ class DataLoader:
             # tree_et = uproot.open("/eos/user/s/stcheung/SWAN_projects/Masters_CP/MVAFILE_AllHiggs_et.root")["ntuple"]
             # tree_mt = uproot.open("/eos/user/s/stcheung/SWAN_projects/Masters_CP/MVAFILE_AllHiggs_mt.root")["ntuple"]
             df = tree_tt.pandas.df(self.variables)
+            pd.to_pickle(f"{self.reco_df_path}_{self.channel}.pkl")
         else:
-            df = pd.read_pickle(self.reco_df_path)
+            df = pd.read_pickle(f"{self.reco_df_path}_{self.channel}.pkl")
         return df
 
     def cleanRecoData(self, df):
@@ -72,7 +74,7 @@ class DataLoader:
             raise ValueError('Incorrect channel inputted')
         return df_clean, df_rho_ps, df_rho_sm
 
-    def createTrainTestData(self, df, df_ps, df_sm, binary, save=True, addons=[]):
+    def createTrainTestData(self, df, df_ps, df_sm, binary, addons=[], save=True):
         if binary:
             print('In binary mode')
             y_sm = pd.DataFrame(np.ones(df_sm.shape[0]))

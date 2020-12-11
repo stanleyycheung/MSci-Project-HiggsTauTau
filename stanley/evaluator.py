@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import roc_curve, roc_auc_score
 from sklearn.model_selection import train_test_split
 
+
 class Evaluator:
     """
     Evaluator class
@@ -11,6 +12,7 @@ class Evaluator:
     - Plot loss curve given a history
     - Plots ROC curve with evaluate function
     """
+
     def __init__(self, model, binary, save_dir, config_str):
         self.model = model
         self.binary = binary
@@ -37,7 +39,7 @@ class Evaluator:
         if show:
             plt.show()
         return auc
-    
+
     def customROCScore(self, pred, w_a, w_b):
         set_a = np.ones(len(pred))
         set_b = np.zeros(len(pred))
@@ -51,7 +53,7 @@ class Evaluator:
         # Extract number of run epochs from the training history
         epochs = range(1, len(history.history["loss"])+1)
         # Extract loss on training and validation ddataset and plot them together
-        plt.figure(figsize=(10,8))
+        plt.figure(figsize=(10, 8))
         plt.plot(epochs, history.history["loss"], "o-", label="Training")
         plt.plot(epochs, history.history["val_loss"], "o-", label="Test")
         plt.xlabel("Epochs"), plt.ylabel("Loss")
