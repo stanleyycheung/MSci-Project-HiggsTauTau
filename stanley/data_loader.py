@@ -5,10 +5,22 @@ from pylorentz import Momentum4
 
 
 class DataLoader:
+    """
+    DataLoader class
+    Functions:
+    - Reads .root file (and saves df if necessary)
+    - Selects appropirate channel, and distinguishes sm/ps events
+    - Boosts, rotates events into correct rest frame, according to channel
+    - Outputs df with all of the possible NN inputs
+
+    To do:
+    - Add in functions to read gen data
+    - Add in neutrino data
+    """
     def __init__(self, variables, channel, input_df_save_dir='./input_df'):
         self.channel = channel
         self.variables = variables
-        self.reco_root_path = "../MVAFILE_AllHiggs_tt_new.root"
+        self.reco_root_path = "./MVAFILE_AllHiggs_tt_new.root"
         self.reco_df_path = './df_tt.pkl'
         self.input_df_save_dir = input_df_save_dir
 

@@ -3,6 +3,12 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 
 class ConfigLoader:
+    """
+    ConfigLoader class
+    Functions:
+    - Loads specific configurations given a df of possible NN inputs
+    - Splits the input events into testing and training set
+    """
     def __init__(self, df_inputs):
         # error in pandas is KeyError
         self.df = df_inputs
@@ -49,8 +55,6 @@ class ConfigLoader:
                 y = (self.df.w_a/(self.df.w_a+self.df.w_b))
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=123456,)
         return X_train, X_test, y_train, y_test
-
-
 
 
 if __name__ == '__main__':

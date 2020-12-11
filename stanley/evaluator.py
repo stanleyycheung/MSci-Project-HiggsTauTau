@@ -4,6 +4,13 @@ from sklearn.metrics import roc_curve, roc_auc_score
 from sklearn.model_selection import train_test_split
 
 class Evaluator:
+    """
+    Evaluator class
+    Functions
+    - Evaluates a given model with test input and labels with weighted/unweighted AUC
+    - Plot loss curve given a history
+    - Plots ROC curve with evaluate function
+    """
     def __init__(self, model, binary, save_dir, config_str):
         self.model = model
         self.binary = binary
@@ -23,7 +30,7 @@ class Evaluator:
             w_b = kwargs['w_b']
             y_pred_test = self.model.predict(X_test)
             _, w_a_test, _, w_b_test = train_test_split(w_a, w_b, test_size=0.2, random_state=123456)
-            auc, y_label_roc, y_pred_roc = self.custom_auc_score(y_pred_test, w_a_test, w_b_test)
+            auc, y_label_roc, y_pred_roc = self.customROCScore(y_pred_test, w_a_test, w_b_test)
             fpr, tpr, _ = roc_curve(y_label_roc, y_pred_roc, sample_weight=np.r_[w_a_test, w_b_test])
         self.plotROCCurve(fpr, tpr, auc)
         self.plotLoss(history)
@@ -31,7 +38,7 @@ class Evaluator:
             plt.show()
         return auc
     
-    def custom_auc_score(self, pred, w_a, w_b):
+    def customROCScore(self, pred, w_a, w_b):
         set_a = np.ones(len(pred))
         set_b = np.zeros(len(pred))
         y_pred_roc = np.r_[pred, pred]
