@@ -7,6 +7,7 @@ import random
 import numpy as np
 import datetime
 import kerastuner as kt
+import datetime
 seed_value = 1
 # 1. Set the `PYTHONHASHSEED` environment variable at a fixed value
 os.environ['PYTHONHASHSEED'] = str(seed_value)
@@ -47,8 +48,8 @@ class NeuralNetwork:
             "y_1_1", "y_1_2",
             'met', 'metx', 'mety',
         ]
-        self.save_dir = 'potential_2016'
-        self.write_dir = 'potential_2016'
+        self.save_dir = 'NN_output'
+        self.write_dir = 'NN_output'
 
     def run(self, config_num, read=True, from_pickle=True, epochs=50, batch_size=1024, patience=10, external_model=False, addons=[]):
         df = self.initalize(addons, read=read, from_pickle=from_pickle)
@@ -142,7 +143,8 @@ class NeuralNetwork:
         file = f'{self.write_dir}/{self.write_filename}.txt'
         with open(file, 'a+') as f:
             print(f'Writing to {file}')
-            f.write(f'{auc},{self.config_num},{self.layers},{self.epochs},{self.batch_size},{self.binary},{self.model_str}\n')
+            time_str = datetime.now().strftime('%Y/%m/%d|%H:%M:%S')
+            f.write(f'{time_str},{auc},{self.config_num},{self.layers},{self.epochs},{self.batch_size},{self.binary},{self.model_str}\n')
         print('Finish writing')
         f.close()
 
@@ -206,4 +208,4 @@ if __name__ == '__main__':
     NN.run(3, read=True, from_pickle=True, epochs=50, batch_size=10000)
     # configs = [1,2,3,4,5,6]
     # NN.runMultiple(configs, epochs=1, batch_size=10000)
-    # NN.runHPTuning(3, read=True, from_pickle=True, epochs=50, tuner_epochs=50)
+    # NN.runHPTuning(3, read=False, from_pickle=True, epochs=50, tuner_epochs=50)
