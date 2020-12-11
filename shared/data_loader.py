@@ -21,7 +21,7 @@ class DataLoader:
     def __init__(self, variables, channel, input_df_save_dir='./input_df'):
         self.channel = channel
         self.variables = variables
-        self.reco_root_path = "./MVAFILE_AllHiggs_tt.root"
+        self.reco_root_path = "./MVAFILE_AllHiggs_tt_new.root"
         self.reco_df_path = './df_tt'
         self.input_df_save_dir = input_df_save_dir
 

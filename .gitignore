@@ -138,3 +138,5 @@ dmypy.json
 # ignore tuning data
 stanley/tuning/
 stanley/logs/
+shared/tuning/
+shared/logs/
