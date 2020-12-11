@@ -203,7 +203,7 @@ class NeuralNetwork:
 
 if __name__ == '__main__':
     NN = NeuralNetwork(channel='rho_rho', binary=True, write_filename='potential_2016', show_graph=False)
-    # NN.run(3, read=True, from_pickle=True, epochs=50, batch_size=10000)
+    NN.run(3, read=True, from_pickle=True, epochs=50, batch_size=10000)
     # configs = [1,2,3,4,5,6]
     # NN.runMultiple(configs, epochs=1, batch_size=10000)
-    NN.runHPTuning(3, read=True, from_pickle=True, epochs=50, tuner_epochs=50)
+    # NN.runHPTuning(3, read=True, from_pickle=True, epochs=50, tuner_epochs=50)

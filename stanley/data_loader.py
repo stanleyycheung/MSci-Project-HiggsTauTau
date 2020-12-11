@@ -48,7 +48,7 @@ class DataLoader:
             # tree_et = uproot.open("/eos/user/s/stcheung/SWAN_projects/Masters_CP/MVAFILE_AllHiggs_et.root")["ntuple"]
             # tree_mt = uproot.open("/eos/user/s/stcheung/SWAN_projects/Masters_CP/MVAFILE_AllHiggs_mt.root")["ntuple"]
             df = tree_tt.pandas.df(self.variables)
-            pd.to_pickle(f"{self.reco_df_path}_{self.channel}.pkl")
+            df.to_pickle(f"{self.reco_df_path}_{self.channel}.pkl")
         else:
             df = pd.read_pickle(f"{self.reco_df_path}_{self.channel}.pkl")
         return df
