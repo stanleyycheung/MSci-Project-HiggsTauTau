@@ -2,6 +2,7 @@ import uproot
 import pandas as pd
 import numpy as np
 from pylorentz import Momentum4
+import os
 
 
 class DataLoader:
@@ -22,6 +23,9 @@ class DataLoader:
         self.channel = channel
         self.variables = variables
         self.reco_root_path = "./MVAFILE_AllHiggs_tt_new.root"
+        if os.path.exists("C:\\Users\\krist\\Downloads\\MVAFILE_ALLHiggs_tt_new.root"):
+            print('using Kristof\'s .root file')
+            self.reco_root_path = "C:\\Users\\krist\\Downloads\\MVAFILE_ALLHiggs_tt_new.root"
         self.reco_df_path = './df_tt'
         self.input_df_save_dir = input_df_save_dir
 
@@ -39,6 +43,8 @@ class DataLoader:
         print('Cleaning data')
         df_clean, df_ps_clean, df_sm_clean = self.cleanRecoData(df)
         print('Creating input data')
+        print(df_ps_clean.to_numpy().shape)
+        print(df_sm_clean.to_numpy().shape)
         df_inputs = self.createTrainTestData(df_clean, df_ps_clean, df_sm_clean, binary, addons, save=True)
         return df_inputs
 
@@ -63,13 +69,13 @@ class DataLoader:
             # drop unnecessary labels
             # df_clean = df_rho.drop(["mva_dm_1", "mva_dm_2", "tau_decay_mode_1", "tau_decay_mode_2", "wt_cp_sm", "wt_cp_ps", "wt_cp_mm", "rand"], axis=1).reset_index(drop=True)
         elif self.channel == 'rho_a1':
-            df_clean = None
-            df_rho_ps = None
-            df_rho_sm = None
+            df_clean = df[(df['mva_dm_1']==1) & (df['mva_dm_2']==10) & (df["tau_decay_mode_1"] == 1)]
+            df_rho_ps = df_clean[(df_clean["rand"] < df_clean["wt_cp_ps"]/2)]
+            df_rho_sm = df_clean[(df_clean["rand"] < df_clean["wt_cp_sm"]/2)]
         elif self.channel == 'a1_a1':
-            df_clean = None
-            df_rho_ps = None
-            df_rho_sm = None
+            df_clean = df[(df['mva_dm_1']==10) & (df['mva_dm_2']==10)]
+            df_rho_ps = df_clean[(df_clean["rand"] < df_clean["wt_cp_ps"]/2)]
+            df_rho_sm = df_clean[(df_clean["rand"] < df_clean["wt_cp_sm"]/2)]
         else:
             raise ValueError('Incorrect channel inputted')
         return df_clean, df_rho_ps, df_rho_sm
@@ -173,7 +179,31 @@ class DataLoader:
         return df_inputs_data, boost
 
     def calculateRhoA1Data(self, df):
-        # TODO: kristof implement
+        # TODO: kristof implement:
+        # - under construction!
+        # - need to add other aco_angles calculation code
+        pi_1 = Momentum4(df['pi_E_1'], df["pi_px_1"], df["pi_py_1"], df["pi_pz_1"])
+        pi_2 = Momentum4(df['pi_E_2'], df["pi_px_2"], df["pi_py_2"], df["pi_pz_2"])
+        pi0_1 = Momentum4(df['pi0_E_1'], df["pi0_px_1"], df["pi0_py_1"], df["pi0_pz_1"])
+        pi2_2 = Momentum4(df['pi2_E_2'], df["pi2_px_2"], df["pi2_py_2"], df["pi2_pz_2"])
+        pi3_2 = Momentum4(df['pi3_E_2'], df["pi3_px_2"], df["pi3_py_2"], df["pi3_pz_2"])
+        rho_1 = pi_1 + pi0_1 # charged rho
+        rho_2 = pi_2 + pi3_2 # neutral rho, a part of the charged a1 particle
+        a1 = rho_2 + pi2_2
+        # boost into rest frame of resonances
+        #rest_frame = pi_1 + pi_2 + pi0_1 + pi2_2 + pi3_2
+        rest_frame = pi_1 + pi_2
+        boost = Momentum4(rest_frame[0], -rest_frame[1], -rest_frame[2], -rest_frame[3])
+        pi_1_boosted = pi_1.boost_particle(boost)
+        pi_2_boosted = pi_2.boost_particle(boost)
+        pi0_1_boosted = pi0_1.boost_particle(boost)
+        pi2_2_boosted = pi2_2.boost_particle(boost)
+        pi3_2_boosted = pi3_2.boost_particle(boost)
+        rho_1_boosted = pi_1_boosted + pi0_1_boosted
+        rho_2_boosted = pi_2_boosted + pi3_2_boosted
+        a1_boosted = rho_2_boosted + pi2_2_boosted
+        # rotations
+        # !!! code missing here
         df_inputs_data = {}
         boost = None
         return df_inputs_data, boost
