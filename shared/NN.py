@@ -134,7 +134,7 @@ class NeuralNetwork:
 
     def configure(self, df, config_num):
         self.config_num = config_num
-        CL = ConfigLoader(df)
+        CL = ConfigLoader(df, self.channel)
         X_train, X_test, y_train, y_test = CL.configTrainTestData(self.config_num, self.binary)
         return X_train, X_test, y_train, y_test
 
@@ -227,16 +227,15 @@ class NeuralNetwork:
 
 
 if __name__ == '__main__':
-    NN = NeuralNetwork(channel='rho_rho', binary=True, write_filename='NN_output', show_graph=False)
-    NN.run(3, read=True, from_pickle=True, epochs=50, batch_size=10000)
-    # configs = [1,2,3,4,5,6]
-    # NN.runMultiple(configs, epochs=1, batch_size=10000)
-    # NN.runHPTuning(3, read=False, from_pickle=True, epochs=50, tuner_epochs=50)
+    if not os.path.exists('C:\\Kristof\\DONT_DELETE_THIS.txt'): # then we are on Stanley's computer
+        NN = NeuralNetwork(channel='rho_rho', binary=True, write_filename='NN_output', show_graph=False)
+        NN.run(3, read=True, from_pickle=True, epochs=50, batch_size=10000)
+        # configs = [1,2,3,4,5,6]
+        # NN.runMultiple(configs, epochs=1, batch_size=10000)
+        # NN.runHPTuning(3, read=False, from_pickle=True, epochs=50, tuner_epochs=50)
     
-# =============================================================================
-#     # Kristof's edit
-#     # NN = NeuralNetwork(channel='rho_rho', binary=True, write_filename='NN_output', show_graph=False)
-#     NN = NeuralNetwork(channel='rho_a1', binary=True, write_filename='NN_output', show_graph=False)
-#     # NN.run(6, read=True, from_pickle=True, epochs=10, batch_size=10000)
-#     NN.run(6, read=False, from_pickle=False, epochs=10, batch_size=10000)
-# =============================================================================
+    else: # if we are on Kristof's computer
+        # NN = NeuralNetwork(channel='rho_rho', binary=True, write_filename='NN_output', show_graph=False)
+        NN = NeuralNetwork(channel='rho_a1', binary=True, write_filename='NN_output', show_graph=False)
+        NN.run(1, read=True, from_pickle=True, epochs=10, batch_size=10000)
+        # NN.run(1, read=False, from_pickle=False, epochs=10, batch_size=10000)
