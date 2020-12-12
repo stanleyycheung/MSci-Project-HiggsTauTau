@@ -190,8 +190,10 @@ class DataLoader:
         a1 = rho_2 + pi2_2
         # boost into rest frame of resonances
         #rest_frame = pi_1 + pi_2 + pi0_1 + pi2_2 + pi3_2
-        rest_frame = pi_1 + pi_2
-        boost = Momentum4(rest_frame[0], -rest_frame[1], -rest_frame[2], -rest_frame[3])
+        rest_frame = pi0_1 + pi_1 + pi_2
+        # rest_frame = pi_1 + pi_2
+        #boost = Momentum4(rest_frame[0], -rest_frame[1], -rest_frame[2], -rest_frame[3])
+        boost = - rest_frame
         pi_1_boosted = pi_1.boost_particle(boost)
         pi_2_boosted = pi_2.boost_particle(boost)
         pi0_1_boosted = pi0_1.boost_particle(boost)
@@ -200,8 +202,10 @@ class DataLoader:
         rho_1_boosted = pi_1_boosted + pi0_1_boosted
         rho_2_boosted = pi_2_boosted + pi3_2_boosted
         a1_boosted = rho_2_boosted + pi2_2_boosted
+        # rest_frame_boosted = pi_1_boosted + pi_2_boosted + pi0_1_boosted
+        # rest_frame_boosted = rest_frame.boost_particle(boost)
         
-        want_rotations = False # !!! Maybe this should be an input parameter
+        want_rotations = True # !!! Maybe this should be an input parameter
         
         # rotations
         if want_rotations:
@@ -209,7 +213,10 @@ class DataLoader:
             pi0_1_boosted_rot, pi2_2_boosted_rot, pi3_2_boosted_rot = [], [], []
             rho_1_boosted_rot, rho_2_boosted_rot, a1_boosted_rot = [], [], []
             for i in range(pi_1_boosted[:].shape[1]):
-                rot_mat = self.rotation_matrix_from_vectors(rho_1_boosted[1:, i], [0, 0, 1])
+                # rot_mat = self.rotation_matrix_from_vectors(rho_1_boosted[1:, i], [0, 0, 1])
+                rot_mat = self.rotation_matrix_from_vectors(pi_1_boosted[1:, i]+pi_2_boosted[1:, i], [0, 0, 1])
+                # rot_mat = self.rotation_matrix_from_vectors(a1_boosted[1:, i], [0, 0, 1])
+                # rot_mat = self.rotation_matrix_from_vectors(rest_frame_boosted[1:, i], [0, 0, 1])
                 pi_1_boosted_rot.append(rot_mat.dot(pi_1_boosted[1:, i]))
                 pi0_1_boosted_rot.append(rot_mat.dot(pi0_1_boosted[1:, i]))
                 pi_2_boosted_rot.append(rot_mat.dot(pi_2_boosted[1:, i]))

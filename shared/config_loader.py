@@ -44,6 +44,7 @@ class ConfigLoader:
             return mode_map[mode]
         
         elif self.channel == 'rho_a1':
+            # configs 1 and 2 learn, but the others don't
             pi_1_transformed = np.c_[self.df.pi_E_1_br, self.df.pi_px_1_br, self.df.pi_py_1_br, self.df.pi_pz_1_br, ]
             pi_2_transformed = np.c_[self.df.pi_E_2_br, self.df.pi_px_2_br, self.df.pi_py_2_br, self.df.pi_pz_2_br, ]
             pi0_1_transformed = np.c_[self.df.pi0_E_1_br, self.df.pi0_px_1_br, self.df.pi0_py_1_br, self.df.pi0_pz_1_br, ]
@@ -53,7 +54,8 @@ class ConfigLoader:
                 1: np.c_[self.df.aco_angle_1],
                 2: np.c_[self.df.aco_angle_1, self.df.y_1_1, self.df.y_1_2],
                 3: np.c_[pi0_1_transformed, pi2_2_transformed, pi3_2_transformed, pi_1_transformed, pi_2_transformed],
-                4: np.c_[pi_1_transformed, pi_2_transformed, pi0_1_transformed, pi2_2_transformed, pi3_2_transformed, self.df.aco_angle_1],
+                # 4: np.c_[pi_1_transformed, pi_2_transformed, pi0_1_transformed, pi2_2_transformed, pi3_2_transformed, self.df.aco_angle_1],
+                4: np.c_[self.df.aco_angle_1, pi_1_transformed, pi_2_transformed, pi0_1_transformed], # reduced config 4 to exclude all variables not existing in rho-rho
                 5: np.c_[self.df.aco_angle_1, self.df.y_1_1, self.df.y_1_2, self.df.m_1**2, self.df.m_2**2],
                 6: np.c_[pi_1_transformed, pi_2_transformed, pi0_1_transformed, pi2_2_transformed, pi3_2_transformed, self.df.aco_angle_1, self.df.y_1_1, self.df.y_1_2, self.df.m_1**2, self.df.m_2**2],
             }
