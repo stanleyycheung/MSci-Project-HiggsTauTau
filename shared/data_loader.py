@@ -189,9 +189,10 @@ class DataLoader:
         If you want to create more addon features, put the necessary arguments through kwargs, 
         unpack them at the start of this function, and add an if case to your needs
         """
-        boost = kwargs["boost"]
+        if kwargs:
+            boost = kwargs["boost"]
         for addon in addons:
-            if addon == 'met':
+            if addon == 'met' and kwargs:
                 print('Addon MET loaded')
                 E_miss, E_miss_x, E_miss_y = self.addonMET(df, boost)
                 df_inputs['E_miss'] = E_miss

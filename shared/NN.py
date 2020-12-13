@@ -1,8 +1,9 @@
 from evaluator import Evaluator
 from data_loader import DataLoader
 from config_loader import ConfigLoader
-import tensorflow as tf
 import os
+import tensorflow as tf
+tf.autograph.set_verbosity(0)
 import random
 import numpy as np
 import datetime
@@ -78,26 +79,45 @@ class NeuralNetwork:
                 auc = self.evaluate(model, X_test, y_test, self.history, w_a, w_b)
             self.write(auc)
 
-    def runHPTuning(self, config_num, read=True, from_pickle=True, epochs=50, tuner_epochs=50, addons=[]):
+    def runHPTuning(self, config_num, read=True, from_pickle=True, epochs=50, tuner_epochs=50, batch_size=1024, patience=10, addons=[]):
         df = self.initalize(addons, read=read, from_pickle=from_pickle)
         X_train, X_test, y_train, y_test = self.configure(df, config_num)
         print(f'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Tuning on config {config_num}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
         best_hps, tuner = self.tuneHP(self.hyperModel, X_train, X_test, y_train, y_test, tuner_epochs=tuner_epochs)
-        print(best_hps)
-        model = tuner.hypermodel.build(best_hps[0])
-        model.fit(X_train, y_train, epochs=epochs, validation_data = (X_test, y_test))
+        print(tuner.results_summary())
+        
+        model = tuner.hypermodel.build(best_hps)
+        self.model = model
+        # model.fit(X_train, y_train, epochs=epochs, validation_data = (X_test, y_test), verbose=0)
+        # verbose is set 0 to prevent logs from spam
+        model = self.train(X_train, X_test, y_train, y_test, epochs=epochs, batch_size=batch_size, patience=patience, external_model=True, verbose=0)
+        if self.binary:
+            auc = self.evaluateBinary(model, X_test, y_test, self.history)
+        else:
+            w_a = df.w_a
+            w_b = df.w_b
+            auc = self.evaluate(model, X_test, y_test, self.history, w_a, w_b)
+        file = f'{self.write_dir}/best_hp_{self.channel}.txt'
+        with open(file, 'a+') as f:
+            print(f'Writing HPs to {file}')
+            time_str = datetime.now().strftime('%Y/%m/%d|%H:%M:%S')
+            best_num_layers = best_hps.get('num_layers')
+            best_batch_norm = best_hps.get('batch_norm')
+            best_dropout = best_hps.get('dropout')
+            f.write(f'{time_str},{auc},{self.config_num},{best_num_layers},{best_batch_norm},{best_dropout}\n')
 
 
-    def tuneHP(self, hyperModel, X_train, X_test, y_train, y_test, tuner_epochs=10):
+    def tuneHP(self, hyperModel, X_train, X_test, y_train, y_test, tuner_epochs=50):
         tuner = kt.Hyperband(hyperModel,
                              objective='val_accuracy',
-                             max_epochs=50,
+                             max_epochs=100,
                              factor=3,
                              seed=seed_value,
                              directory='tuning',
-                             project_name='test')
+                             project_name='test',
+                             overwrite=True)
         tuner.search(X_train, y_train, epochs=tuner_epochs, validation_data=(X_test, y_test))
-        best_hps = tuner.get_best_hyperparameters(num_trials=1)
+        best_hps = tuner.get_best_hyperparameters(num_trials=1)[0]
         print(tuner.search_space_summary())
         return best_hps, tuner
 
@@ -115,7 +135,7 @@ class NeuralNetwork:
         X_train, X_test, y_train, y_test = CL.configTrainTestData(self.config_num, self.binary)
         return X_train, X_test, y_train, y_test
 
-    def train(self, X_train, X_test, y_train, y_test, epochs=50, batch_size=1024, patience=10, external_model=False, save=False):
+    def train(self, X_train, X_test, y_train, y_test, epochs=50, batch_size=1024, patience=10, external_model=False, save=False, verbose=1):
         self.epochs = epochs
         self.batch_size = batch_size
         if not external_model:
@@ -128,7 +148,8 @@ class NeuralNetwork:
                        batch_size=batch_size,
                        epochs=epochs,
                        callbacks=[self.history, early_stop, tensorboard_callback],
-                       validation_data=(X_test, y_test))
+                       validation_data=(X_test, y_test),
+                       verbose=verbose)
         if save:
             self.model.save(f'{self.save_dir}/NN')
         return self.model
@@ -165,8 +186,7 @@ class NeuralNetwork:
         self.model = tf.keras.models.Sequential()
         self.layers = len(units)
         for unit in units:
-            self.model.add(tf.keras.layers.Dense(
-                unit, kernel_initializer='normal'))
+            self.model.add(tf.keras.layers.Dense(unit, kernel_initializer='normal'))
             if batch_norm:
                 self.model.add(tf.keras.layers.BatchNormalization())
             self.model.add(tf.keras.layers.Activation('relu'))
@@ -180,10 +200,13 @@ class NeuralNetwork:
 
     def hyperModel(self, hp):
         self.model = tf.keras.models.Sequential()
-        hp_units = hp.Int('units', min_value=128, max_value=256, step=64)
-        self.layers = hp_units
-        self.model.add(tf.keras.layers.Dense(units=hp_units, activation='relu', kernel_initializer='normal'))
-        self.model.add(tf.keras.layers.Dense(units=hp_units, activation='relu', kernel_initializer='normal'))
+        num_layers = hp.Int('num_layers', 1, 8)
+        self.layers = num_layers
+        for i in range(num_layers):
+            self.model.add(tf.keras.layers.Dense(units=300, kernel_initializer='normal'))
+            if hp.Boolean('batch_norm', default=False):
+                self.model.add(tf.keras.layers.BatchNormalization())
+            self.model.add(tf.keras.layers.Dropout(rate=hp.Float('dropout', min_value=0.0, max_value=0.2, default=0.0, step=0.2)))
         self.model.add(tf.keras.layers.Dense(1, activation="sigmoid"))
         metrics = ['AUC', 'accuracy']
         self.model.compile(loss='binary_crossentropy', optimizer='adam', metrics=metrics)
@@ -205,7 +228,7 @@ class NeuralNetwork:
 
 if __name__ == '__main__':
     NN = NeuralNetwork(channel='rho_rho', binary=True, write_filename='NN_output', show_graph=False)
-    NN.run(3, read=True, from_pickle=True, epochs=50, batch_size=10000)
+    # NN.run(3, read=True, from_pickle=True, epochs=50, batch_size=10000)
     # configs = [1,2,3,4,5,6]
     # NN.runMultiple(configs, epochs=1, batch_size=10000)
-    # NN.runHPTuning(3, read=False, from_pickle=True, epochs=50, tuner_epochs=50)
+    NN.runHPTuning(3, read=True, from_pickle=True, epochs=1, tuner_epochs=1)
