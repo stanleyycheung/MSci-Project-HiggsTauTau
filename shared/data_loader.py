@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from pylorentz import Momentum4
 import os
+import math
 
 
 class DataLoader:
@@ -175,6 +176,24 @@ class DataLoader:
             'm_2': rho_2.m,
         }
         return df_inputs_data, boost
+    
+    def rotation_matrix(self, axis, theta):
+        """
+        Return the rotation matrix associated with counterclockwise rotation about
+        the given axis by theta radians.
+        """
+        axis = np.asarray(axis)
+        axis = axis / np.dot(axis, axis)**0.5
+        a = math.cos(theta / 2.0)
+        b, c, d = -axis * math.sin(theta / 2.0)
+        aa, bb, cc, dd = a * a, b * b, c * c, d * d
+        bc, ad, ac, ab, bd, cd = b * c, a * d, a * c, a * b, b * d, c * d
+        return np.array([[aa + bb - cc - dd, 2 * (bc + ad), 2 * (bd - ac)],
+                         [2 * (bc - ad), aa + cc - bb - dd, 2 * (cd + ab)],
+                         [2 * (bd + ac), 2 * (cd - ab), aa + dd - bb - cc]])
+
+        def rotate(self, vect, axis, theta):
+            return np.dot(self.rotation_matrix(axis, theta), vect)
 
     def calculateRhoA1Data(self, df):
         # TODO: kristof implement:
@@ -202,7 +221,7 @@ class DataLoader:
         rho_1_boosted = pi_1_boosted + pi0_1_boosted
         rho_2_boosted = pi_2_boosted + pi3_2_boosted
         a1_boosted = rho_2_boosted + pi2_2_boosted
-        # rest_frame_boosted = pi_1_boosted + pi_2_boosted + pi0_1_boosted
+        rest_frame_boosted = pi_1_boosted + pi_2_boosted + pi0_1_boosted
         # rest_frame_boosted = rest_frame.boost_particle(boost)
         
         want_rotations = True # !!! Maybe this should be an input parameter
@@ -212,11 +231,30 @@ class DataLoader:
             pi_1_boosted_rot, pi_2_boosted_rot = [], []
             pi0_1_boosted_rot, pi2_2_boosted_rot, pi3_2_boosted_rot = [], [], []
             rho_1_boosted_rot, rho_2_boosted_rot, a1_boosted_rot = [], [], []
+            
+            # !!! adapt this code!
+            # MY ROTATIONS:
+            # unit vectors along the momenta of the primary resonances
+            unit1 = (r1_boosted[1:, :] / np.linalg.norm(r1_boosted[1:, :], axis=0)).transpose()
+            unit2 = (r2_boosted[1:, :] / np.linalg.norm(r2_boosted[1:, :], axis=0)).transpose()
+            
+            # probably there's a faster way of doing this
+            zaxis = np.array([np.array([0., 0., 1.]) for _ in range(len(unit1))])
+            
+            axes1 = np.cross(unit1, zaxis)
+            axes2 = np.cross(unit2, zaxis)
+            
+            dotproduct1 = (unit1*zaxis).sum(1)
+            angles1 = np.arccos(dotproduct1)
+            dotproduct2 = (unit2*zaxis).sum(1)
+            angles2 = np.arccos(dotproduct2)
+            
             for i in range(pi_1_boosted[:].shape[1]):
+                # STANLEY'S ROTATIONS:
                 # rot_mat = self.rotation_matrix_from_vectors(rho_1_boosted[1:, i], [0, 0, 1])
-                rot_mat = self.rotation_matrix_from_vectors(pi_1_boosted[1:, i]+pi_2_boosted[1:, i], [0, 0, 1])
+                # rot_mat = self.rotation_matrix_from_vectors(pi_1_boosted[1:, i]+pi_2_boosted[1:, i], [0, 0, 1])
                 # rot_mat = self.rotation_matrix_from_vectors(a1_boosted[1:, i], [0, 0, 1])
-                # rot_mat = self.rotation_matrix_from_vectors(rest_frame_boosted[1:, i], [0, 0, 1])
+                rot_mat = self.rotation_matrix_from_vectors(rest_frame_boosted[1:, i], [0, 0, 1])
                 pi_1_boosted_rot.append(rot_mat.dot(pi_1_boosted[1:, i]))
                 pi0_1_boosted_rot.append(rot_mat.dot(pi0_1_boosted[1:, i]))
                 pi_2_boosted_rot.append(rot_mat.dot(pi_2_boosted[1:, i]))
@@ -225,6 +263,11 @@ class DataLoader:
                 rho_1_boosted_rot.append(rot_mat.dot(rho_1_boosted[1:, i]))
                 rho_2_boosted_rot.append(rot_mat.dot(rho_2_boosted[1:, i]))
                 a1_boosted_rot.append(rot_mat.dot(a1_boosted[1:, i]))
+                
+                # MY ROTATIONS:
+                # !!! implement this!
+
+                
                 if i % 100000 == 0:
                     print('finished getting rotated 4-vector', i)
             pi_1_boosted_rot = np.array(pi_1_boosted_rot)
@@ -235,6 +278,17 @@ class DataLoader:
             rho_1_boosted_rot = np.array(rho_1_boosted_rot)
             rho_2_boosted_rot = np.array(rho_2_boosted_rot)
             a1_boosted_rot = np.array(a1_boosted_rot)
+            
+            # write out some rotated 4-vectors to a file, to compare with shared code
+            print('started writing out 4-vectors')
+            with open('4vectors/rotated_4vectors.txt', 'w') as f:
+                for i in range(10):
+                    p1str = ' '.join([str(x) for x in pi0_1_boosted_rot[i]])
+                    p3str = ' '.join([str(x) for x in pi_1_boosted_rot[i]])
+                    p4str = ' '.join([str(x) for x in pi_2_boosted_rot[i]])
+                    f.write(p1str+'\t\t'+p3str+'\t\t'+p4str+'\n')
+            print('finished writing out 4-vectors')
+                
             
         else: # if don't want rotations:
             pi_1_boosted_rot = np.array(pi_1_boosted).T
