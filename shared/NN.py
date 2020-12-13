@@ -115,12 +115,14 @@ class NeuralNetwork:
         file = f'{self.write_dir}/best_hp_{self.channel}.txt'
         with open(file, 'a+') as f:
             print(f'Writing HPs to {file}')
-            time_str = datetime.now().strftime('%Y/%m/%d|%H:%M:%S')
+            time_str = datetime.datetime.now().strftime('%Y/%m/%d|%H:%M:%S')
             best_num_layers = best_hps.get('num_layers')
             best_batch_norm = best_hps.get('batch_norm')
             best_dropout = best_hps.get('dropout')
-            f.write(f'{time_str},{auc},{self.config_num},{best_num_layers},{best_batch_norm},{best_dropout}\n')
-
+            message = f'{time_str},{auc},{self.config_num},{best_num_layers},{best_batch_norm},{best_dropout}\n'
+            print(f"Message: {message}")
+            f.write(message)
+        model.save('./hp_model_1/')
 
     def tuneHP(self, hyperModel, X_train, X_test, y_train, y_test, tuner_epochs=50):
         tuner = kt.Hyperband(hyperModel,
@@ -129,7 +131,7 @@ class NeuralNetwork:
                              factor=3,
                              seed=seed_value,
                              directory='tuning',
-                             project_name='test',
+                             project_name='model_1',
                              overwrite=True)
         tuner.search(X_train, y_train, epochs=tuner_epochs, validation_data=(X_test, y_test), verbose=0)
         best_hps = tuner.get_best_hyperparameters(num_trials=1)[0]
@@ -254,7 +256,7 @@ if __name__ == '__main__':
         # NN.run(3, read=True, from_pickle=True, epochs=50, batch_size=10000)
         # configs = [1,2,3,4,5,6]
         # NN.runMultiple(configs, epochs=1, batch_size=10000)
-        NN.runHPTuning(3, read=True, from_pickle=True, epochs=2, tuner_epochs=1)
+        NN.runHPTuning(3, read=True, from_pickle=True, epochs=50, tuner_epochs=50)
     
     else: # if we are on Kristof's computer
         # NN = NeuralNetwork(channel='rho_rho', binary=True, write_filename='NN_output', show_graph=False)
