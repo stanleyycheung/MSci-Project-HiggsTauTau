@@ -3,7 +3,6 @@ from data_loader import DataLoader
 from config_loader import ConfigLoader
 import os
 import tensorflow as tf
-tf.autograph.set_verbosity(0)
 import random
 import numpy as np
 import datetime
@@ -132,7 +131,7 @@ class NeuralNetwork:
                              directory='tuning',
                              project_name='test',
                              overwrite=True)
-        tuner.search(X_train, y_train, epochs=tuner_epochs, validation_data=(X_test, y_test))
+        tuner.search(X_train, y_train, epochs=tuner_epochs, validation_data=(X_test, y_test), verbose=0)
         best_hps = tuner.get_best_hyperparameters(num_trials=1)[0]
         print(tuner.search_space_summary())
         return best_hps, tuner

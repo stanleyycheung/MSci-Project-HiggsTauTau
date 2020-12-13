@@ -135,8 +135,12 @@ dmypy.json
 *.zip
 *.pkl
 *.npy
+*.txt
 # ignore tuning data
 stanley/tuning/
 stanley/logs/
 shared/tuning/
 shared/logs/
+shared/cuda/
+env/
+*.sh
