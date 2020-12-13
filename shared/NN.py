@@ -8,7 +8,6 @@ import random
 import numpy as np
 import datetime
 import kerastuner as kt
-import datetime
 seed_value = 1
 # 1. Set the `PYTHONHASHSEED` environment variable at a fixed value
 os.environ['PYTHONHASHSEED'] = str(seed_value)
@@ -48,6 +47,23 @@ class NeuralNetwork:
             "pi0_E_2", "pi0_px_2", "pi0_py_2", "pi0_pz_2",
             "y_1_1", "y_1_2",
             'met', 'metx', 'mety',
+        ]
+        self.variables_rho_a1 = [
+            "wt_cp_sm", "wt_cp_ps", "wt_cp_mm", "rand",
+            "aco_angle_1",
+            "mva_dm_1", "mva_dm_2",
+            "tau_decay_mode_1", "tau_decay_mode_2",
+            "pi_E_1", "pi_px_1", "pi_py_1", "pi_pz_1",
+            "pi_E_2", "pi_px_2", "pi_py_2", "pi_pz_2",
+            "pi0_E_1", "pi0_px_1", "pi0_py_1", "pi0_pz_1",
+            "pi2_px_2", "pi2_py_2", "pi2_pz_2", "pi2_E_2",
+            "pi3_px_2", "pi3_py_2", "pi3_pz_2", "pi3_E_2",
+            "ip_x_1", "ip_y_1", "ip_z_1",
+            "sv_x_2", "sv_y_2", "sv_z_2",
+            "y_1_1", "y_1_2",
+        ]
+        self.variables_a1_a1 = [
+            
         ]
         self.save_dir = 'NN_output'
         self.write_dir = 'NN_output'
@@ -122,7 +138,14 @@ class NeuralNetwork:
         return best_hps, tuner
 
     def initalize(self, addons=[], read=True, from_pickle=True):
-        self.DL = DataLoader(self.variables_rho_rho, self.channel)
+        if self.channel == 'rho_rho':
+            self.DL = DataLoader(self.variables_rho_rho, self.channel)
+        elif self.channel == 'rho_a1':
+            self.DL = DataLoader(self.variables_rho_a1, self.channel)
+        elif self.channel == 'a1_a1':
+            self.DL = DataLoader(self.variables_a1_a1, self.channel)
+        else:
+            raise ValueError('Incorrect channel inputted')
         if read:
             df = self.DL.loadRecoData(self.binary)
         else:
@@ -131,7 +154,7 @@ class NeuralNetwork:
 
     def configure(self, df, config_num):
         self.config_num = config_num
-        CL = ConfigLoader(df)
+        CL = ConfigLoader(df, self.channel)
         X_train, X_test, y_train, y_test = CL.configTrainTestData(self.config_num, self.binary)
         return X_train, X_test, y_train, y_test
 
@@ -164,7 +187,7 @@ class NeuralNetwork:
         file = f'{self.write_dir}/{self.write_filename}.txt'
         with open(file, 'a+') as f:
             print(f'Writing to {file}')
-            time_str = datetime.now().strftime('%Y/%m/%d|%H:%M:%S')
+            time_str = datetime.datetime.now().strftime('%Y/%m/%d|%H:%M:%S')
             f.write(f'{time_str},{auc},{self.config_num},{self.layers},{self.epochs},{self.batch_size},{self.binary},{self.model_str}\n')
         print('Finish writing')
         f.close()
@@ -227,8 +250,15 @@ class NeuralNetwork:
 
 
 if __name__ == '__main__':
-    NN = NeuralNetwork(channel='rho_rho', binary=True, write_filename='NN_output', show_graph=False)
-    # NN.run(3, read=True, from_pickle=True, epochs=50, batch_size=10000)
-    # configs = [1,2,3,4,5,6]
-    # NN.runMultiple(configs, epochs=1, batch_size=10000)
-    NN.runHPTuning(3, read=True, from_pickle=True, epochs=1, tuner_epochs=1)
+    if not os.path.exists('C:\\Kristof'): # then we are on Stanley's computer
+        NN = NeuralNetwork(channel='rho_rho', binary=True, write_filename='NN_output', show_graph=False)
+        # NN.run(3, read=True, from_pickle=True, epochs=50, batch_size=10000)
+        # configs = [1,2,3,4,5,6]
+        # NN.runMultiple(configs, epochs=1, batch_size=10000)
+        NN.runHPTuning(3, read=True, from_pickle=True, epochs=1, tuner_epochs=1)
+    
+    else: # if we are on Kristof's computer
+        # NN = NeuralNetwork(channel='rho_rho', binary=True, write_filename='NN_output', show_graph=False)
+        NN = NeuralNetwork(channel='rho_a1', binary=True, write_filename='NN_output', show_graph=False)
+        # NN.run(4, read=True, from_pickle=True, epochs=10, batch_size=10000)
+        NN.run(4, read=False, from_pickle=False, epochs=10, batch_size=10000)
