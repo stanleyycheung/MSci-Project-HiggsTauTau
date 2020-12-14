@@ -51,7 +51,8 @@ class ConfigLoader:
             pi2_2_transformed = np.c_[self.df.pi2_E_2_br, self.df.pi2_px_2_br, self.df.pi2_py_2_br, self.df.pi2_pz_2_br, ]
             pi3_2_transformed = np.c_[self.df.pi3_E_2_br, self.df.pi3_px_2_br, self.df.pi3_py_2_br, self.df.pi3_pz_2_br, ]
             config_map_norhoa1 = {
-                1: np.c_[self.df.aco_angle_1],
+                # 1: np.c_[self.df.aco_angle_1],
+                1: np.c_[self.df.aco_angle_1, self.df.aco_angle_2],
                 2: np.c_[self.df.aco_angle_1, self.df.y_1_1, self.df.y_1_2],
                 3: np.c_[pi0_1_transformed, pi2_2_transformed, pi3_2_transformed, pi_1_transformed, pi_2_transformed],
                 # 4: np.c_[pi_1_transformed, pi_2_transformed, pi0_1_transformed, pi2_2_transformed, pi3_2_transformed, self.df.aco_angle_1],

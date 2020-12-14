@@ -4,6 +4,7 @@ import numpy as np
 from pylorentz import Momentum4
 import os
 import math
+import matplotlib.pyplot as plt
 
 
 class DataLoader:
@@ -29,6 +30,7 @@ class DataLoader:
             self.reco_root_path = "C:\\Users\\krist\\Downloads\\MVAFILE_ALLHiggs_tt_new.root"
         self.reco_df_path = './df_tt'
         self.input_df_save_dir = input_df_save_dir
+        self.i = 0
 
     def loadRecoData(self, binary):
         print('Reading df pkl file')
@@ -87,9 +89,9 @@ class DataLoader:
             y = pd.concat([y_sm, y_ps]).to_numpy()
             df = pd.concat([df_sm, df_ps])
         if self.channel == 'rho_rho':
-            df_inputs_data, boost = self.calculateRhoRhoData(df)
+            df_inputs_data, boost = self.calculateRhoRhoData(df, len(df_ps))
         elif self.channel == 'rho_a1':
-            df_inputs_data, boost = self.calculateRhoA1Data(df)
+            df_inputs_data, boost = self.calculateRhoA1Data(df, len(df_ps))
         else:
             # no need to check here as checked in cleanRecoData
             df_inputs_data, boost = self.calculateA1A1Data(df)
@@ -106,7 +108,7 @@ class DataLoader:
             df_inputs.to_pickle(pickle_file_name+'.pkl')
         return df_inputs
 
-    def calculateRhoRhoData(self, df):
+    def calculateRhoRhoData(self, df, len_df_ps):
         pi_1 = Momentum4(df['pi_E_1'], df["pi_px_1"], df["pi_py_1"], df["pi_pz_1"])
         pi_2 = Momentum4(df['pi_E_2'], df["pi_px_2"], df["pi_py_2"], df["pi_pz_2"])
         pi0_1 = Momentum4(df['pi0_E_1'], df["pi0_px_1"], df["pi0_py_1"], df["pi0_pz_1"])
@@ -142,6 +144,27 @@ class DataLoader:
         pi0_2_boosted_rot = np.array(pi0_2_boosted_rot)
         rho_1_boosted_rot = np.array(rho_1_boosted_rot)
         rho_2_boosted_rot = np.array(rho_2_boosted_rot)
+        
+        def padded(vect3):
+            zeros = np.reshape(np.zeros(len(vect3)), (-1, 1))
+            return np.concatenate([zeros, vect3], axis=1)
+        # print(padded(pi0_1_boosted_rot[:]).shape)
+        # print(df['y_1_1'].to_numpy().shape)
+        aco_angle_1_calc = self.calc_aco_angles(padded(pi0_1_boosted_rot[:]), padded(pi0_2_boosted_rot[:]), padded(pi_1_boosted_rot[:]), padded(pi_2_boosted_rot[:]), df['y_1_1'].to_numpy(), df['y_1_2'].to_numpy())
+           
+        with open('rhorho_aco_angle_calc.txt', 'w') as f:
+            f.write('\n'.join([str(x) for x in aco_angle_1_calc[:20]]))
+        with open('rhorho_aco_angle_given.txt', 'w') as f:
+            f.write('\n'.join([str(x) for x in df['aco_angle_1'].to_numpy()[:20]]))
+        print(np.sum(np.abs(aco_angle_1_calc - df['aco_angle_1']) < 0.01))
+        print(np.sum(np.array(aco_angle_1_calc) < np.inf))
+        
+        plt.figure(12)
+        aco_angle_1_calc_ps = aco_angle_1_calc[:len_df_ps]
+        aco_angle_1_calc_sm = aco_angle_1_calc[len_df_ps:]
+        plt.hist(aco_angle_1_calc_ps, bins=50, alpha=0.5)
+        plt.hist(aco_angle_1_calc_sm, bins=50, alpha=0.5)
+            
         df_inputs_data = {
             'pi_E_1_br': pi_1_boosted[0],
             'pi_px_1_br': pi_1_boosted_rot[:, 0],
@@ -167,7 +190,8 @@ class DataLoader:
             'rho_px_2_br': rho_2_boosted_rot[:, 0],
             'rho_py_2_br': rho_2_boosted_rot[:, 1],
             'rho_pz_2_br': rho_2_boosted_rot[:, 2],
-            'aco_angle_1': df['aco_angle_1'],
+            # 'aco_angle_1': df['aco_angle_1'],
+            'aco_angle_1': aco_angle_1_calc,
             'y_1_1': df['y_1_1'],
             'y_1_2': df['y_1_2'],
             'w_a': df.wt_cp_sm,
@@ -192,10 +216,84 @@ class DataLoader:
                          [2 * (bc - ad), aa + cc - bb - dd, 2 * (cd + ab)],
                          [2 * (bd + ac), 2 * (cd - ab), aa + dd - bb - cc]])
 
-        def rotate(self, vect, axis, theta):
-            return np.dot(self.rotation_matrix(axis, theta), vect)
+    def rotate(self, vect, axis, theta):
+        return np.dot(self.rotation_matrix(axis, theta), vect)
+    
+    def calculate_aco_angles(self, pi_1, pi_2, pi0_1, pi2_2, pi3_2, y1, y2, which_aco_angle='rhoa1-5'):
+        p3 = Momentum4(pi_1[:, 0], pi_1[:, 1], pi_1[:, 2], pi_1[:, 3]) # p3 = charged pion 1
+        p4 = Momentum4(pi_2[:, 0], pi_2[:, 1], pi_2[:, 2], pi_2[:, 3]) # p4 = charged pion 2
+        
+        if which_aco_angle == 'rhoa1-5': # this is the same though process as rhoa1-4, but I think it's corrected, because particle 1 and particle 3 are the same composite particle
+            pi0 = Momentum4(pi0_1[:, 0], pi0_1[:, 1], pi0_1[:, 2], pi0_1[:, 3]) # pi0 = neutral pion 1
+            pi2 = Momentum4(pi2_2[:, 0], pi2_2[:, 1], pi2_2[:, 2], pi2_2[:, 3]) # pi2 = second charged pion 2
+            pi3 = Momentum4(pi3_2[:, 0], pi3_2[:, 1], pi3_2[:, 2], pi3_2[:, 3]) # pi3 = third carged pion 3
+            # p3 = pi_1
+            # p4 = pi_2
+            
+            # # this gives: good distr for the p4+pi3 combination, but bad distr for the p4+pi2 neutral rho
+            # p1 = p3
+            # p2 = p4 + pi3
+            # p3 = pi0
+            # p4 = pi2
+            
+            p1 = pi0
+            p2 = pi2
+            p3 = p3
+            p4 = p4 + pi3
+            
+            # # this is the other option:
+            # p1 = p3
+            # p2 = p4 + pi2
+            # p3 = pi0
+            # p4 = pi3
+        
+        return self.calc_aco_angles(p1[:].T, p2[:].T, p3[:].T, p4[:].T, y1, y2)
 
-    def calculateRhoA1Data(self, df):
+        
+    def calc_aco_angles(self, pp1, pp2, pp3, pp4, yy1, yy2):
+        angles = []
+        for i in range(len(pp1)):
+            p3 = pp3[i]
+            p4 = pp4[i]
+            p1 = pp1[i]
+            p2 = pp2[i]
+            y1 = yy1[i]
+            y2 = yy2[i]
+            # print(p3.shape)
+    
+            def unit(vect):
+                return vect / np.linalg.norm(vect)
+            
+            n1 = p1[1:] - np.dot(p1[1:], unit(p3[1:])) * unit(p3[1:])
+            n2 = p2[1:] - np.dot(p2[1:], unit(p4[1:])) * unit(p4[1:])
+            n1 = unit(n1)
+            n2 = unit(n2)
+    
+            angle = np.arccos(np.dot(n1, n2))
+            # print(p4.shape)
+            # print(n1.shape)
+            # print(n2.shape)
+            sign = np.dot(unit(p4[1:]), np.cross(n1, n2))
+    
+            # shift 1
+            if sign < 0:
+                angle = 2 * np.pi - angle
+    
+            # shift 2
+            if y1*y2 < 0:
+                if angle < np.pi:
+                    angle += np.pi
+                else:
+                    angle -= np.pi
+    
+            angles.append(angle)
+    
+            if i%100000==0:
+                print('finished element', i)
+                
+        return angles
+
+    def calculateRhoA1Data(self, df, len_df_ps):
         # TODO: kristof implement:
         # - under construction!
         # - need to add other aco_angles calculation code
@@ -208,11 +306,11 @@ class DataLoader:
         rho_2 = pi_2 + pi3_2 # neutral rho, a part of the charged a1 particle
         a1 = rho_2 + pi2_2
         # boost into rest frame of resonances
-        #rest_frame = pi_1 + pi_2 + pi0_1 + pi2_2 + pi3_2
-        rest_frame = pi0_1 + pi_1 + pi_2
+        rest_frame = pi_1 + pi_2 + pi0_1 + pi2_2 + pi3_2
+        # rest_frame = pi0_1 + pi_1 + pi_2
         # rest_frame = pi_1 + pi_2
-        #boost = Momentum4(rest_frame[0], -rest_frame[1], -rest_frame[2], -rest_frame[3])
-        boost = - rest_frame
+        boost = Momentum4(rest_frame[0], -rest_frame[1], -rest_frame[2], -rest_frame[3])
+        # boost = - rest_frame
         pi_1_boosted = pi_1.boost_particle(boost)
         pi_2_boosted = pi_2.boost_particle(boost)
         pi0_1_boosted = pi0_1.boost_particle(boost)
@@ -232,41 +330,45 @@ class DataLoader:
             pi0_1_boosted_rot, pi2_2_boosted_rot, pi3_2_boosted_rot = [], [], []
             rho_1_boosted_rot, rho_2_boosted_rot, a1_boosted_rot = [], [], []
             
-            # !!! adapt this code!
             # MY ROTATIONS:
             # unit vectors along the momenta of the primary resonances
-            unit1 = (r1_boosted[1:, :] / np.linalg.norm(r1_boosted[1:, :], axis=0)).transpose()
-            unit2 = (r2_boosted[1:, :] / np.linalg.norm(r2_boosted[1:, :], axis=0)).transpose()
-            
+            unit1 = (rho_1_boosted[1:, :] / np.linalg.norm(rho_1_boosted[1:, :], axis=0)).transpose()
+            unit2 = (pi_2_boosted[1:, :] / np.linalg.norm(pi_2_boosted[1:, :], axis=0)).transpose()
             # probably there's a faster way of doing this
             zaxis = np.array([np.array([0., 0., 1.]) for _ in range(len(unit1))])
-            
             axes1 = np.cross(unit1, zaxis)
             axes2 = np.cross(unit2, zaxis)
-            
             dotproduct1 = (unit1*zaxis).sum(1)
             angles1 = np.arccos(dotproduct1)
             dotproduct2 = (unit2*zaxis).sum(1)
             angles2 = np.arccos(dotproduct2)
             
             for i in range(pi_1_boosted[:].shape[1]):
-                # STANLEY'S ROTATIONS:
-                # rot_mat = self.rotation_matrix_from_vectors(rho_1_boosted[1:, i], [0, 0, 1])
-                # rot_mat = self.rotation_matrix_from_vectors(pi_1_boosted[1:, i]+pi_2_boosted[1:, i], [0, 0, 1])
-                # rot_mat = self.rotation_matrix_from_vectors(a1_boosted[1:, i], [0, 0, 1])
-                rot_mat = self.rotation_matrix_from_vectors(rest_frame_boosted[1:, i], [0, 0, 1])
-                pi_1_boosted_rot.append(rot_mat.dot(pi_1_boosted[1:, i]))
-                pi0_1_boosted_rot.append(rot_mat.dot(pi0_1_boosted[1:, i]))
-                pi_2_boosted_rot.append(rot_mat.dot(pi_2_boosted[1:, i]))
-                pi2_2_boosted_rot.append(rot_mat.dot(pi2_2_boosted[1:, i]))
-                pi3_2_boosted_rot.append(rot_mat.dot(pi3_2_boosted[1:, i]))
-                rho_1_boosted_rot.append(rot_mat.dot(rho_1_boosted[1:, i]))
-                rho_2_boosted_rot.append(rot_mat.dot(rho_2_boosted[1:, i]))
-                a1_boosted_rot.append(rot_mat.dot(a1_boosted[1:, i]))
+# =============================================================================
+#                 # STANLEY'S ROTATIONS:
+#                 # rot_mat = self.rotation_matrix_from_vectors(rho_1_boosted[1:, i], [0, 0, 1])
+#                 # rot_mat = self.rotation_matrix_from_vectors(pi_1_boosted[1:, i]+pi_2_boosted[1:, i], [0, 0, 1])
+#                 # rot_mat = self.rotation_matrix_from_vectors(a1_boosted[1:, i], [0, 0, 1])
+#                 rot_mat = self.rotation_matrix_from_vectors(rest_frame_boosted[1:, i], [0, 0, 1])
+#                 pi_1_boosted_rot.append(rot_mat.dot(pi_1_boosted[1:, i]))
+#                 pi0_1_boosted_rot.append(rot_mat.dot(pi0_1_boosted[1:, i]))
+#                 pi_2_boosted_rot.append(rot_mat.dot(pi_2_boosted[1:, i]))
+#                 pi2_2_boosted_rot.append(rot_mat.dot(pi2_2_boosted[1:, i]))
+#                 pi3_2_boosted_rot.append(rot_mat.dot(pi3_2_boosted[1:, i]))
+#                 rho_1_boosted_rot.append(rot_mat.dot(rho_1_boosted[1:, i]))
+#                 rho_2_boosted_rot.append(rot_mat.dot(rho_2_boosted[1:, i]))
+#                 a1_boosted_rot.append(rot_mat.dot(a1_boosted[1:, i]))
+# =============================================================================
                 
                 # MY ROTATIONS:
-                # !!! implement this!
-
+                pi_1_boosted_rot.append(self.rotate(pi_1_boosted[1:, i], axes1[i], angles1[i]))
+                pi0_1_boosted_rot.append(self.rotate(pi0_1_boosted[1:, i], axes1[i], angles1[i]))
+                pi_2_boosted_rot.append(self.rotate(pi_2_boosted[1:, i], axes1[i], angles1[i]))
+                pi2_2_boosted_rot.append(self.rotate(pi2_2_boosted[1:, i], axes1[i], angles1[i]))
+                pi3_2_boosted_rot.append(self.rotate(pi3_2_boosted[1:, i], axes1[i], angles1[i]))
+                rho_1_boosted_rot.append(self.rotate(rho_1_boosted[1:, i], axes1[i], angles1[i]))
+                rho_2_boosted_rot.append(self.rotate(rho_2_boosted[1:, i], axes1[i], angles1[i]))
+                a1_boosted_rot.append(self.rotate(a1_boosted[1:, i], axes1[i], angles1[i]))
                 
                 if i % 100000 == 0:
                     print('finished getting rotated 4-vector', i)
@@ -288,7 +390,30 @@ class DataLoader:
                     p4str = ' '.join([str(x) for x in pi_2_boosted_rot[i]])
                     f.write(p1str+'\t\t'+p3str+'\t\t'+p4str+'\n')
             print('finished writing out 4-vectors')
-                
+            
+            def padded(vect3):
+                zeros = np.reshape(np.zeros(len(vect3)), (-1, 1))
+                return np.concatenate([zeros, vect3], axis=1)
+            # zeros_1 = np.reshape(np.zeros(len(pi_1_boosted_rot)), (-1, 1))
+            # zeros_2 = np.reshape(np.zeros(len(pi_2_boosted_rot)), (-1, 1))
+            # zeros_3 = np.reshape(np.zeros(len(pi0_1_boosted_rot)), (-1, 1))
+            # zeros_4 = np.reshape(np.zeros(len(pi2_2_boosted_rot)), (-1, 1))
+            # zeros_5 = np.reshape(np.zeros(len(pi3_2_boosted_rot)), (-1, 1))
+            # aco_angle_2 = self.calculate_aco_angles(np.concatenate([zeros_1, pi_1_boosted_rot], axis=1), np.concatenate([zeros_1, pi_2_boosted_rot], axis=1), np.concatenate([zeros_1, pi0_1_boosted_rot], axis=1), np.concatenate([zeros_1, pi2_2_boosted_rot], axis=1), np.concatenate([zeros_1, pi3_2_boosted_rot], axis=1), df['y_1_1'].to_numpy(), df['y_1_2'].to_numpy())
+            
+            aco_angle_2 = self.calculate_aco_angles(padded(pi_1_boosted_rot), padded(pi_2_boosted_rot), padded(pi0_1_boosted_rot), padded(pi2_2_boosted_rot), padded(pi3_2_boosted_rot), df['y_1_1'].to_numpy(), df['y_1_2'].to_numpy())
+            aco_angle_danny = self.calc_aco_angles(padded(pi0_1_boosted_rot[:]), padded(pi_2_boosted_rot[:]), padded(pi_1_boosted_rot[:]), padded(pi2_2_boosted_rot[:]), df['y_1_1'].to_numpy(), df['y_1_2'].to_numpy())
+            # aco_angle_2 = aco_angle_danny
+            aco_angle_danny = np.array(aco_angle_danny)
+            aco_angle_2 = np.array(aco_angle_2)
+            aco_angle_danny[np.isnan(aco_angle_danny)] = np.pi
+            aco_angle_2[np.isnan(aco_angle_2)] = np.pi
+            
+            plt.figure(12)
+            aco_angle_2_ps = aco_angle_2[:len_df_ps]
+            aco_angle_2_sm = aco_angle_2[len_df_ps:]
+            plt.hist(aco_angle_2_ps, bins=50, alpha=0.5)
+            plt.hist(aco_angle_2_sm, bins=50, alpha=0.5)
             
         else: # if don't want rotations:
             pi_1_boosted_rot = np.array(pi_1_boosted).T
@@ -333,7 +458,9 @@ class DataLoader:
             'a1_px_br': a1_boosted_rot[:, 0],
             'a1_py_br': a1_boosted_rot[:, 1],
             'a1_pz_br': a1_boosted_rot[:, 2],
-            'aco_angle_1': df['aco_angle_1'],
+            # 'aco_angle_1': df['aco_angle_1'],
+            'aco_angle_1': aco_angle_danny,
+            'aco_angle_2': aco_angle_2,
             'y_1_1': df['y_1_1'],
             'y_1_2': df['y_1_2'],
             'w_a': df.wt_cp_sm,
