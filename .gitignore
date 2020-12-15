@@ -148,7 +148,8 @@ shared/cuda/
 shared/NN_output/*.txt
 shared/hp_model_1
 # ignore venv folder
-env/
+shared/env/
+shared/msci/
 # ignore bash scripts and script outputs
 *.sh
 *.sh.*

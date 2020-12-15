@@ -85,6 +85,8 @@ class DataLoader:
             y_ps = pd.DataFrame(np.zeros(df_ps.shape[0]))
             y = pd.concat([y_sm, y_ps]).to_numpy()
             df = pd.concat([df_sm, df_ps])
+        else:
+            y = None
         if self.channel == 'rho_rho':
             df_inputs_data, boost = self.calculateRhoRhoData(df)
         elif self.channel == 'rho_a1':
@@ -303,6 +305,8 @@ class DataLoader:
         """
         if kwargs:
             boost = kwargs["boost"]
+        else:
+            boost = None
         for addon in addons:
             if addon == 'met' and kwargs:
                 print('Addon MET loaded')

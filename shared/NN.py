@@ -62,12 +62,12 @@ class NeuralNetwork:
             "y_1_1", "y_1_2",
         ]
         self.variables_a1_a1 = [
-            
+
         ]
         self.save_dir = 'NN_output'
         self.write_dir = 'NN_output'
 
-    def run(self, config_num, read=True, from_pickle=True, epochs=50, batch_size=1024, patience=10, external_model=False, addons=[]):
+    def run(self, config_num, read=True, from_pickle=True, epochs=50, batch_size=1024, patience=20, external_model=False, addons=[]):
         df = self.initalize(addons, read=read, from_pickle=from_pickle)
         X_train, X_test, y_train, y_test = self.configure(df, config_num)
         print(f'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Training config {config_num}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
@@ -80,7 +80,7 @@ class NeuralNetwork:
             auc = self.evaluate(model, X_test, y_test, self.history, w_a, w_b)
         self.write(auc)
 
-    def runMultiple(self, configs, read=True, from_pickle=True, epochs=50, batch_size=1024, patience=10, external_model=False, addons=[]):
+    def runMultiple(self, configs, read=True, from_pickle=True, epochs=50, batch_size=1024, patience=20, external_model=False, addons=[]):
         df = self.initalize(addons, read=read, from_pickle=from_pickle)
         for config_num in configs:
             print(f'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Training config {config_num}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
@@ -94,13 +94,12 @@ class NeuralNetwork:
                 auc = self.evaluate(model, X_test, y_test, self.history, w_a, w_b)
             self.write(auc)
 
-    def runHPTuning(self, config_num, read=True, from_pickle=True, epochs=50, tuner_epochs=50, batch_size=1024, patience=10, addons=[]):
+    def runHPTuning(self, config_num, read=True, from_pickle=True, epochs=50, tuner_epochs=50, batch_size=10000, tuner_batch_size=10000, patience=20, tuner_mode=0, addons=[]):
         df = self.initalize(addons, read=read, from_pickle=from_pickle)
         X_train, X_test, y_train, y_test = self.configure(df, config_num)
         print(f'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Tuning on config {config_num}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-        best_hps, tuner = self.tuneHP(self.hyperModel, X_train, X_test, y_train, y_test, tuner_epochs=tuner_epochs)
+        best_hps, tuner = self.tuneHP(self.hyperModel, X_train, X_test, y_train, y_test, tuner_epochs=tuner_epochs, tuner_batch_size=tuner_batch_size, tuner_mode=tuner_mode)
         print(tuner.results_summary())
-        
         model = tuner.hypermodel.build(best_hps)
         self.model = model
         # model.fit(X_train, y_train, epochs=epochs, validation_data = (X_test, y_test), verbose=0)
@@ -119,20 +118,42 @@ class NeuralNetwork:
             best_num_layers = best_hps.get('num_layers')
             best_batch_norm = best_hps.get('batch_norm')
             best_dropout = best_hps.get('dropout')
-            message = f'{time_str},{auc},{self.config_num},{best_num_layers},{best_batch_norm},{best_dropout}\n'
+            message = f'{time_str},{auc},{self.config_num},{best_num_layers},{best_batch_norm},{best_dropout},{tuner_mode}\n'
             print(f"Message: {message}")
             f.write(message)
         model.save('./hp_model_1/')
 
-    def tuneHP(self, hyperModel, X_train, X_test, y_train, y_test, tuner_epochs=50):
-        tuner = kt.Hyperband(hyperModel,
-                             objective='val_accuracy',
-                             max_epochs=100,
-                             factor=3,
-                             seed=seed_value,
-                             directory='tuning',
-                             project_name='model_1',
-                             overwrite=True)
+    def tuneHP(self, hyperModel, X_train, X_test, y_train, y_test, tuner_epochs=50, tuner_batch_size=10000, tuner_mode=0):
+        if tuner_mode == 0:
+            tuner = kt.Hyperband(hyperModel,
+                                 objective='val_loss',  # ['loss', 'auc', 'accuracy', 'val_loss', 'val_auc', 'val_accuracy']
+                                 max_epochs=500,
+                                 hyperband_iterations=10,
+                                 factor=3,
+                                 seed=seed_value,
+                                 directory='tuning',
+                                 project_name='model_hyperband_1',
+                                 overwrite=True)
+        elif tuner_mode == 1:
+            tuner = kt.BayesianOptimization(hyperModel,
+                                            objective='val_loss',
+                                            max_trials=50,
+                                            num_initial_points=4,
+                                            seed=seed_value,
+                                            directory='tuning',
+                                            project_name='model_bayesian_1',
+                                            overwrite=True)
+        elif tuner_mode == 2:
+            tuner = kt.RandomSearch(hyperModel,
+                                    objective='val_loss',
+                                    max_trials=50,
+                                    seed=seed_value,
+                                    directory='tuning',
+                                    project_name='model_random_1',
+                                    overwrite=True)
+        else:
+            raise ValueError('Invalid tuner mode')
+        # tuner.search(X_train, y_train, epochs=tuner_epochs, batch_size=tuner_batch_size, validation_data=(X_test, y_test), verbose=0)
         tuner.search(X_train, y_train, epochs=tuner_epochs, validation_data=(X_test, y_test), verbose=0)
         best_hps = tuner.get_best_hyperparameters(num_trials=1)[0]
         print(tuner.search_space_summary())
@@ -159,7 +180,7 @@ class NeuralNetwork:
         X_train, X_test, y_train, y_test = CL.configTrainTestData(self.config_num, self.binary)
         return X_train, X_test, y_train, y_test
 
-    def train(self, X_train, X_test, y_train, y_test, epochs=50, batch_size=1024, patience=10, external_model=False, save=False, verbose=1):
+    def train(self, X_train, X_test, y_train, y_test, epochs=50, batch_size=1024, patience=20, external_model=False, save=False, verbose=1):
         self.epochs = epochs
         self.batch_size = batch_size
         if not external_model:
@@ -224,7 +245,7 @@ class NeuralNetwork:
 
     def hyperModel(self, hp):
         self.model = tf.keras.models.Sequential()
-        num_layers = hp.Int('num_layers', 1, 8)
+        num_layers = hp.Int('num_layers', 1, 6)
         self.layers = num_layers
         for i in range(num_layers):
             self.model.add(tf.keras.layers.Dense(units=300, kernel_initializer='normal'))
@@ -251,14 +272,15 @@ class NeuralNetwork:
 
 
 if __name__ == '__main__':
-    if not os.path.exists('C:\\Kristof'): # then we are on Stanley's computer
+    if not os.path.exists('C:\\Kristof'):  # then we are on Stanley's computer
         NN = NeuralNetwork(channel='rho_rho', binary=True, write_filename='NN_output', show_graph=False)
-        # NN.run(3, read=True, from_pickle=True, epochs=50, batch_size=10000)
+        # NN.model = NN.seq_model(units=[300,300,300,300,300,300], batch_norm=False, dropout=0.2)
+        # NN.run(3, read=True, from_pickle=True, epochs=50, batch_size=10000, external_model=False)
         # configs = [1,2,3,4,5,6]
         # NN.runMultiple(configs, epochs=1, batch_size=10000)
-        NN.runHPTuning(3, read=True, from_pickle=True, epochs=50, tuner_epochs=50)
-    
-    else: # if we are on Kristof's computer
+        NN.runHPTuning(3, read=True, from_pickle=True, epochs=50, tuner_epochs=50, batch_size=10000, tuner_batch_size=10000, tuner_mode=2)
+
+    else:  # if we are on Kristof's computer
         # NN = NeuralNetwork(channel='rho_rho', binary=True, write_filename='NN_output', show_graph=False)
         NN = NeuralNetwork(channel='rho_a1', binary=True, write_filename='NN_output', show_graph=False)
         # NN.run(4, read=True, from_pickle=True, epochs=10, batch_size=10000)
