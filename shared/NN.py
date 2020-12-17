@@ -7,6 +7,8 @@ import random
 import numpy as np
 import datetime
 import kerastuner as kt
+from tensorflow.keras.wrappers.scikit_learn import KerasClassifier
+from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
 seed_value = 1
 # 1. Set the `PYTHONHASHSEED` environment variable at a fixed value
 os.environ['PYTHONHASHSEED'] = str(seed_value)
@@ -66,35 +68,36 @@ class NeuralNetwork:
         ]
         self.save_dir = 'NN_output'
         self.write_dir = 'NN_output'
+        self.model = None
 
-    def run(self, config_num, read=True, from_pickle=True, epochs=50, batch_size=1024, patience=20, external_model=False, addons=[]):
+    def run(self, config_num, read=True, from_pickle=True, epochs=50, batch_size=1024, patience=10, addons=[]):
         df = self.initalize(addons, read=read, from_pickle=from_pickle)
         X_train, X_test, y_train, y_test = self.configure(df, config_num)
         print(f'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Training config {config_num}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-        model = self.train(X_train, X_test, y_train, y_test, epochs=epochs, batch_size=batch_size, patience=patience, external_model=external_model)
+        model = self.train(X_train, X_test, y_train, y_test, epochs=epochs, batch_size=batch_size, patience=patience)
         if self.binary:
             auc = self.evaluateBinary(model, X_test, y_test, self.history)
         else:
             w_a = df.w_a
             w_b = df.w_b
             auc = self.evaluate(model, X_test, y_test, self.history, w_a, w_b)
-        self.write(auc)
+        self.write(auc, self.history)
 
-    def runMultiple(self, configs, read=True, from_pickle=True, epochs=50, batch_size=1024, patience=20, external_model=False, addons=[]):
+    def runMultiple(self, configs, read=True, from_pickle=True, epochs=50, batch_size=1024, patience=10, addons=[]):
         df = self.initalize(addons, read=read, from_pickle=from_pickle)
         for config_num in configs:
             print(f'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Training config {config_num}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
             X_train, X_test, y_train, y_test = self.configure(df, config_num)
-            model = self.train(X_train, X_test, y_train, y_test, epochs=epochs, batch_size=batch_size, patience=patience, external_model=external_model)
+            model = self.train(X_train, X_test, y_train, y_test, epochs=epochs, batch_size=batch_size, patience=patience)
             if self.binary:
                 auc = self.evaluateBinary(model, X_test, y_test, self.history)
             else:
                 w_a = df.w_a
                 w_b = df.w_b
                 auc = self.evaluate(model, X_test, y_test, self.history, w_a, w_b)
-            self.write(auc)
+            self.write(auc, self.history)
 
-    def runHPTuning(self, config_num, read=True, from_pickle=True, epochs=50, tuner_epochs=50, batch_size=10000, tuner_batch_size=10000, patience=20, tuner_mode=0, addons=[]):
+    def runHPTuning(self, config_num, read=True, from_pickle=True, epochs=50, tuner_epochs=50, batch_size=10000, tuner_batch_size=10000, patience=10, tuner_mode=0, addons=[]):
         df = self.initalize(addons, read=read, from_pickle=from_pickle)
         X_train, X_test, y_train, y_test = self.configure(df, config_num)
         print(f'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Tuning on config {config_num}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
@@ -104,7 +107,7 @@ class NeuralNetwork:
         self.model = model
         # model.fit(X_train, y_train, epochs=epochs, validation_data = (X_test, y_test), verbose=0)
         # verbose is set 0 to prevent logs from spam
-        model = self.train(X_train, X_test, y_train, y_test, epochs=epochs, batch_size=batch_size, patience=patience, external_model=True, verbose=0)
+        model = self.train(X_train, X_test, y_train, y_test, epochs=epochs, batch_size=batch_size, patience=patience, verbose=0)
         if self.binary:
             auc = self.evaluateBinary(model, X_test, y_test, self.history)
         else:
@@ -113,22 +116,77 @@ class NeuralNetwork:
             auc = self.evaluate(model, X_test, y_test, self.history, w_a, w_b)
         file = f'{self.write_dir}/best_hp_{self.channel}.txt'
         with open(file, 'a+') as f:
-            print(f'Writing HPs to {file}')
+            # print(f'Writing HPs to {file}')
             time_str = datetime.datetime.now().strftime('%Y/%m/%d|%H:%M:%S')
             best_num_layers = best_hps.get('num_layers')
-            best_batch_norm = best_hps.get('batch_norm')
-            best_dropout = best_hps.get('dropout')
-            message = f'{time_str},{auc},{self.config_num},{best_num_layers},{best_batch_norm},{best_dropout},{tuner_mode}\n'
+            # best_batch_norm = best_hps.get('batch_norm')
+            # best_dropout = best_hps.get('dropout')
+            actual_epochs = len(self.history.history["loss"])
+            # message = f'{time_str},{auc},{self.config_num},{best_num_layers},{best_batch_norm},{best_dropout},{tuner_mode}\n'
+            message = f'{time_str},{auc},{self.config_num},{best_num_layers},{tuner_mode}\n'
+            print(f"Message: {message}")
+        #     f.write(message)
+        # model.save('./hp_model_1/')
+
+    def runGridSearch(self, config_num, read=True, from_pickle=True, addons=[], search_mode=0):
+        df = self.initalize(addons, read=read, from_pickle=from_pickle)
+        X_train, X_test, y_train, y_test = self.configure(df, config_num)
+        print(f'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Grid searching on config {config_num}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+        model = KerasClassifier(self.gridModel, verbose=0)
+        layers = [2,3,4,5,6]
+        batch_norms = [True, False]
+        dropouts = [None, 0.2]
+        epochs = [100, 200, 500]
+        batch_sizes = [8192, 16384, 65536, 131072]
+        param_grid = dict(
+            layers=layers,
+            batch_norm=batch_norms,
+            dropout=dropouts,
+            epochs=epochs,
+            batch_size=batch_sizes
+        )
+        if search_mode == 0:
+            grid = GridSearchCV(estimator=model, param_grid=param_grid, cv=2, verbose=2, scoring='roc_auc')
+        elif search_mode == 1:
+            # can increase the distributions of params
+            grid = RandomizedSearchCV(estimator=model, param_distributions=param_grid, cv=2, verbose=2, scoring='roc_auc')
+        else:
+            raise ValueError('Search mode not defined correctly')
+        grid_result = grid.fit(X_train, y_train)
+        best_num_layers = grid_result['layers']
+        best_batch_norm = grid_result['batch_norm']
+        best_dropout = grid_result['dropout']
+        best_epochs = grid_result['epochs']
+        best_batchsize = grid_result['batch_size']
+        self.model = self.gridModel(layers=best_num_layers, batch_norm=best_batch_norm, dropout=best_dropout)
+        model = self.train(X_train, X_test, y_train, y_test, epochs=best_epochs, batch_size=best_batchsize, verbose=0)
+        if self.binary:
+            auc = self.evaluateBinary(model, X_test, y_test, self.history)
+        else:
+            w_a = df.w_a
+            w_b = df.w_b
+            auc = self.evaluate(model, X_test, y_test, self.history, w_a, w_b)
+        print("Best: %f using %s" % (grid_result.best_score_, grid_result.best_params_))
+        means = grid_result.cv_results_['mean_test_score']
+        stds = grid_result.cv_results_['std_test_score']
+        params = grid_result.cv_results_['params']
+        for mean, stdev, param in zip(means, stds, params):
+            print("%f (%f) with: %r" % (mean, stdev, param))
+        file = f'{self.write_dir}/grid_search_{self.channel}.txt'
+        with open(file, 'a+') as f:
+            print(f'Writing HPs to {file}')
+            time_str = datetime.datetime.now().strftime('%Y/%m/%d|%H:%M:%S')
+            message = f'{time_str},{auc},{self.config_num},{best_num_layers},{best_batch_norm},{best_dropout},{best_epochs},{best_batchsize},{grid_result.best_score_}\n'
             print(f"Message: {message}")
             f.write(message)
-        model.save('./hp_model_1/')
+        model.save(f'./grid_search_model_{config_num}_{self.channel}/')
 
     def tuneHP(self, hyperModel, X_train, X_test, y_train, y_test, tuner_epochs=50, tuner_batch_size=10000, tuner_mode=0):
         if tuner_mode == 0:
             tuner = kt.Hyperband(hyperModel,
-                                 objective='val_loss',  # ['loss', 'auc', 'accuracy', 'val_loss', 'val_auc', 'val_accuracy']
-                                 max_epochs=500,
-                                 hyperband_iterations=10,
+                                 objective=kt.Objective("auc", direction="max"),  # ['loss', 'auc', 'accuracy', 'val_loss', 'val_auc', 'val_accuracy']
+                                 max_epochs=200,
+                                 hyperband_iterations=3,
                                  factor=3,
                                  seed=seed_value,
                                  directory='tuning',
@@ -137,8 +195,7 @@ class NeuralNetwork:
         elif tuner_mode == 1:
             tuner = kt.BayesianOptimization(hyperModel,
                                             objective='val_loss',
-                                            max_trials=50,
-                                            num_initial_points=4,
+                                            max_trials=100,
                                             seed=seed_value,
                                             directory='tuning',
                                             project_name='model_bayesian_1',
@@ -146,15 +203,15 @@ class NeuralNetwork:
         elif tuner_mode == 2:
             tuner = kt.RandomSearch(hyperModel,
                                     objective='val_loss',
-                                    max_trials=50,
+                                    max_trials=1000,
                                     seed=seed_value,
                                     directory='tuning',
                                     project_name='model_random_1',
                                     overwrite=True)
         else:
             raise ValueError('Invalid tuner mode')
-        # tuner.search(X_train, y_train, epochs=tuner_epochs, batch_size=tuner_batch_size, validation_data=(X_test, y_test), verbose=0)
-        tuner.search(X_train, y_train, epochs=tuner_epochs, validation_data=(X_test, y_test), verbose=0)
+        tuner.search(X_train, y_train, epochs=tuner_epochs, batch_size=tuner_batch_size, validation_data=(X_test, y_test), verbose=0)
+        # tuner.search(X_train, y_train, epochs=tuner_epochs, validation_data=(X_test, y_test), verbose=1)
         best_hps = tuner.get_best_hyperparameters(num_trials=1)[0]
         print(tuner.search_space_summary())
         return best_hps, tuner
@@ -180,10 +237,10 @@ class NeuralNetwork:
         X_train, X_test, y_train, y_test = CL.configTrainTestData(self.config_num, self.binary)
         return X_train, X_test, y_train, y_test
 
-    def train(self, X_train, X_test, y_train, y_test, epochs=50, batch_size=1024, patience=20, external_model=False, save=False, verbose=1):
+    def train(self, X_train, X_test, y_train, y_test, epochs=50, batch_size=1024, patience=10, save=False, verbose=1):
         self.epochs = epochs
         self.batch_size = batch_size
-        if not external_model:
+        if self.model is None:
             self.model = self.kristof_model(X_train.shape[1])
         self.history = tf.keras.callbacks.History()
         early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=patience)
@@ -192,7 +249,7 @@ class NeuralNetwork:
         self.model.fit(X_train, y_train,
                        batch_size=batch_size,
                        epochs=epochs,
-                       callbacks=[self.history, early_stop, tensorboard_callback],
+                       callbacks=[self.history, tensorboard_callback], #, early_stop],
                        validation_data=(X_test, y_test),
                        verbose=verbose)
         if save:
@@ -205,12 +262,13 @@ class NeuralNetwork:
         auc = E.evaluate(X_test, y_test, history, show=self.show_graph, w_a=w_a, w_b=w_b)
         return auc
 
-    def write(self, auc):
+    def write(self, auc, history):
         file = f'{self.write_dir}/{self.write_filename}.txt'
         with open(file, 'a+') as f:
             print(f'Writing to {file}')
             time_str = datetime.datetime.now().strftime('%Y/%m/%d|%H:%M:%S')
-            f.write(f'{time_str},{auc},{self.config_num},{self.layers},{self.epochs},{self.batch_size},{self.binary},{self.model_str}\n')
+            actual_epochs = len(history.history["loss"])
+            f.write(f'{time_str},{auc},{self.config_num},{self.layers},{self.epochs},{actual_epochs},{self.batch_size},{self.binary},{self.model_str}\n')
         print('Finish writing')
         f.close()
 
@@ -245,17 +303,33 @@ class NeuralNetwork:
 
     def hyperModel(self, hp):
         self.model = tf.keras.models.Sequential()
-        num_layers = hp.Int('num_layers', 1, 6)
+        num_layers = hp.Int('num_layers', 2, 3)
         self.layers = num_layers
         for i in range(num_layers):
             self.model.add(tf.keras.layers.Dense(units=300, kernel_initializer='normal'))
-            if hp.Boolean('batch_norm', default=False):
-                self.model.add(tf.keras.layers.BatchNormalization())
-            self.model.add(tf.keras.layers.Dropout(rate=hp.Float('dropout', min_value=0.0, max_value=0.2, default=0.0, step=0.2)))
+            # if hp.Boolean('batch_norm', default=False):
+                # self.model.add(tf.keras.layers.BatchNormalization())
+            # self.model.add(tf.keras.layers.Dropout(rate=hp.Float('dropout', min_value=0.0, max_value=0.2, default=0.0, step=0.2)))
         self.model.add(tf.keras.layers.Dense(1, activation="sigmoid"))
         metrics = ['AUC', 'accuracy']
         self.model.compile(loss='binary_crossentropy', optimizer='adam', metrics=metrics)
         self.model_str = "hyper_model"
+        return self.model
+
+    def gridModel(self, layers=2, batch_norm=False, dropout=None):
+        self.model = tf.keras.models.Sequential()
+        self.layers = layers
+        for i in range(layers):
+            self.model.add(tf.keras.layers.Dense(300, kernel_initializer='normal'))
+            if batch_norm:
+                self.model.add(tf.keras.layers.BatchNormalization())
+            self.model.add(tf.keras.layers.Activation('relu'))
+            if dropout is not None:
+                self.model.add(tf.keras.layers.Dropout(dropout))
+        self.model.add(tf.keras.layers.Dense(1, activation="sigmoid"))
+        metrics = ['AUC', 'accuracy']
+        self.model.compile(loss='binary_crossentropy', optimizer='adam', metrics=metrics)
+        self.model_str = "grid_model"
         return self.model
 
     def kristof_model(self, dimensions):
@@ -267,18 +341,20 @@ class NeuralNetwork:
         model.add(tf.keras.layers.Dense(300, input_dim=dimensions, kernel_initializer='normal', activation='relu'))
         model.add(tf.keras.layers.Dense(300, kernel_initializer='normal', activation='relu'))
         model.add(tf.keras.layers.Dense(1, activation="sigmoid"))
-        model.compile(loss='binary_crossentropy', optimizer='adam', metrics=metrics)
+        opt = tf.keras.optimizers.Adam(learning_rate=0.001)
+        model.compile(loss='binary_crossentropy', optimizer=opt, metrics=metrics)
         return model
 
 
 if __name__ == '__main__':
     if not os.path.exists('C:\\Kristof'):  # then we are on Stanley's computer
         NN = NeuralNetwork(channel='rho_rho', binary=True, write_filename='NN_output', show_graph=False)
-        # NN.model = NN.seq_model(units=[300,300,300,300,300,300], batch_norm=False, dropout=0.2)
-        # NN.run(3, read=True, from_pickle=True, epochs=50, batch_size=10000, external_model=False)
+        # NN.model = NN.seq_model(units=(300, 300, 300), batch_norm=True, dropout=0.2)
+        # NN.run(3, read=True, from_pickle=True, epochs=100, batch_size=8192) # 16384, 131072
         # configs = [1,2,3,4,5,6]
         # NN.runMultiple(configs, epochs=1, batch_size=10000)
-        NN.runHPTuning(3, read=True, from_pickle=True, epochs=50, tuner_epochs=50, batch_size=10000, tuner_batch_size=10000, tuner_mode=2)
+        # NN.runHPTuning(3, read=True, from_pickle=True, epochs=200, tuner_epochs=200, batch_size=8192, tuner_batch_size=8192, tuner_mode=1)
+        NN.runGridSearch(3, read=True, from_pickle=True)
 
     else:  # if we are on Kristof's computer
         # NN = NeuralNetwork(channel='rho_rho', binary=True, write_filename='NN_output', show_graph=False)
