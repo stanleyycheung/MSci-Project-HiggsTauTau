@@ -133,31 +133,49 @@ class NeuralNetwork:
         X_train, X_test, y_train, y_test = self.configure(df, config_num)
         print(f'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Grid searching on config {config_num}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
         model = KerasClassifier(self.gridModel, verbose=0)
-        layers = [2,3,4,5,6]
-        batch_norms = [True, False]
-        dropouts = [None, 0.2]
-        epochs = [100, 200, 500]
-        batch_sizes = [8192, 16384, 65536, 131072]
-        param_grid = dict(
-            layers=layers,
-            batch_norm=batch_norms,
-            dropout=dropouts,
-            epochs=epochs,
-            batch_size=batch_sizes
-        )
         if search_mode == 0:
+            layers = [2,3,4,5,6]
+            batch_norms = [True, False]
+            dropouts = [None, 0.2]
+            epochs = [100, 200, 500]
+            batch_sizes = [8192, 16384, 65536, 131072]
+            param_grid = dict(
+                layers=layers,
+                batch_norm=batch_norms,
+                dropout=dropouts,
+                epochs=epochs,
+                batch_size=batch_sizes
+            )
             grid = GridSearchCV(estimator=model, param_grid=param_grid, cv=2, verbose=2, scoring='roc_auc')
         elif search_mode == 1:
+            layers = np.arange(1,11)
+            batch_norms = [True, False]
+            dropouts = [None, 0.1, 0.2, 0.3, 0.4, 0.5]
+            epochs = [50, 100, 200, 500]
+            batch_sizes = [2**i for i in range(8, 19)]
+            # layers = [2,3,4,5,6]
+            # batch_norms = [True, False]
+            # dropouts = [None, 0.2]
+            # epochs = [100, 200, 500]
+            # batch_sizes = [8192, 16384, 65536, 131072]
+            param_grid = dict(
+                layers=layers,
+                batch_norm=batch_norms,
+                dropout=dropouts,
+                epochs=epochs,
+                batch_size=batch_sizes
+            )
             # can increase the distributions of params
-            grid = RandomizedSearchCV(estimator=model, param_distributions=param_grid, cv=2, verbose=2, scoring='roc_auc')
+            grid = RandomizedSearchCV(estimator=model, param_distributions=param_grid, cv=2, verbose=2, scoring='roc_auc', random_state=seed_value, n_iter=20)
         else:
             raise ValueError('Search mode not defined correctly')
         grid_result = grid.fit(X_train, y_train)
-        best_num_layers = grid_result['layers']
-        best_batch_norm = grid_result['batch_norm']
-        best_dropout = grid_result['dropout']
-        best_epochs = grid_result['epochs']
-        best_batchsize = grid_result['batch_size']
+        print(grid_result)
+        best_num_layers = grid_result.best_params_['layers']
+        best_batch_norm = grid_result.best_params_['batch_norm']
+        best_dropout = grid_result.best_params_['dropout']
+        best_epochs = grid_result.best_params_['epochs']
+        best_batchsize = grid_result.best_params_['batch_size']
         self.model = self.gridModel(layers=best_num_layers, batch_norm=best_batch_norm, dropout=best_dropout)
         model = self.train(X_train, X_test, y_train, y_test, epochs=best_epochs, batch_size=best_batchsize, verbose=0)
         if self.binary:
@@ -176,10 +194,10 @@ class NeuralNetwork:
         with open(file, 'a+') as f:
             print(f'Writing HPs to {file}')
             time_str = datetime.datetime.now().strftime('%Y/%m/%d|%H:%M:%S')
-            message = f'{time_str},{auc},{self.config_num},{best_num_layers},{best_batch_norm},{best_dropout},{best_epochs},{best_batchsize},{grid_result.best_score_}\n'
+            message = f'{time_str},{auc},{self.config_num},{best_num_layers},{best_batch_norm},{best_dropout},{best_epochs},{best_batchsize},{search_mode},{grid_result.best_score_}\n'
             print(f"Message: {message}")
             f.write(message)
-        model.save(f'./grid_search_model_{config_num}_{self.channel}/')
+        model.save(f'./saved_models/grid_search_model_{config_num}_{self.channel}_{search_mode}/')
 
     def tuneHP(self, hyperModel, X_train, X_test, y_train, y_test, tuner_epochs=50, tuner_batch_size=10000, tuner_mode=0):
         if tuner_mode == 0:
@@ -253,7 +271,7 @@ class NeuralNetwork:
                        validation_data=(X_test, y_test),
                        verbose=verbose)
         if save:
-            self.model.save(f'{self.save_dir}/NN')
+            self.model.save(f'./saved_models/{self.save_dir}/NN')
         return self.model
 
     def evaluate(self, model, X_test, y_test, history, w_a, w_b):
@@ -354,7 +372,7 @@ if __name__ == '__main__':
         # configs = [1,2,3,4,5,6]
         # NN.runMultiple(configs, epochs=1, batch_size=10000)
         # NN.runHPTuning(3, read=True, from_pickle=True, epochs=200, tuner_epochs=200, batch_size=8192, tuner_batch_size=8192, tuner_mode=1)
-        NN.runGridSearch(3, read=True, from_pickle=True)
+        NN.runGridSearch(3, read=True, from_pickle=True, search_mode=1)
 
     else:  # if we are on Kristof's computer
         # NN = NeuralNetwork(channel='rho_rho', binary=True, write_filename='NN_output', show_graph=False)

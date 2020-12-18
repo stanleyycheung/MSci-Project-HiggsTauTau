@@ -150,6 +150,7 @@ shared/hp_model_1
 # ignore venv folder
 shared/env/
 shared/msci/
+shared/saved_models/
 # ignore bash scripts and script outputs
 *.sh
 *.sh.*
