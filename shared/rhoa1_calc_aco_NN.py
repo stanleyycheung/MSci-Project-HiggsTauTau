@@ -53,6 +53,67 @@ def calc_aco_angles(pp1, pp2, pp3, pp4, yy1, yy2):
     return angles
 
 
+def calc_aco_angles_alie(pp1, pp2, pp3, pp4, yy1, yy2):
+    pp1 = pp1.T
+    pp2 = pp2.T
+    pp3 = pp3.T
+    pp4 = pp4.T
+    
+    #Some geometrical functions
+    def cross_product(vector3_1,vector3_2):
+        if len(vector3_1)!=3 or len(vector3_1)!=3:
+            print('These are not 3D arrays !')
+        x_perp_vector=vector3_1[1]*vector3_2[2]-vector3_1[2]*vector3_2[1]
+        y_perp_vector=vector3_1[2]*vector3_2[0]-vector3_1[0]*vector3_2[2]
+        z_perp_vector=vector3_1[0]*vector3_2[1]-vector3_1[1]*vector3_2[0]
+        return np.array([x_perp_vector,y_perp_vector,z_perp_vector])
+    
+    def dot_product(vector1,vector2):
+        if len(vector1)!=len(vector2):
+            print('vector1 =', vector1)
+            print('vector2 =', vector2)
+            raise Exception('Arrays_of_different_size')
+        prod=0
+        for i in range(len(vector1)):
+            prod=prod+vector1[i]*vector2[i]
+        return prod
+
+    def norm(vector):
+        if len(vector)!=3:
+            print('This is only for a 3d vector')
+        return np.sqrt(vector[0]**2+vector[1]**2+vector[2]**2)
+    
+    #calculating the perpependicular component
+    pi0_1_3Mom_star_perp=cross_product(pp1[1:], pp3[1:])
+    pi0_2_3Mom_star_perp=cross_product(pp2[1:], pp4[1:])
+    
+    #Now normalise:
+    pi0_1_3Mom_star_perp=pi0_1_3Mom_star_perp/norm(pi0_1_3Mom_star_perp)
+    pi0_2_3Mom_star_perp=pi0_2_3Mom_star_perp/norm(pi0_2_3Mom_star_perp)
+    
+    #Calculating phi_star
+    phi_CP=np.arccos(dot_product(pi0_1_3Mom_star_perp,pi0_2_3Mom_star_perp))
+    
+    
+    #The energy ratios
+    y_T = np.array(yy1 * yy2)
+    
+    #Up to here I agree with Kingsley
+    print(phi_CP[:10],'\n')
+    
+    #The O variable
+    cross=np.cross(pi0_1_3Mom_star_perp.transpose(),pi0_2_3Mom_star_perp.transpose()).transpose()
+    bigO=dot_product(pp4[1:],cross)
+    
+    #perform the shift w.r.t. O* sign
+    phi_CP=np.where(bigO>=0, 2*np.pi-phi_CP, phi_CP)#, phi_CP)
+    
+    #additionnal shift that needs to be done do see differences between odd and even scenarios, with y=Energy ratios
+    #phi_CP=np.where(y_T<0, 2*np.pi-phi_CP, np.pi-phi_CP)
+    phi_CP=np.where(y_T>=0, np.where(phi_CP<np.pi, phi_CP+np.pi, phi_CP-np.pi), phi_CP)
+
+    return phi_CP
+
 def calculate_aco_angles(pi_1, pi_2, pi0_1, pi2_2, pi3_2, y1, y2, which_aco_angle='rhoa1-5'):
     p3 = Momentum4(pi_1[:, 0], pi_1[:, 1], pi_1[:, 2], pi_1[:, 3]) # p3 = charged pion 1
     p4 = Momentum4(pi_2[:, 0], pi_2[:, 1], pi_2[:, 2], pi_2[:, 3]) # p4 = charged pion 2
@@ -266,7 +327,9 @@ if __name__ == "__main__":
         # aco_angle_2 = calculate_aco_angles(np.concatenate([zeros_1, pi_1_boosted_rot], axis=1), np.concatenate([zeros_1, pi_2_boosted_rot], axis=1), np.concatenate([zeros_1, pi0_1_boosted_rot], axis=1), np.concatenate([zeros_1, pi2_2_boosted_rot], axis=1), np.concatenate([zeros_1, pi3_2_boosted_rot], axis=1), df['y_1_1'].to_numpy(), df['y_1_2'].to_numpy())
         
         # aco_angle_2 = calculate_aco_angles(padded(pi_1_boosted_rot), padded(pi_2_boosted_rot), padded(pi0_1_boosted_rot), padded(pi2_2_boosted_rot), padded(pi3_2_boosted_rot), df['y_1_1'].to_numpy(), df['y_1_2'].to_numpy())
-        aco_angle_danny = calc_aco_angles(padded(pi0_1_boosted_rot[:]), padded(pi_2_boosted_rot[:]), padded(pi_1_boosted_rot[:]), padded(pi2_2_boosted_rot[:]), df['y_1_1'].to_numpy(), df['y_1_2'].to_numpy())
+        # aco_angle_danny = calc_aco_angles(padded(pi0_1_boosted_rot[:]), padded(pi_2_boosted_rot[:]), padded(pi_1_boosted_rot[:]), padded(pi2_2_boosted_rot[:]), df['y_1_1'].to_numpy(), df['y_1_2'].to_numpy())
+        print('shape =', pi0_1_boosted_rot[:].shape)
+        aco_angle_danny = calc_aco_angles_alie(padded(pi0_1_boosted_rot[:]), padded(pi_2_boosted_rot[:]), padded(pi_1_boosted_rot[:]), padded(pi2_2_boosted_rot[:]), df['y_1_1'].to_numpy(), df['y_1_2'].to_numpy())
         aco_angle_2 = aco_angle_danny
         
         with open('rhoa1_aco_angle_calc.txt', 'w') as f:

@@ -7,15 +7,15 @@ import random
 import numpy as np
 import datetime
 import kerastuner as kt
-seed_value = 1
-# 1. Set the `PYTHONHASHSEED` environment variable at a fixed value
-os.environ['PYTHONHASHSEED'] = str(seed_value)
-# 2. Set the `python` built-in pseudo-random generator at a fixed value
-random.seed(seed_value)
-# 3. Set the `numpy` pseudo-random generator at a fixed value
-np.random.seed(seed_value)
-# 4. Set the `tensorflow` pseudo-random generator at a fixed value
-tf.compat.v1.set_random_seed(seed_value)
+# seed_value = 1
+# # 1. Set the `PYTHONHASHSEED` environment variable at a fixed value
+# os.environ['PYTHONHASHSEED'] = str(seed_value)
+# # 2. Set the `python` built-in pseudo-random generator at a fixed value
+# random.seed(seed_value)
+# # 3. Set the `numpy` pseudo-random generator at a fixed value
+# np.random.seed(seed_value)
+# # 4. Set the `tensorflow` pseudo-random generator at a fixed value
+# tf.compat.v1.set_random_seed(seed_value)
 
 
 class NeuralNetwork:
@@ -256,10 +256,16 @@ if __name__ == '__main__':
         # configs = [1,2,3,4,5,6]
         # NN.runMultiple(configs, epochs=1, batch_size=10000)
         NN.runHPTuning(3, read=True, from_pickle=True, epochs=1, tuner_epochs=1)
-    
+
     else: # if we are on Kristof's computer
         # NN = NeuralNetwork(channel='rho_rho', binary=True, write_filename='NN_output', show_graph=False)
         NN = NeuralNetwork(channel='rho_a1', binary=True, write_filename='NN_output', show_graph=False)
         # NN.run(3, read=True, from_pickle=True, epochs=25, batch_size=10000)
         # NN.run(4, read=False, from_pickle=False, epochs=10, batch_size=10000)
-        NN.run(1, read=False, from_pickle=False, epochs=10, batch_size=10000)
+        for _ in range(7):
+            NN.run(1, read=False, from_pickle=False, epochs=10, batch_size=10000)
+            print()
+            print()
+            print('ITERATION', _, 'done')
+            print()
+            print()
