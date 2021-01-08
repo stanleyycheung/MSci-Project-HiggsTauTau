@@ -194,7 +194,7 @@ class NeuralNetwork:
         with open(file, 'a+') as f:
             print(f'Writing HPs to {file}')
             time_str = datetime.datetime.now().strftime('%Y/%m/%d|%H:%M:%S')
-            message = f'{time_str},{auc},{self.config_num},{best_num_layers},{best_batch_norm},{best_dropout},{best_epochs},{best_batchsize},{search_mode},{grid_result.best_score_}\n'
+            message = f'{time_str},{auc},{self.config_num},{best_num_layers},{best_batch_norm},{best_dropout},{best_epochs},{best_batchsize},{search_mode},{grid_result.best_score_},{param_grid}\n'
             print(f"Message: {message}")
             f.write(message)
         model.save(f'./saved_models/grid_search_model_{config_num}_{self.channel}_{search_mode}/')
@@ -303,7 +303,7 @@ class NeuralNetwork:
             config_str = f'config{self.config_num}_{self.layers}_{self.epochs}_{self.batch_size}_{self.model_str}'
         return config_str
 
-    def seq_model(self, units=[300, 300], batch_norm=False, dropout=None):
+    def seq_model(self, units=(300, 300), batch_norm=False, dropout=None):
         self.model = tf.keras.models.Sequential()
         self.layers = len(units)
         for unit in units:
@@ -372,7 +372,7 @@ if __name__ == '__main__':
         # configs = [1,2,3,4,5,6]
         # NN.runMultiple(configs, epochs=1, batch_size=10000)
         # NN.runHPTuning(3, read=True, from_pickle=True, epochs=200, tuner_epochs=200, batch_size=8192, tuner_batch_size=8192, tuner_mode=1)
-        NN.runGridSearch(3, read=True, from_pickle=True, search_mode=1)
+        NN.runGridSearch(6, read=True, from_pickle=True, search_mode=1)
 
     else:  # if we are on Kristof's computer
         # NN = NeuralNetwork(channel='rho_rho', binary=True, write_filename='NN_output', show_graph=False)
