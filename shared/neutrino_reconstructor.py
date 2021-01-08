@@ -45,7 +45,7 @@ class NeutrinoReconstructor:
         return pd.read_pickle(f'{self.saved_df_dir}/rho_rho/df_rho_rho.pkl')
 
     def runAlphaReconstructor(self, termination=10000):
-        load_alpha = False
+        load_alpha = True
         df_reco = self.loadRecoData(skip=load_alpha)
         df = self.loadBRData()
         AC = AlphaCalculator(df_reco, self.m_higgs,
