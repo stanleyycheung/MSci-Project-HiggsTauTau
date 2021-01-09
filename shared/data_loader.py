@@ -130,7 +130,9 @@ class DataLoader:
         pi_1_boosted_rot, pi_2_boosted_rot = [], []
         pi0_1_boosted_rot, pi0_2_boosted_rot = [], []
         rho_1_boosted_rot, rho_2_boosted_rot = [], []
-        want_rotations = True
+        
+        want_rotations = True # !!! should be an input parameter
+        
         if want_rotations:
             for i in range(pi_1_boosted[:].shape[1]):
                 rot_mat = self.rotation_matrix_from_vectors(rho_1_boosted[1:, i], [0, 0, 1])
@@ -162,26 +164,41 @@ class DataLoader:
         # print(padded(pi0_1_boosted_rot[:]).shape)
         # print(df['y_1_1'].to_numpy().shape)
         
-        print('df[y_1_1].shape =', df['y_1_1'].shape)
-        print('pi0_1_boosted_rot[:].shape =', pi0_1_boosted_rot[:].shape)
-        print('padded(pi0_1_boosted_rot[:]).shape =', padded(pi0_1_boosted_rot[:]).shape)
-        # aco_angle_1_calc = self.calc_aco_angles(padded(pi0_1_boosted_rot[:]), padded(pi0_2_boosted_rot[:]), padded(pi_1_boosted_rot[:]), padded(pi_2_boosted_rot[:]), df['y_1_1'].to_numpy(), df['y_1_2'].to_numpy())
-        print('pi0_1_boosted_rot[:]', pi0_1_boosted_rot[:10, :])
+        # print('df[y_1_1].shape =', df['y_1_1'].shape)
+        # print('pi0_1_boosted_rot[:].shape =', pi0_1_boosted_rot[:].shape)
+        # print('padded(pi0_1_boosted_rot[:]).shape =', padded(pi0_1_boosted_rot[:]).shape)
+        # # aco_angle_1_calc = self.calc_aco_angles(padded(pi0_1_boosted_rot[:]), padded(pi0_2_boosted_rot[:]), padded(pi_1_boosted_rot[:]), padded(pi_2_boosted_rot[:]), df['y_1_1'].to_numpy(), df['y_1_2'].to_numpy())
+        # print('pi0_1_boosted_rot[:]', pi0_1_boosted_rot[:10, :])
         aco_angle_1_calc = self.calc_aco_angles_alie(padded(pi0_1_boosted_rot[:]), padded(pi0_2_boosted_rot[:]), padded(pi_1_boosted_rot[:]), padded(pi_2_boosted_rot[:]), df['y_1_1'].to_numpy(), df['y_1_2'].to_numpy())
         
-        with open('rhorho_aco_angle_calc.txt', 'w') as f:
-            f.write('\n'.join([str(x) for x in aco_angle_1_calc[:20]]))
-        with open('rhorho_aco_angle_given.txt', 'w') as f:
-            f.write('\n'.join([str(x) for x in df['aco_angle_1'].to_numpy()[:20]]))
-        print('correct phi stars:', np.sum(np.abs(aco_angle_1_calc - df['aco_angle_1']) < 0.01))
-        print('number of phi stars:', np.sum(np.array(aco_angle_1_calc) < np.inf))
+        # with open('rhorho_aco_angle_calc.txt', 'w') as f:
+        #     f.write('\n'.join([str(x) for x in aco_angle_1_calc[:20]]))
+        # with open('rhorho_aco_angle_given.txt', 'w') as f:
+        #     f.write('\n'.join([str(x) for x in df['aco_angle_1'].to_numpy()[:20]]))
+        # print('correct phi stars:', np.sum(np.abs(aco_angle_1_calc - df['aco_angle_1']) < 0.01))
+        # print('number of phi stars:', np.sum(np.array(aco_angle_1_calc) < np.inf))
         
-        plt.figure(12)
-        aco_angle_1_calc_ps = aco_angle_1_calc[:len_df_ps]
-        aco_angle_1_calc_sm = aco_angle_1_calc[len_df_ps:]
-        plt.hist(aco_angle_1_calc_ps, bins=50, alpha=0.5)
-        plt.hist(aco_angle_1_calc_sm, bins=50, alpha=0.5)
-            
+        # plt.figure(12)
+        # aco_angle_1_calc_ps = aco_angle_1_calc[:len_df_ps]
+        # aco_angle_1_calc_sm = aco_angle_1_calc[len_df_ps:]
+        # plt.hist(aco_angle_1_calc_ps, bins=50, alpha=0.5)
+        # plt.hist(aco_angle_1_calc_sm, bins=50, alpha=0.5)
+        
+        # plt.figure(15)
+        # plt.title('filtered difference between given and calculated aco_angle')
+        # df_ps_aco = df['aco_angle_1'][:len_df_ps]
+        # df_sm_aco = df['aco_angle_1'][len_df_ps:]
+        # diff_ps = aco_angle_1_calc_ps - df_ps_aco.to_numpy()
+        # diff_sm = aco_angle_1_calc_sm - df_sm_aco.to_numpy()
+        # print('Number of insensible given values:', len([x for x in df_ps_aco if x>9000 or x<-9000]) + len([x for x in df_sm_aco if x>9000 or x<-9000]))
+        # print('Mean of insensible given values:', np.mean([x for x in df_ps_aco if x>9000 or x<-9000]))
+        # print('Number of calculated nans:', np.sum(np.isnan(aco_angle_1_calc)))
+        # print('Incorrect calculations:', np.sum(diff_ps>0.001) + np.sum(diff_sm>0.001))
+        # diff_ps = np.array([x for x in diff_ps if x<0.0015 and x>-0.0015])
+        # diff_sm = np.array([x for x in diff_sm if x<0.0015 and x>-0.0015])
+        # plt.hist(diff_ps, bins=50, alpha=0.5, range=[-1e-12, 1e-12])
+        # plt.hist(diff_sm, bins=50, alpha=0.5, range=[-1e-12, 1e-12])
+        
         df_inputs_data = {
             'pi_E_1_br': pi_1_boosted[0],
             'pi_px_1_br': pi_1_boosted_rot[:, 0],
@@ -484,20 +501,35 @@ class DataLoader:
             # WARNING! calculate_aco_angles takes the input arguments in a different order than calc_aco_angles
             # aco_angle_2 = self.calculate_aco_angles(padded(pi_1_boosted_rot), padded(pi_2_boosted_rot), padded(pi0_1_boosted_rot), padded(pi2_2_boosted_rot), padded(pi3_2_boosted_rot), df['y_1_1'].to_numpy(), df['y_1_2'].to_numpy())
             # the next line is the interesting one:
-            aco_angle_2 = self.calc_aco_angles_alie(padded(pi0_1_boosted_rot), padded(pi3_2_boosted_rot), padded(pi_1_boosted_rot), padded(pi_2_boosted_rot + pi2_2_boosted_rot), df['y_1_1'].to_numpy(), df['y_1_2'].to_numpy())
+            # aco_angle_2 = self.calc_aco_angles_alie(padded(pi0_1_boosted_rot), padded(pi3_2_boosted_rot), padded(pi_1_boosted_rot), padded(pi_2_boosted_rot + pi2_2_boosted_rot), df['y_1_1'].to_numpy(), df['y_1_2'].to_numpy())
             # aco_angle_danny = self.calc_aco_angles(padded(pi0_1_boosted_rot[:]), padded(pi_2_boosted_rot[:]), padded(pi_1_boosted_rot[:]), padded(pi2_2_boosted_rot[:]), df['y_1_1'].to_numpy(), df['y_1_2'].to_numpy())
-            # aco_angle_danny = self.calc_aco_angles_alie(padded(pi0_1_boosted_rot[:]), padded(pi_2_boosted_rot[:]), padded(pi_1_boosted_rot[:]), padded(pi2_2_boosted_rot[:]), df['y_1_1'].to_numpy(), df['y_1_2'].to_numpy())
-            # aco_angle_2 = aco_angle_danny
+            aco_angle_danny = self.calc_aco_angles_alie(padded(pi0_1_boosted_rot[:]), padded(pi_2_boosted_rot[:]), padded(pi_1_boosted_rot[:]), padded(pi2_2_boosted_rot[:]), df['y_1_1'].to_numpy(), df['y_1_2'].to_numpy())
+            aco_angle_2 = aco_angle_danny
             # aco_angle_danny = np.array(aco_angle_danny)
             aco_angle_2 = np.array(aco_angle_2)
             # aco_angle_danny[np.isnan(aco_angle_danny)] = np.pi
             aco_angle_2[np.isnan(aco_angle_2)] = np.pi
             
-            plt.figure(12)
-            aco_angle_2_ps = aco_angle_2[:len_df_ps]
-            aco_angle_2_sm = aco_angle_2[len_df_ps:]
-            plt.hist(aco_angle_2_ps, bins=50, alpha=0.5)
-            plt.hist(aco_angle_2_sm, bins=50, alpha=0.5)
+            # plt.figure(12)
+            # aco_angle_2_ps = aco_angle_2[:len_df_ps]
+            # aco_angle_2_sm = aco_angle_2[len_df_ps:]
+            # plt.hist(aco_angle_2_ps, bins=50, alpha=0.5)
+            # plt.hist(aco_angle_2_sm, bins=50, alpha=0.5)
+            
+            # plt.figure(15)
+            # plt.title('filtered difference between given and calculated aco_angle')
+            # df_ps_aco = df['aco_angle_1'][:len_df_ps]
+            # df_sm_aco = df['aco_angle_1'][len_df_ps:]
+            # diff_ps = aco_angle_2_ps - df_ps_aco.to_numpy()
+            # diff_sm = aco_angle_2_sm - df_sm_aco.to_numpy()
+            # print('Number of insensible given values:', len([x for x in df_ps_aco if x>9000 or x<-9000]) + len([x for x in df_sm_aco if x>9000 or x<-9000]))
+            # print('Mean of insensible given values:', np.mean([x for x in df_ps_aco if x>9000 or x<-9000]))
+            # print('Number of calculated nans:', np.sum(np.isnan(aco_angle_danny)))
+            # print('Incorrect calculations:', np.sum(diff_ps>0.001) + np.sum(diff_sm>0.001))
+            # diff_ps = np.array([x for x in diff_ps if x<0.0015 and x>-0.0015])
+            # diff_sm = np.array([x for x in diff_sm if x<0.0015 and x>-0.0015])
+            # plt.hist(diff_ps, bins=50, alpha=0.5)
+            # plt.hist(diff_sm, bins=50, alpha=0.5)
             
         else: # if don't want rotations:
             pi_1_boosted_rot = np.array(pi_1_boosted).T
@@ -512,6 +544,11 @@ class DataLoader:
         # print('correct phi stars:', np.sum(np.abs(aco_angle_2 - df['aco_angle_1']) < 0.01))
         # print('number of phi stars:', np.sum(np.array(aco_angle_2) < np.inf))
         # print('number of nans:', np.sum(np.isnan(aco_angle_2)))
+        pi_1_boosted_rot[np.isnan(pi_1_boosted_rot)] == np.mean(pi_1_boosted_rot)
+        pi_2_boosted_rot[np.isnan(pi_2_boosted_rot)] == np.mean(pi_2_boosted_rot)
+        pi0_1_boosted_rot[np.isnan(pi0_1_boosted_rot)] == np.mean(pi0_1_boosted_rot)
+        pi2_2_boosted_rot[np.isnan(pi2_2_boosted_rot)] == np.mean(pi2_2_boosted_rot)
+        pi3_2_boosted_rot[np.isnan(pi3_2_boosted_rot)] == np.mean(pi3_2_boosted_rot)
             
         df_inputs_data = {
             'pi_E_1_br': pi_1_boosted[0],
@@ -546,9 +583,10 @@ class DataLoader:
             'a1_px_br': a1_boosted_rot[:, 0],
             'a1_py_br': a1_boosted_rot[:, 1],
             'a1_pz_br': a1_boosted_rot[:, 2],
-            'aco_angle_1': df['aco_angle_1'],
+            # 'aco_angle_1': df['aco_angle_1'],
             # 'aco_angle_1': aco_angle_danny,
-            'aco_angle_2': aco_angle_2,
+            'aco_angle_1': aco_angle_2,
+            # 'aco_angle_2': aco_angle_2,
             'y_1_1': df['y_1_1'],
             'y_1_2': df['y_1_2'],
             'w_a': df.wt_cp_sm,
