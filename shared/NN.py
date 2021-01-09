@@ -255,6 +255,7 @@ class NeuralNetwork:
         X_train, X_test, y_train, y_test = CL.configTrainTestData(self.config_num, self.binary)
         return X_train, X_test, y_train, y_test
 
+
     def train(self, X_train, X_test, y_train, y_test, epochs=50, batch_size=1024, patience=10, save=False, verbose=1):
         self.epochs = epochs
         self.batch_size = batch_size
@@ -377,5 +378,13 @@ if __name__ == '__main__':
     else:  # if we are on Kristof's computer
         # NN = NeuralNetwork(channel='rho_rho', binary=True, write_filename='NN_output', show_graph=False)
         NN = NeuralNetwork(channel='rho_a1', binary=True, write_filename='NN_output', show_graph=False)
-        # NN.run(4, read=True, from_pickle=True, epochs=10, batch_size=10000)
+        # NN.run(3, read=True, from_pickle=True, epochs=25, batch_size=10000)
         NN.run(4, read=False, from_pickle=False, epochs=10, batch_size=10000)
+        
+        # for _ in range(7):
+        #     NN.run(1, read=False, from_pickle=False, epochs=10, batch_size=10000)
+        #     print()
+        #     print()
+        #     print('ITERATION', _, 'done')
+        #     print()
+        #     print()
