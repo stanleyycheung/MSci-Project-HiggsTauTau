@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 # plt.rcParams.update({'font.size': 14, "figure.figsize": (10,6)})
 
-def profileplot(x, y, xlabel, ylabel, bins=100, mode=1):
+def profileplot(x, y, xlabel='', ylabel='', bins=100, mode=0):
     means_result = sps.binned_statistic(x, [y, y**2], bins=bins, statistic='mean')
     means, means2 = means_result.statistic
     standard_deviations = np.sqrt(means2 - means**2)
@@ -45,3 +45,16 @@ def profileplot(x, y, xlabel, ylabel, bins=100, mode=1):
     plt.ylabel(ylabel)
     plt.tight_layout()
     
+
+def profileplot_plain(x, y, xlabel='', ylabel='', bins=100, plot_range=None):
+    means_result = sps.binned_statistic(x, [y, y**2], bins=bins, statistic='mean', range=plot_range)
+    means, means2 = means_result.statistic
+    standard_deviations = np.sqrt(means2 - means**2)
+    bin_edges = means_result.bin_edges
+    bin_centers = (bin_edges[:-1] + bin_edges[1:])/2.
+    plt.figure()
+    plt.errorbar(x=bin_centers, y=means, yerr=standard_deviations, linestyle='none', marker='.', capsize=2)
+    plt.grid()
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.tight_layout()
