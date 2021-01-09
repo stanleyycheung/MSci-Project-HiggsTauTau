@@ -108,7 +108,7 @@ class DataLoader:
             df_inputs.to_pickle(pickle_file_name+'.pkl')
         return df_inputs
 
-    def calculateRhoRhoData(self, df, len_df_ps):
+    def calculateRhoRhoData(self, df, len_df_ps=0):
         pi_1 = Momentum4(df['pi_E_1'], df["pi_px_1"], df["pi_py_1"], df["pi_pz_1"])
         pi_2 = Momentum4(df['pi_E_2'], df["pi_px_2"], df["pi_py_2"], df["pi_pz_2"])
         pi0_1 = Momentum4(df['pi0_E_1'], df["pi0_px_1"], df["pi0_py_1"], df["pi0_pz_1"])
@@ -390,7 +390,7 @@ class DataLoader:
     
         return phi_CP    
 
-    def calculateRhoA1Data(self, df, len_df_ps):
+    def calculateRhoA1Data(self, df, len_df_ps=0):
         # TODO: kristof implement:
         # - under construction!
         # - need to add other aco_angles calculation code
