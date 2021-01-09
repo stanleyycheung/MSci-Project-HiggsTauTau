@@ -19,28 +19,42 @@ class DataLoader:
     To do:
     - Add in functions to read gen data
     - Add in neutrino data
+
+    Note:
+    - Hardcoded gen level variables
     """
 
     def __init__(self, variables, channel, input_df_save_dir='./input_df'):
+        """
+        DataLoader should be near stateless, exceptions of the channel and variables needed to load
+        Other instance variables should only deal with load/save directories
+        """
         self.channel = channel
         self.variables = variables
-        self.reco_root_path = "./MVAFILE_AllHiggs_tt_new.root"
+        self.input_df_save_dir = input_df_save_dir
+        self.reco_root_path = "./MVAFILE_AllHiggs_tt.root"
+        self.gen_root_path = "./MVAFILE_GEN_AllHiggs_tt.root"
         if os.path.exists("C:\\Users\\krist\\Downloads\\MVAFILE_ALLHiggs_tt_new.root"):
             print('Using Kristof\'s .root file')
             self.reco_root_path = "C:\\Users\\krist\\Downloads\\MVAFILE_ALLHiggs_tt_new.root"
         self.reco_df_path = './df_tt'
-        self.input_df_save_dir = input_df_save_dir
-        self.i = 0
+        self.gen_df_path = './df_tt_gen'
 
     def loadRecoData(self, binary):
-        print('Reading df pkl file')
-        pickle_file_name = f'{self.input_df_save_dir}/input_{self.channel}'
+        """
+        Loads the BR df directly from pickle - no need to read from .root, boost and rotate events
+        """
+        print('Reading reco df pkl file')
+        pickle_file_name = f'{self.input_df_save_dir}_reco/input_{self.channel}'
         if binary:
             pickle_file_name += '_b'
         df_inputs = pd.read_pickle(pickle_file_name+'.pkl')
         return df_inputs
 
-    def createRecoData(self, binary,  from_pickle=True, addons=[]):
+    def createRecoData(self, binary, from_pickle=True, addons=[]):
+        """
+        Creates the input (reco) data for the NN either from .root file or a previously saved .pkl file
+        """
         print('Loading .root info')
         df = self.readRecoData(from_pickle=from_pickle)
         print('Cleaning data')
@@ -50,6 +64,9 @@ class DataLoader:
         return df_inputs
 
     def readRecoData(self, from_pickle=False):
+        """
+        Reads the reco root file, can save contents into .pkl for fast read/write abilities
+        """
         if not from_pickle:
             tree_tt = uproot.open(self.reco_root_path)["ntuple"]
             # tree_et = uproot.open("/eos/user/s/stcheung/SWAN_projects/Masters_CP/MVAFILE_AllHiggs_et.root")["ntuple"]
@@ -60,7 +77,46 @@ class DataLoader:
             df = pd.read_pickle(f"{self.reco_df_path}_{self.channel}.pkl")
         return df
 
+    def readGenData(self, from_pickle=False):
+        """
+        Reads the gen root file, can save contents into .pkl for fast read/write abilities
+        Note: hardcoded variables for gen level 
+        """
+        variables_gen = [
+            "wt_cp_sm", "wt_cp_ps", "wt_cp_mm", "rand",
+            "dm_1", "dm_2",
+            "pi_E_1", "pi_px_1", "pi_py_1", "pi_pz_1", # charged pion 1
+            "pi_E_2", "pi_px_2", "pi_py_2", "pi_pz_2", # charged pion 2
+            "pi0_E_1", "pi0_px_1", "pi0_py_1", "pi0_pz_1", # neutral pion 1
+            "pi0_E_2", "pi0_px_2", "pi0_py_2", "pi0_pz_2", # neutral pion 2,
+            'metx', 'mety',
+            'sv_x_1', 'sv_y_1', 'sv_z_1', 'sv_x_2', 'sv_y_2', 'sv_z_2',]
+        if not from_pickle:
+            tree_tt = uproot.open(self.gen_root_path)["ntuple"]
+            df = tree_tt.pandas.df(variables_gen)
+            df.to_pickle(f"{self.gen_df_path}_{self.channel}.pkl")
+        else:
+            df = pd.read_pickle(f"{self.gen_df_path}_{self.channel}.pkl")
+        return df
+
+    def cleanGenData(self, df):
+        """
+        Selects correct channel for gen data
+        """
+        if self.channel == 'rho_rho':
+            df_clean = df[(df['dm_1']==1) & (df['dm_2']==1)]
+        elif self.channel == 'rho_a1':
+            df_clean = df[(df['dm_1']==1) & (df['dm_2']==10)]
+        elif self.channel == 'a1_a1':
+            df_clean = df[(df['dm_1']==10) & (df['dm_2']==10)]
+        else:
+            raise ValueError('Incorrect channel inputted')
+        return df_clean
+
     def cleanRecoData(self, df):
+        """
+        Selects correct channel for reco data, whilst seperating sm/ps distributions as well
+        """
         if self.channel == 'rho_rho':
             # select only rho-rho events
             df_clean = df[(df['mva_dm_1'] == 1) & (df['mva_dm_2'] == 1) & (df["tau_decay_mode_1"] == 1) & (df["tau_decay_mode_2"] == 1)]
@@ -82,12 +138,17 @@ class DataLoader:
         return df_clean, df_rho_ps, df_rho_sm
 
     def createTrainTestData(self, df, df_ps, df_sm, binary, addons=[], save=True):
+        """
+        Runs to create df with all NN input data, both test and train
+        """
         if binary:
             print('In binary mode')
             y_sm = pd.DataFrame(np.ones(df_sm.shape[0]))
             y_ps = pd.DataFrame(np.zeros(df_ps.shape[0]))
             y = pd.concat([y_sm, y_ps]).to_numpy()
             df = pd.concat([df_sm, df_ps])
+        else:
+            y = None
         if self.channel == 'rho_rho':
             df_inputs_data, boost = self.calculateRhoRhoData(df, len(df_ps))
         elif self.channel == 'rho_a1':
@@ -109,6 +170,9 @@ class DataLoader:
         return df_inputs
 
     def calculateRhoRhoData(self, df, len_df_ps=0):
+        """
+        Applies boosting, rotations and calculations to rho_rho channel events
+        """
         pi_1 = Momentum4(df['pi_E_1'], df["pi_px_1"], df["pi_py_1"], df["pi_pz_1"])
         pi_2 = Momentum4(df['pi_E_2'], df["pi_px_2"], df["pi_py_2"], df["pi_pz_2"])
         pi0_1 = Momentum4(df['pi0_E_1'], df["pi0_px_1"], df["pi0_py_1"], df["pi0_pz_1"])
@@ -610,6 +674,8 @@ class DataLoader:
         """
         if kwargs:
             boost = kwargs["boost"]
+        else:
+            boost = None
         for addon in addons:
             if addon == 'met' and kwargs:
                 print('Addon MET loaded')
@@ -619,6 +685,9 @@ class DataLoader:
                 df_inputs['E_miss_y'] = E_miss_y
 
     def addonMET(self, df, boost):
+        """
+        Addon configuration for the MET
+        """
         N = len(df['metx'])
         met_x = Momentum4(df['metx'], np.zeros(N), np.zeros(N), np.zeros(N))
         met_y = Momentum4(df['mety'], np.zeros(N), np.zeros(N), np.zeros(N))
@@ -644,6 +713,15 @@ class DataLoader:
         return rotation_matrix
 
 
+    def createBRWithGen(self, binary):
+        # pickle_file_name = f'{self.input_df_save_dir}_reco/input_{self.channel}'
+        # if binary:
+            # pickle_file_name += '_b'
+        # df_reco_inputs = pd.read_pickle(pickle_file_name+'.pkl')
+        # print(df_reco_inputs.columns)
+        df_gen = self.cleanGenData(self.readGenData(from_pickle=True))
+        print(df_gen.columns)
+
 if __name__ == '__main__':
     variables = [
         "wt_cp_sm", "wt_cp_ps", "wt_cp_mm", "rand",
@@ -661,4 +739,6 @@ if __name__ == '__main__':
         #             'sv_x_1', 'sv_y_1', 'sv_z_1', 'sv_x_2', 'sv_y_2','sv_z_2'
     ]
     DL = DataLoader(variables, 'rho_rho')
-    DL.createRecoData(binary=True, addons=['met'])
+    # DL.createRecoData(binary=True, addons=['met'])
+    # DL.readGenData()
+    DL.createBRWithGen(binary=True)

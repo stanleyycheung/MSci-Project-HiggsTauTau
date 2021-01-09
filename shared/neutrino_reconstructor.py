@@ -11,9 +11,9 @@ class NeutrinoReconstructor:
     def __init__(self, seed=1):
         np.random.seed(seed)
         self.seed = seed
-        self.reco_data_dir = './df_tt.pkl'
-        self.gen_data_dir = './df_tt_gen.pkl'
-        self.saved_df_dir = './df_saved'
+        self.reco_data_dir = './df_tt_rho_rho.pkl'
+        self.gen_data_dir = './df_tt_gen_rho_rho.pkl'
+        self.saved_df_dir = '../stanley/df_saved'
         self.m_higgs = 125.18
         self.m_tau = 1.776
 
@@ -41,13 +41,14 @@ class NeutrinoReconstructor:
         self.df = df.drop(["dm_1", "dm_2", "wt_cp_sm", "wt_cp_ps",
                            "wt_cp_mm", "rand"], axis=1).reset_index(drop=True)
 
-    def loadBRData(self):
+    def loadBRGenData(self):
         return pd.read_pickle(f'{self.saved_df_dir}/rho_rho/df_rho_rho.pkl')
 
     def runAlphaReconstructor(self, termination=10000):
-        load_alpha = False
+        # to include high alpha constraints
+        load_alpha = True
         df_reco = self.loadRecoData(skip=load_alpha)
-        df = self.loadBRData()
+        df = self.loadBRGenData()
         AC = AlphaCalculator(df_reco, self.m_higgs,
                              self.m_tau, load=load_alpha, seed=self.seed)
         alpha_1, alpha_2 = AC.runAlpha(termination=termination)
@@ -78,11 +79,10 @@ class NeutrinoReconstructor:
         df_red.dropna(inplace=True)
         df_red.name = f'{termination}'
         print(f'Rejected {(len(df.index)-len(df_red.index))/len(df_red.index)*100:.4f}% events due to physical reasons')
-        AC.checkAlphaPz(df_red, df)
+        # AC.checkAlphaPz(df_red)
+        AC.profileAlphaPz(df_red)
         return df, df_red
 
-    def plotDistribution(self):
-        pass
 
     def evaluateNegative(self, var):
         print(f"Fraction of < 0: {(var<0).sum()/len(var):.3f}")

@@ -132,6 +132,7 @@ dmypy.json
 .vscode
 *.root
 *.png
+*.PNG
 *.zip
 *.pkl
 *.npy
@@ -141,6 +142,15 @@ stanley/tuning/
 stanley/logs/
 shared/tuning/
 shared/logs/
+# ignore cuda files
 shared/cuda/
-env/
+# ignore NN output txt files
+shared/NN_output/*.txt
+shared/hp_model_1
+# ignore venv folder
+shared/env/
+shared/msci/
+shared/saved_models/
+# ignore bash scripts and script outputs
 *.sh
+*.sh.*
