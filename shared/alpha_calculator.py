@@ -5,12 +5,13 @@ import matplotlib.pyplot as plt
 from utils import profileplot, sps, profileplot_plain
 
 class AlphaCalculator:
-    def __init__(self, df_reco, m_higgs, m_tau, load=False, seed=1):
+    def __init__(self, df_reco, df_br, m_higgs, m_tau, load=False, seed=1):
         np.random.seed(seed)
         self.m_higgs = m_higgs
         self.m_tau = m_tau
         self.pickle_dir = './df_tt_rho_rho.pkl'
         self.df = df_reco
+        self.df_br = df_br
         self.load = load
         self.alpha_save_dir = '../stanley/alpha_analysis'
 
@@ -52,7 +53,8 @@ class AlphaCalculator:
 
     def getAlpha(self, E_miss_x, E_miss_y, rho_1, rho_2, mean, cov, mode=1, termination=1000):
         alpha_1, alpha_2 = self.calcAlpha(E_miss_x, E_miss_y, rho_1, rho_2, mode)
-        if alpha_1 < 0 or alpha_2 < 0:
+        p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2 = self.getReconstructedInfo(alpha_1, alpha_2)
+        if alpha_1 < 0 or alpha_2 < 0 or np.abs(E_nu_1) < np.abs(p_z_nu_1) or np.abs(E_nu_2) < np.abs(p_z_nu_2):
             E_miss_gen = np.random.multivariate_normal(mean, cov, termination)
         else:
             return alpha_1, alpha_2
@@ -60,9 +62,24 @@ class AlphaCalculator:
             E_miss_x, E_miss_y = E_miss_gen[i]
             alpha_1, alpha_2 = self.calcAlpha(E_miss_x, E_miss_y, rho_1, rho_2, mode)
             # print(E_miss_x, E_miss_y, alpha_1, alpha_2)
-            if alpha_1 > 0 and alpha_2 > 0:
+            p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2 = self.getReconstructedInfo(alpha_1, alpha_2)
+            if alpha_1 > 0 and alpha_2 > 0 or np.abs(E_nu_1) < np.abs(p_z_nu_1) or np.abs(E_nu_2) < np.abs(p_z_nu_2):
                 return alpha_1, alpha_2
         return -1, -1
+
+    def getReconstructedInfo(self, alpha_1, alpha_2):
+        """
+        Reconstructs the momenta of neutrinos in the BR frame
+        """
+        # doesnt work currently - returns an array
+        p_z_nu_1 = alpha_1*(self.df_br.pi_pz_1_br + self.df_br.pi0_pz_1_br)
+        p_z_nu_2 = alpha_2*self.df_br.pi_pz_2_br + self.df_br.pi0_pz_2_br
+        E_nu_1 = (self.m_tau**2 - (self.df_br.pi_E_1_br+self.df_br.pi0_E_1_br)**2 + (self.df_br.pi_pz_1_br + self.df_br.pi0_pz_1_br)
+                  ** 2 + 2*p_z_nu_1*(self.df_br.pi_pz_1_br + self.df_br.pi0_pz_1_br))/(2*(self.df_br.pi_E_1_br+self.df_br.pi0_E_1_br))
+        E_nu_2 = (self.m_tau**2 - (self.df_br.pi_E_2_br+self.df_br.pi0_E_2_br)**2 + (self.df_br.pi_pz_2_br + self.df_br.pi0_pz_2_br)
+                  ** 2 + 2*p_z_nu_2*(self.df_br.pi_pz_2_br + self.df_br.pi0_pz_2_br))/(2*(self.df_br.pi_E_2_br+self.df_br.pi0_E_2_br))
+        return p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2
+
 
     def profileAlphaPz(self, df_red, termination=100):
         # remove NaN values

@@ -18,6 +18,9 @@ class NeutrinoReconstructor:
         self.m_tau = 1.776
 
     def loadRecoData(self, channel='rho_rho', skip=False):
+        """
+        Loads the .root information of events in the laboratory frame
+        """
         if skip:
             return None
         df_tt = pd.read_pickle(self.reco_data_dir)
@@ -30,27 +33,24 @@ class NeutrinoReconstructor:
                            "wt_cp_sm", "wt_cp_ps", "wt_cp_mm", "rand"], axis=1).reset_index(drop=True)
         return df_reco
 
-    def loadGenData(self, channel='rho_rho', skip=False):
-        if skip:
-            return None
-        df_tt = pd.read_pickle(self.gen_data_dir)
-        df = None
-        if channel == 'rho_rho':
-            df = df_tt[(df_tt['dm_1'] == 1) & (df_tt['dm_2'] == 1)]
-        # TODO: To add other channels
-        self.df = df.drop(["dm_1", "dm_2", "wt_cp_sm", "wt_cp_ps",
-                           "wt_cp_mm", "rand"], axis=1).reset_index(drop=True)
 
     def loadBRGenData(self):
         return pd.read_pickle(f'{self.saved_df_dir}/rho_rho/df_rho_rho.pkl')
 
     def runAlphaReconstructor(self, termination=10000):
+        """
+        Calculates the alphas and reconstructs neutrino momenta
+        """
         # to include high alpha constraints
         load_alpha = True
         df_reco = self.loadRecoData(skip=load_alpha)
         df = self.loadBRGenData()
-        AC = AlphaCalculator(df_reco, self.m_higgs,
+        AC = AlphaCalculator(df_reco, df, self.m_higgs,
                              self.m_tau, load=load_alpha, seed=self.seed)
+
+        # print(df.info())
+        # print(df_reco.info())
+        # return
         alpha_1, alpha_2 = AC.runAlpha(termination=termination)
         # print(alpha_1, alpha_2)
         p_z_nu_1 = alpha_1*(df.pi_pz_1_br + df.pi0_pz_1_br)
@@ -87,6 +87,17 @@ class NeutrinoReconstructor:
     def evaluateNegative(self, var):
         print(f"Fraction of < 0: {(var<0).sum()/len(var):.3f}")
 
+
+    # def loadGenData(self, channel='rho_rho', skip=False):
+    #     if skip:
+    #         return None
+    #     df_tt = pd.read_pickle(self.gen_data_dir)
+    #     df = None
+    #     if channel == 'rho_rho':
+    #         df = df_tt[(df_tt['dm_1'] == 1) & (df_tt['dm_2'] == 1)]
+    #     # TODO: To add other channels
+    #     self.df = df.drop(["dm_1", "dm_2", "wt_cp_sm", "wt_cp_ps",
+    #                        "wt_cp_mm", "rand"], axis=1).reset_index(drop=True)
 
 if __name__ == '__main__':
     NR = NeutrinoReconstructor()
