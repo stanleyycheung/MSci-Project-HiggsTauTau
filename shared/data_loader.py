@@ -45,7 +45,7 @@ class DataLoader:
         Loads the BR df directly from pickle - no need to read from .root, boost and rotate events
         """
         print('Reading reco df pkl file')
-        pickle_file_name = f'{self.input_df_save_dir}_reco/input_{self.channel}'
+        pickle_file_name = f'{self.input_df_save_dir}/input_{self.channel}'
         if binary:
             pickle_file_name += '_b'
         df_inputs = pd.read_pickle(pickle_file_name+'.pkl')

@@ -129,6 +129,11 @@ class NeuralNetwork:
         # model.save('./hp_model_1/')
 
     def runGridSearch(self, config_num, read=True, from_pickle=True, addons=[], search_mode=0):
+        """
+        Runs grid search on NN with given config_num
+        search_mode = 0: GridSearch
+        search_mode = 1: RandomSearch
+        """
         df = self.initalize(addons, read=read, from_pickle=from_pickle)
         X_train, X_test, y_train, y_test = self.configure(df, config_num)
         print(f'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Grid searching on config {config_num}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
@@ -148,16 +153,16 @@ class NeuralNetwork:
             )
             grid = GridSearchCV(estimator=model, param_grid=param_grid, cv=2, verbose=2, scoring='roc_auc')
         elif search_mode == 1:
-            layers = np.arange(1,11)
-            batch_norms = [True, False]
-            dropouts = [None, 0.1, 0.2, 0.3, 0.4, 0.5]
-            epochs = [50, 100, 200, 500]
-            batch_sizes = [2**i for i in range(8, 19)]
-            # layers = [2,3,4,5,6]
+            # layers = np.arange(1,11)
             # batch_norms = [True, False]
-            # dropouts = [None, 0.2]
-            # epochs = [100, 200, 500]
-            # batch_sizes = [8192, 16384, 65536, 131072]
+            # dropouts = [None, 0.1, 0.2, 0.3, 0.4, 0.5]
+            # epochs = [50, 100, 200, 500]
+            # batch_sizes = [2**i for i in range(8, 19)]
+            layers = [2,3]
+            batch_norms = [True, False]
+            dropouts = [None, 0.2]
+            epochs = [200, 500]
+            batch_sizes = [8192, 16384, 65536, 131072]
             param_grid = dict(
                 layers=layers,
                 batch_norm=batch_norms,
