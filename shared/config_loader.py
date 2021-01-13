@@ -17,6 +17,9 @@ class ConfigLoader:
         self.channel = channel
 
     def chooseConfigMap(self, mode=0):
+        """
+        Chooses which configurations of inputs to load to NN training
+        """
         # TODO: fail safe for extra information
         if self.channel == 'rho_rho':
             pi_1_transformed = np.c_[self.df.pi_E_1_br, self.df.pi_px_1_br, self.df.pi_py_1_br, self.df.pi_pz_1_br, ]

@@ -24,7 +24,7 @@ class DataLoader:
     - Hardcoded gen level variables
     """
 
-    def __init__(self, variables, channel, input_df_save_dir='./input_df'):
+    def __init__(self, variables, channel, input_df_save_dir='./input_df_reco'):
         """
         DataLoader should be near stateless, exceptions of the channel and variables needed to load
         Other instance variables should only deal with load/save directories
@@ -45,10 +45,11 @@ class DataLoader:
         Loads the BR df directly from pickle - no need to read from .root, boost and rotate events
         """
         print('Reading reco df pkl file')
-        pickle_file_name = f'{self.input_df_save_dir}_reco/input_{self.channel}'
+        pickle_file_name = f'{self.input_df_save_dir}/input_{self.channel}'
         if binary:
             pickle_file_name += '_b'
         df_inputs = pd.read_pickle(pickle_file_name+'.pkl')
+        print(pickle_file_name)
         return df_inputs
 
     def createRecoData(self, binary, from_pickle=True, addons=[]):
@@ -137,16 +138,24 @@ class DataLoader:
             raise ValueError('Incorrect channel inputted')
         return df_clean, df_rho_ps, df_rho_sm
 
+    def augmentDfToBinary(self, df_ps, df_sm):
+        y_sm = pd.DataFrame(np.ones(df_sm.shape[0]))
+        y_ps = pd.DataFrame(np.zeros(df_ps.shape[0]))
+        y = pd.concat([y_sm, y_ps]).to_numpy()
+        df = pd.concat([df_sm, df_ps]).reset_index(drop=True)
+        return df, y
+
     def createTrainTestData(self, df, df_ps, df_sm, binary, addons=[], save=True):
         """
         Runs to create df with all NN input data, both test and train
         """
         if binary:
             print('In binary mode')
-            y_sm = pd.DataFrame(np.ones(df_sm.shape[0]))
-            y_ps = pd.DataFrame(np.zeros(df_ps.shape[0]))
-            y = pd.concat([y_sm, y_ps]).to_numpy()
-            df = pd.concat([df_sm, df_ps])
+            # y_sm = pd.DataFrame(np.ones(df_sm.shape[0]))
+            # y_ps = pd.DataFrame(np.zeros(df_ps.shape[0]))
+            # y = pd.concat([y_sm, y_ps]).to_numpy()
+            # df = pd.concat([df_sm, df_ps])
+            df, y = self.augmentDfToBinary(df_ps, df_sm)
         else:
             y = None
         if self.channel == 'rho_rho':
@@ -809,6 +818,7 @@ class DataLoader:
 
 
     def createBRWithGen(self, binary):
+        # TODO: to delete
         # pickle_file_name = f'{self.input_df_save_dir}_reco/input_{self.channel}'
         # if binary:
             # pickle_file_name += '_b'
@@ -818,12 +828,11 @@ class DataLoader:
         print(df_gen.columns)
 
 if __name__ == '__main__':
-    variables = [
+    variables_rho_rho = [
         "wt_cp_sm", "wt_cp_ps", "wt_cp_mm", "rand",
-        "aco_angle_1", "aco_angle_5", "aco_angle_6", "aco_angle_7",
+        "aco_angle_1",
         "mva_dm_1", "mva_dm_2",
         "tau_decay_mode_1", "tau_decay_mode_2",
-        "ip_x_1", "ip_y_1", "ip_z_1", "ip_x_2", "ip_y_2", "ip_z_2",  # ignore impact parameter for now
         "pi_E_1", "pi_px_1", "pi_py_1", "pi_pz_1",
         "pi_E_2", "pi_px_2", "pi_py_2", "pi_pz_2",
         "pi0_E_1", "pi0_px_1", "pi0_py_1", "pi0_pz_1",
@@ -831,9 +840,10 @@ if __name__ == '__main__':
         "y_1_1", "y_1_2",
         'met', 'metx', 'mety',
         'metcov00', 'metcov01', 'metcov10', 'metcov11',
-        #             'sv_x_1', 'sv_y_1', 'sv_z_1', 'sv_x_2', 'sv_y_2','sv_z_2'
+        "gen_nu_p_1", "gen_nu_phi_1", "gen_nu_eta_1", #leading neutrino, gen level
+        "gen_nu_p_2", "gen_nu_phi_2", "gen_nu_eta_2" #subleading neutrino, gen level
     ]
-    DL = DataLoader(variables, 'rho_rho')
+    DL = DataLoader(variables_rho_rho, 'rho_rho')
     # DL.createRecoData(binary=True, addons=['met'])
     # DL.readGenData()
-    DL.createBRWithGen(binary=True)
+    DL.createBRWithGen(binary=False)
