@@ -25,11 +25,22 @@ class AlphaCalculator:
                            "wt_cp_sm", "wt_cp_ps", "wt_cp_mm", "rand"], axis=1).reset_index(drop=True)
 
     def runAlpha(self, termination=1000):
+        """
+        Runs alpha calculation, and automatically saves them
+        Return type: alpha_1, alpha_2, p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2
+        """
         if self.load:
             self.alpha_1 = np.load(f'{self.alpha_save_dir}/alpha_1_{termination}.npy', allow_pickle=True)
             self.alpha_2 = np.load(f'{self.alpha_save_dir}/alpha_2_{termination}.npy', allow_pickle=True)
-            return self.alpha_1, self.alpha_2
+            p_z_nu_1 = self.alpha_1*(self.df_br.pi_pz_1_br + self.df_br.pi0_pz_1_br)
+            p_z_nu_2 = self.alpha_2*(self.df_br.pi_pz_2_br + self.df_br.pi0_pz_2_br)
+            E_nu_1 = (self.m_tau**2 - (self.df_br.pi_E_1_br+self.df_br.pi0_E_1_br)**2 + (self.df_br.pi_pz_1_br + self.df_br.pi0_pz_1_br)
+                      ** 2 + 2*p_z_nu_1*(self.df_br.pi_pz_1_br + self.df_br.pi0_pz_1_br))/(2*(self.df_br.pi_E_1_br+self.df_br.pi0_E_1_br))
+            E_nu_2 = (self.m_tau**2 - (self.df_br.pi_E_2_br+self.df_br.pi0_E_2_br)**2 + (self.df_br.pi_pz_2_br + self.df_br.pi0_pz_2_br)
+                      ** 2 + 2*p_z_nu_2*(self.df_br.pi_pz_2_br + self.df_br.pi0_pz_2_br))/(2*(self.df_br.pi_E_2_br+self.df_br.pi0_E_2_br))
+            return self.alpha_1, self.alpha_2, p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2
         self.alpha_1, self.alpha_2 = [], []
+        p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2 = [], [], [], []
         rejection = 0
         for i in range(self.df.shape[0]):
             E_miss_x_row = self.df.metx[i] 
@@ -38,7 +49,11 @@ class AlphaCalculator:
             rho_2_row = np.array([self.df.pi_E_2[i],self.df.pi_px_2[i],self.df.pi_py_2[i],self.df.pi_pz_2[i]])
             row_mean = np.array([self.df.metx[i], self.df.mety[i]])
             row_cov = np.array(([self.df.metcov00[i],self.df.metcov01[i]],[self.df.metcov10[i],self.df.metcov11[i]]))
-            alpha_1_loc, alpha_2_loc = self.getAlpha(E_miss_x_row, E_miss_y_row, rho_1_row, rho_2_row, row_mean, row_cov, termination=termination)
+            (alpha_1_loc, alpha_2_loc), (p_z_nu_1_loc, E_nu_1_loc, p_z_nu_2_loc, E_nu_2_loc) = self.getAlpha(i, E_miss_x_row, E_miss_y_row, rho_1_row, rho_2_row, row_mean, row_cov, termination=termination)
+            p_z_nu_1.append(p_z_nu_1_loc)
+            E_nu_1.append(E_nu_1_loc)
+            p_z_nu_2.append(p_z_nu_2_loc)
+            E_nu_2.append(E_nu_2_loc)
             self.alpha_1.append(alpha_1_loc)
             self.alpha_2.append(alpha_2_loc)
             if alpha_1_loc < 0:
@@ -48,36 +63,40 @@ class AlphaCalculator:
         print('Saving alpha')
         np.save(f'{self.alpha_save_dir}/alpha_1_{termination}.npy', self.alpha_1, allow_pickle=True)
         np.save(f'{self.alpha_save_dir}/alpha_2_{termination}.npy', self.alpha_2, allow_pickle=True)
-        return self.alpha_1, self.alpha_2
+        return self.alpha_1, self.alpha_2, p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2
 
 
-    def getAlpha(self, E_miss_x, E_miss_y, rho_1, rho_2, mean, cov, mode=1, termination=1000):
+    def getAlpha(self, idx, E_miss_x, E_miss_y, rho_1, rho_2, mean, cov, mode=1, termination=1000):
+        """
+        Calculates alpha with constraints, returns -1 if not possible
+        Returns: (alpha_1, alpha_2), (p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2)
+        """
         alpha_1, alpha_2 = self.calcAlpha(E_miss_x, E_miss_y, rho_1, rho_2, mode)
-        p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2 = self.getReconstructedInfo(alpha_1, alpha_2)
+        p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2 = self.getReconstructedInfo(idx, alpha_1, alpha_2)
         if alpha_1 < 0 or alpha_2 < 0 or np.abs(E_nu_1) < np.abs(p_z_nu_1) or np.abs(E_nu_2) < np.abs(p_z_nu_2):
             E_miss_gen = np.random.multivariate_normal(mean, cov, termination)
         else:
-            return alpha_1, alpha_2
+            return (alpha_1, alpha_2), (p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2)
         for i in range(termination):
             E_miss_x, E_miss_y = E_miss_gen[i]
             alpha_1, alpha_2 = self.calcAlpha(E_miss_x, E_miss_y, rho_1, rho_2, mode)
             # print(E_miss_x, E_miss_y, alpha_1, alpha_2)
-            p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2 = self.getReconstructedInfo(alpha_1, alpha_2)
+            p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2 = self.getReconstructedInfo(idx, alpha_1, alpha_2)
             if alpha_1 > 0 and alpha_2 > 0 or np.abs(E_nu_1) < np.abs(p_z_nu_1) or np.abs(E_nu_2) < np.abs(p_z_nu_2):
-                return alpha_1, alpha_2
-        return -1, -1
+                return (alpha_1, alpha_2), (p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2)
+        return (-1, -1), (-1, -1, -1, -1)
 
-    def getReconstructedInfo(self, alpha_1, alpha_2):
+    def getReconstructedInfo(self, i, alpha_1, alpha_2):
         """
         Reconstructs the momenta of neutrinos in the BR frame
         """
         # doesnt work currently - returns an array
-        p_z_nu_1 = alpha_1*(self.df_br.pi_pz_1_br + self.df_br.pi0_pz_1_br)
-        p_z_nu_2 = alpha_2*self.df_br.pi_pz_2_br + self.df_br.pi0_pz_2_br
-        E_nu_1 = (self.m_tau**2 - (self.df_br.pi_E_1_br+self.df_br.pi0_E_1_br)**2 + (self.df_br.pi_pz_1_br + self.df_br.pi0_pz_1_br)
-                  ** 2 + 2*p_z_nu_1*(self.df_br.pi_pz_1_br + self.df_br.pi0_pz_1_br))/(2*(self.df_br.pi_E_1_br+self.df_br.pi0_E_1_br))
-        E_nu_2 = (self.m_tau**2 - (self.df_br.pi_E_2_br+self.df_br.pi0_E_2_br)**2 + (self.df_br.pi_pz_2_br + self.df_br.pi0_pz_2_br)
-                  ** 2 + 2*p_z_nu_2*(self.df_br.pi_pz_2_br + self.df_br.pi0_pz_2_br))/(2*(self.df_br.pi_E_2_br+self.df_br.pi0_E_2_br))
+        p_z_nu_1 = alpha_1*(self.df_br.pi_pz_1_br[i] + self.df_br.pi0_pz_1_br[i])
+        p_z_nu_2 = alpha_2*(self.df_br.pi_pz_2_br[i] + self.df_br.pi0_pz_2_br[i])
+        E_nu_1 = (self.m_tau**2 - (self.df_br.pi_E_1_br[i] + self.df_br.pi0_E_1_br[i])**2 + (self.df_br.pi_pz_1_br[i] + self.df_br.pi0_pz_1_br[i])
+                  ** 2 + 2*p_z_nu_1*(self.df_br.pi_pz_1_br[i] + self.df_br.pi0_pz_1_br[i]))/(2*(self.df_br.pi_E_1_br[i] + self.df_br.pi0_E_1_br[i]))
+        E_nu_2 = (self.m_tau**2 - (self.df_br.pi_E_2_br[i] + self.df_br.pi0_E_2_br[i])**2 + (self.df_br.pi_pz_2_br[i] + self.df_br.pi0_pz_2_br[i])
+                  ** 2 + 2*p_z_nu_2*(self.df_br.pi_pz_2_br[i] + self.df_br.pi0_pz_2_br[i]))/(2*(self.df_br.pi_E_2_br[i] + self.df_br.pi0_E_2_br[i]))
         return p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2
 
 
