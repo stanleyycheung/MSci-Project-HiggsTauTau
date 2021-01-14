@@ -5,15 +5,16 @@ import matplotlib.pyplot as plt
 from utils import profileplot, sps, profileplot_plain
 
 class AlphaCalculator:
-    def __init__(self, df_reco, df_br, m_higgs, m_tau, load=False, seed=1):
+    def __init__(self, df_reco, df_br, binary, m_higgs, m_tau, load=False, seed=1):
         np.random.seed(seed)
         self.m_higgs = m_higgs
         self.m_tau = m_tau
+        self.binary = binary
         self.pickle_dir = './df_tt_rho_rho.pkl'
         self.df = df_reco
         self.df_br = df_br
         self.load = load
-        self.alpha_save_dir = '../stanley/alpha_analysis'
+        self.alpha_save_dir = './alpha_analysis'
 
     def loadData(self, channel='rho_rho'):
         df_tt = pd.read_pickle(self.pickle_dir)
@@ -30,8 +31,11 @@ class AlphaCalculator:
         Return type: alpha_1, alpha_2, p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2
         """
         if self.load:
-            self.alpha_1 = np.load(f'{self.alpha_save_dir}/alpha_1_{termination}.npy', allow_pickle=True)
-            self.alpha_2 = np.load(f'{self.alpha_save_dir}/alpha_2_{termination}.npy', allow_pickle=True)
+            binary_str = ''
+            if self.binary:
+                binary_str += "_b"
+            self.alpha_1 = np.load(f'{self.alpha_save_dir}/alpha_1_{termination}'+binary_str+".npy", allow_pickle=True)
+            self.alpha_2 = np.load(f'{self.alpha_save_dir}/alpha_2_{termination}'+binary_str+".npy", allow_pickle=True)
             p_z_nu_1 = self.alpha_1*(self.df_br.pi_pz_1_br + self.df_br.pi0_pz_1_br)
             p_z_nu_2 = self.alpha_2*(self.df_br.pi_pz_2_br + self.df_br.pi0_pz_2_br)
             E_nu_1 = (self.m_tau**2 - (self.df_br.pi_E_1_br+self.df_br.pi0_E_1_br)**2 + (self.df_br.pi_pz_1_br + self.df_br.pi0_pz_1_br)
@@ -56,13 +60,16 @@ class AlphaCalculator:
             E_nu_2.append(E_nu_2_loc)
             self.alpha_1.append(alpha_1_loc)
             self.alpha_2.append(alpha_2_loc)
-            if alpha_1_loc < 0:
+            if alpha_1_loc == -1:
                 rejection += 1
             if i%100000 == 0:
                 print(f'getting alpha for {i}, rejection: {rejection}/{self.df.shape[0]}')
         print('Saving alpha')
-        np.save(f'{self.alpha_save_dir}/alpha_1_{termination}.npy', self.alpha_1, allow_pickle=True)
-        np.save(f'{self.alpha_save_dir}/alpha_2_{termination}.npy', self.alpha_2, allow_pickle=True)
+        binary_str = ''
+        if self.binary:
+            binary_str += "_b"
+        np.save(f'{self.alpha_save_dir}/alpha_1_{termination}'+binary_str+".npy", self.alpha_1, allow_pickle=True)
+        np.save(f'{self.alpha_save_dir}/alpha_2_{termination}'+binary_str+".npy", self.alpha_2, allow_pickle=True)
         return self.alpha_1, self.alpha_2, p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2
 
 
@@ -82,7 +89,7 @@ class AlphaCalculator:
             alpha_1, alpha_2 = self.calcAlpha(E_miss_x, E_miss_y, rho_1, rho_2, mode)
             # print(E_miss_x, E_miss_y, alpha_1, alpha_2)
             p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2 = self.getReconstructedInfo(idx, alpha_1, alpha_2)
-            if alpha_1 > 0 and alpha_2 > 0 or np.abs(E_nu_1) < np.abs(p_z_nu_1) or np.abs(E_nu_2) < np.abs(p_z_nu_2):
+            if (alpha_1 > 0 and alpha_2 > 0) and (np.abs(E_nu_1) > np.abs(p_z_nu_1) and np.abs(E_nu_2) > np.abs(p_z_nu_2)):
                 return (alpha_1, alpha_2), (p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2)
         return (-1, -1), (-1, -1, -1, -1)
 

@@ -12,9 +12,10 @@ class NeutrinoReconstructor:
     - df_tt_rho_rho.pkl - get from DL.loadRecoData()
     - BR with gen df - constructing now 
     """
-    def __init__(self, seed=1):
+    def __init__(self, binary, seed=1):
         np.random.seed(seed)
         self.seed = seed
+        self.binary = binary
         self.reco_data_dir = './df_tt_rho_rho.pkl'
         # self.gen_data_dir = './df_tt_gen_rho_rho.pkl'
         self.saved_df_dir = '../stanley/df_saved'
@@ -52,8 +53,9 @@ class NeutrinoReconstructor:
         - include azimuthal angles of the neutrinos
         Notes:
         - not inserting four-vector -> other components are just 0
+        Returns: alpha_1, alpha_2, E_nu_1, E_nu_2, p_t_nu_1, p_t_nu_2, p_z_nu_1, p_z_nu_2
         """
-        AC = AlphaCalculator(df_reco_gen, df_br, self.m_higgs,
+        AC = AlphaCalculator(df_reco_gen, df_br, self.binary, self.m_higgs,
                              self.m_tau, load=load_alpha, seed=self.seed)
         alpha_1, alpha_2, p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2 = AC.runAlpha(termination=termination)
         p_t_nu_1 = np.sqrt(np.array(E_nu_1)**2 - np.array(p_z_nu_1)**2)
@@ -61,13 +63,13 @@ class NeutrinoReconstructor:
         p_t_nu_1[np.isnan(p_t_nu_1)] = -1
         p_t_nu_2[np.isnan(p_t_nu_2)] = -1
         # populate input df with neutrino variables
-        df_br['E_nu_1'] = E_nu_1
-        df_br['E_nu_2'] = E_nu_2
-        df_br['p_t_nu_1'] = p_t_nu_1
-        df_br['p_t_nu_2'] = p_t_nu_2
-        df_br['p_z_nu_1'] = p_z_nu_1
-        df_br['p_z_nu_2'] = p_z_nu_2
-        return (alpha_1, alpha_2), df_br
+        # df_br['E_nu_1'] = E_nu_1
+        # df_br['E_nu_2'] = E_nu_2
+        # df_br['p_t_nu_1'] = p_t_nu_1
+        # df_br['p_t_nu_2'] = p_t_nu_2
+        # df_br['p_z_nu_1'] = p_z_nu_1
+        # df_br['p_z_nu_2'] = p_z_nu_2
+        return alpha_1, alpha_2, E_nu_1, E_nu_2, p_t_nu_1, p_t_nu_2, p_z_nu_1, p_z_nu_2
 
     def testRunAlphaReconstructor(self, termination=10000):
         """
@@ -158,4 +160,15 @@ if __name__ == '__main__':
     # slightly different lengths - due to binary/non_binary
     # print(df_reco_gen.metx)
     # print(df_br.shape)
-    NR.runAlphaReconstructor(df_reco_gen, df_br, load_alpha=False, termination=100)
+    alpha_1, alpha_2, E_nu_1, E_nu_2, p_t_nu_1, p_t_nu_2, p_z_nu_1, p_z_nu_2 = NR.runAlphaReconstructor(df_reco_gen, df_br, load_alpha=False, termination=100)
+    df_br['alpha_1'] = alpha_1
+    df_br['alpha_2'] = alpha_2
+    df_br['E_nu_1'] = E_nu_1
+    df_br['E_nu_2'] = E_nu_2
+    df_br['p_t_nu_1'] = p_t_nu_1
+    df_br['p_t_nu_2'] = p_t_nu_2
+    df_br['p_z_nu_1'] = p_z_nu_1
+    df_br['p_z_nu_2'] = p_z_nu_2
+    print(df_br.columns)
+    pd.to_pickle(df_br, 'misc/df_br.pkl')
+

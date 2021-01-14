@@ -1,10 +1,13 @@
-import uproot
-import pandas as pd
-import numpy as np
-from pylorentz import Momentum4
-import os
 import math
+import os
+
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import uproot
+from pylorentz import Momentum4
+
+from neutrino_reconstructor import NeutrinoReconstructor
 
 
 class DataLoader:
@@ -17,8 +20,11 @@ class DataLoader:
     - Outputs df with all of the possible NN inputs
 
     To do:
-    - Add in functions to read gen data
     - Add in neutrino data
+
+    Possible addons currently:
+    - 'neutrino'
+    - 'met'
 
     Note:
     - Hardcoded gen level variables
@@ -40,28 +46,30 @@ class DataLoader:
         self.reco_df_path = './df_tt'
         self.gen_df_path = './df_tt_gen'
 
-    def loadRecoData(self, binary):
+    def loadRecoData(self, binary, addons=[]):
         """
         Loads the BR df directly from pickle - no need to read from .root, boost and rotate events
         """
         print('Reading reco df pkl file')
-        pickle_file_name = f'{self.input_df_save_dir}/input_{self.channel}'
+        addons_loaded = ""
+        if addons:
+            addons_loaded = '_'+'_'.join(addons)
+        pickle_file_name = f'{self.input_df_save_dir}/input_{self.channel}{addons_loaded}'
         if binary:
             pickle_file_name += '_b'
         df_inputs = pd.read_pickle(pickle_file_name+'.pkl')
-        print(pickle_file_name)
         return df_inputs
 
-    def createRecoData(self, binary, from_pickle=True, addons=[]):
+    def createRecoData(self, binary, from_pickle=True, addons=[], addons_config={}):
         """
         Creates the input (reco) data for the NN either from .root file or a previously saved .pkl file
         """
-        print('Loading .root info')
+        print(f'Loading .root info with using pickle as {from_pickle}')
         df = self.readRecoData(from_pickle=from_pickle)
         print('Cleaning data')
         df_clean, df_ps_clean, df_sm_clean = self.cleanRecoData(df)
         print('Creating input data')
-        df_inputs = self.createTrainTestData(df_clean, df_ps_clean, df_sm_clean, binary, addons, save=True)
+        df_inputs = self.createTrainTestData(df_clean, df_ps_clean, df_sm_clean, binary, addons, addons_config, save=True)
         return df_inputs
 
     def readRecoData(self, from_pickle=False):
@@ -145,7 +153,7 @@ class DataLoader:
         df = pd.concat([df_sm, df_ps]).reset_index(drop=True)
         return df, y
 
-    def createTrainTestData(self, df, df_ps, df_sm, binary, addons=[], save=True):
+    def createTrainTestData(self, df, df_ps, df_sm, binary, addons, addons_config, save=True):
         """
         Runs to create df with all NN input data, both test and train
         """
@@ -168,11 +176,13 @@ class DataLoader:
         df_inputs = pd.DataFrame(df_inputs_data)
         if binary:
             df_inputs['y'] = y
-        if not addons:
-            self.createAddons(addons, df, df_inputs, boost=boost)
+        addons_loaded = ""
+        if addons:
+            self.createAddons(addons, df, df_inputs, binary, addons_config, boost=boost)
+            addons_loaded = '_'+'_'.join(addons)
         if save:
             print('Saving df to pickle')
-            pickle_file_name = f'{self.input_df_save_dir}/input_{self.channel}'
+            pickle_file_name = f'{self.input_df_save_dir}/input_{self.channel}{addons_loaded}'
             if binary:
                 pickle_file_name += '_b'
             df_inputs.to_pickle(pickle_file_name+'.pkl')
@@ -356,7 +366,6 @@ class DataLoader:
         
         return self.calc_aco_angles(p1[:].T, p2[:].T, p3[:].T, p4[:].T, y1, y2)
 
-        
     def calc_aco_angles(self, pp1, pp2, pp3, pp4, yy1, yy2):
         angles = []
         for i in range(len(pp1)):
@@ -676,22 +685,34 @@ class DataLoader:
         boost = None
         return df_inputs_data, boost
 
-    def createAddons(self, addons, df, df_inputs, **kwargs):
+    def createAddons(self, addons, df, df_inputs, binary, addons_configs={}, **kwargs):
         """
         If you want to create more addon features, put the necessary arguments through kwargs, 
         unpack them at the start of this function, and add an if case to your needs
+        TODO: need to catch incorrectly loaded kwargs
         """
+        boost = None
         if kwargs:
             boost = kwargs["boost"]
-        else:
-            boost = None
+            
         for addon in addons:
-            if addon == 'met' and kwargs:
+            if addon == 'met' and boost is not None:
                 print('Addon MET loaded')
                 E_miss, E_miss_x, E_miss_y = self.addonMET(df, boost)
                 df_inputs['E_miss'] = E_miss
                 df_inputs['E_miss_x'] = E_miss_x
                 df_inputs['E_miss_y'] = E_miss_y
+            if addon == 'neutrino':
+                print('Addon neutrino loaded')
+                load_alpha = addons_configs['neutrino']['load_alpha']
+                termination = addons_configs['neutrino']['termination']
+                alpha_1, alpha_2, E_nu_1, E_nu_2, p_t_nu_1, p_t_nu_2, p_z_nu_1, p_z_nu_2 = self.addonNeutrinos(df, df_inputs, binary, load_alpha, termination=termination)
+                df_inputs['E_nu_1'] = E_nu_1
+                df_inputs['E_nu_2'] = E_nu_2
+                df_inputs['p_t_nu_1'] = p_t_nu_1
+                df_inputs['p_t_nu_2'] = p_t_nu_2
+                df_inputs['p_z_nu_1'] = p_z_nu_1
+                df_inputs['p_z_nu_2'] = p_z_nu_2
 
     def addonMET(self, df, boost):
         """
@@ -707,6 +728,16 @@ class DataLoader:
         E_miss_y = met.boost_particle(boost)[0]
         return E_miss, E_miss_x, E_miss_y
 
+    def addonNeutrinos(self, df, df_inputs, binary, load_alpha, termination=100):
+        """
+        Addon configuration for neutrino information
+        TODO:
+        - load in neutrino phis
+        Returns: alpha_1, alpha_2, E_nu_1, E_nu_2, p_t_nu_1, p_t_nu_2, p_z_nu_1, p_z_nu_2
+        """
+        NR = NeutrinoReconstructor(binary=binary)
+        return NR.runAlphaReconstructor(df.reset_index(drop=False), df_inputs.reset_index(drop=False), load_alpha=load_alpha, termination=termination)
+
     def rotation_matrix_from_vectors(self, vec1, vec2):
         """ Find the rotation matrix that aligns vec1 to vec2
         :param vec1: A 3d "source" vector
@@ -720,17 +751,6 @@ class DataLoader:
         kmat = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
         rotation_matrix = np.eye(3) + kmat + kmat.dot(kmat) * ((1 - c) / (s ** 2))
         return rotation_matrix
-
-
-    def createBRWithGen(self, binary):
-        # TODO: to delete
-        # pickle_file_name = f'{self.input_df_save_dir}_reco/input_{self.channel}'
-        # if binary:
-            # pickle_file_name += '_b'
-        # df_reco_inputs = pd.read_pickle(pickle_file_name+'.pkl')
-        # print(df_reco_inputs.columns)
-        df_gen = self.cleanGenData(self.readGenData(from_pickle=True))
-        print(df_gen.columns)
 
 if __name__ == '__main__':
     variables_rho_rho = [
@@ -751,4 +771,3 @@ if __name__ == '__main__':
     DL = DataLoader(variables_rho_rho, 'rho_rho')
     # DL.createRecoData(binary=True, addons=['met'])
     # DL.readGenData()
-    DL.createBRWithGen(binary=False)

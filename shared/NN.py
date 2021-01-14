@@ -73,8 +73,8 @@ class NeuralNetwork:
         self.write_dir = 'NN_output'
         self.model = None
 
-    def run(self, config_num, read=True, from_pickle=True, epochs=50, batch_size=1024, patience=10, addons=[]):
-        df = self.initialize(addons, read=read, from_pickle=from_pickle)
+    def run(self, config_num, read=True, from_pickle=True, epochs=50, batch_size=1024, patience=10, addons_config={}):
+        df = self.initialize(addons_config, read=read, from_pickle=from_pickle)
         X_train, X_test, y_train, y_test = self.configure(df, config_num)
         print(f'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Training config {config_num}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
         model = self.train(X_train, X_test, y_train, y_test, epochs=epochs, batch_size=batch_size, patience=patience)
@@ -86,8 +86,8 @@ class NeuralNetwork:
             auc = self.evaluate(model, X_test, y_test, self.history, w_a, w_b)
         self.write(auc, self.history)
 
-    def runMultiple(self, configs, read=True, from_pickle=True, epochs=50, batch_size=1024, patience=10, addons=[]):
-        df = self.initialize(addons, read=read, from_pickle=from_pickle)
+    def runMultiple(self, configs, read=True, from_pickle=True, epochs=50, batch_size=1024, patience=10, addons_config={}):
+        df = self.initialize(addons_config, read=read, from_pickle=from_pickle)
         for config_num in configs:
             print(f'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Training config {config_num}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
             X_train, X_test, y_train, y_test = self.configure(df, config_num)
@@ -100,8 +100,8 @@ class NeuralNetwork:
                 auc = self.evaluate(model, X_test, y_test, self.history, w_a, w_b)
             self.write(auc, self.history)
 
-    def runHPTuning(self, config_num, read=True, from_pickle=True, epochs=50, tuner_epochs=50, batch_size=10000, tuner_batch_size=10000, patience=10, tuner_mode=0, addons=[]):
-        df = self.initialize(addons, read=read, from_pickle=from_pickle)
+    def runHPTuning(self, config_num, read=True, from_pickle=True, epochs=50, tuner_epochs=50, batch_size=10000, tuner_batch_size=10000, patience=10, tuner_mode=0, addons_config={}):
+        df = self.initialize(addons_config, read=read, from_pickle=from_pickle)
         X_train, X_test, y_train, y_test = self.configure(df, config_num)
         print(f'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Tuning on config {config_num}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
         best_hps, tuner = self.tuneHP(self.hyperModel, X_train, X_test, y_train, y_test, tuner_epochs=tuner_epochs, tuner_batch_size=tuner_batch_size, tuner_mode=tuner_mode)
@@ -131,13 +131,13 @@ class NeuralNetwork:
         #     f.write(message)
         # model.save('./hp_model_1/')
 
-    def runGridSearch(self, config_num, read=True, from_pickle=True, addons=[], search_mode=0):
+    def runGridSearch(self, config_num, read=True, from_pickle=True, addons_config={}, search_mode=0):
         """
         Runs grid search on NN with given config_num
         search_mode = 0: GridSearch
         search_mode = 1: RandomSearch
         """
-        df = self.initialize(addons, read=read, from_pickle=from_pickle)
+        df = self.initialize(addons_config, read=read, from_pickle=from_pickle)
         X_train, X_test, y_train, y_test = self.configure(df, config_num)
         print(f'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Grid searching on config {config_num}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
         model = KerasClassifier(self.gridModel, verbose=0)
@@ -242,11 +242,19 @@ class NeuralNetwork:
         print(tuner.search_space_summary())
         return best_hps, tuner
 
-    def initialize(self, addons=[], read=True, from_pickle=True):
+    def initialize(self, addons_config={}, read=True, from_pickle=True):
         """
         Initialize NN by loading/ creating the input data for NN via DataLoader
+        Params:
+        addons(dict) - addon map each value being an addon configuration
+        read - will read df inputs instead of creating them
+        from_pickle - will read events from pickle instead of .root file
         Returns: df of NN inputs (to be configured) 
         """
+        if not addons_config:
+            addons = []
+        else:
+            addons = addons_config.keys()
         if self.channel == 'rho_rho':
             self.DL = DataLoader(self.variables_rho_rho, self.channel)
         elif self.channel == 'rho_a1':
@@ -256,9 +264,9 @@ class NeuralNetwork:
         else:
             raise ValueError('Incorrect channel inputted')
         if read:
-            df = self.DL.loadRecoData(self.binary)
+            df = self.DL.loadRecoData(self.binary, addons)
         else:
-            df = self.DL.createRecoData(self.binary, from_pickle, addons)
+            df = self.DL.createRecoData(self.binary, from_pickle, addons, addons_config)
         return df
 
     def configure(self, df, config_num):
@@ -382,8 +390,8 @@ class NeuralNetwork:
 
 if __name__ == '__main__':
     if not os.path.exists('C:\\Kristof'):  # then we are on Stanley's computer
-        NN = NeuralNetwork(channel='rho_rho', binary=False, write_filename='NN_output', show_graph=False)
-        NN.initialize(addons=[], read=False, from_pickle=False)
+        NN = NeuralNetwork(channel='rho_rho', binary=True, write_filename='NN_output', show_graph=False)
+        NN.initialize(addons_config={'neutrino': {'load_alpha':False, 'termination':100}}, read=False, from_pickle=True)
         # NN.model = NN.seq_model(units=(300, 300, 300), batch_norm=True, dropout=0.2)
         # NN.run(3, read=True, from_pickle=True, epochs=100, batch_size=8192) # 16384, 131072
         # configs = [1,2,3,4,5,6]
