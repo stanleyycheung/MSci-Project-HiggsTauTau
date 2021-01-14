@@ -67,7 +67,19 @@ class NeuralNetwork:
             "y_1_1", "y_1_2",
         ]
         self.variables_a1_a1 = [
-
+            "wt_cp_sm", "wt_cp_ps", "wt_cp_mm", "rand",
+            "aco_angle_1",
+            "mva_dm_1", "mva_dm_2",
+            "tau_decay_mode_1", "tau_decay_mode_2",
+            "pi_E_1", "pi_px_1", "pi_py_1", "pi_pz_1",
+            "pi_E_2", "pi_px_2", "pi_py_2", "pi_pz_2",
+            "pi2_E_1", "pi2_px_1", "pi2_py_1", "pi2_pz_1",
+            "pi3_E_1", "pi3_px_1", "pi3_py_1", "pi3_pz_1",
+            "pi2_px_2", "pi2_py_2", "pi2_pz_2", "pi2_E_2",
+            "pi3_px_2", "pi3_py_2", "pi3_pz_2", "pi3_E_2",
+            "ip_x_1", "ip_y_1", "ip_z_1",
+            "sv_x_2", "sv_y_2", "sv_z_2",
+            "y_1_1", "y_1_2",
         ]
         self.save_dir = 'NN_output'
         self.write_dir = 'NN_output'
@@ -401,9 +413,10 @@ if __name__ == '__main__':
 
     else:  # if we are on Kristof's computer
         # NN = NeuralNetwork(channel='rho_rho', binary=True, write_filename='NN_output', show_graph=False)
-        NN = NeuralNetwork(channel='rho_a1', binary=True, write_filename='NN_output', show_graph=False)
+        # NN = NeuralNetwork(channel='rho_a1', binary=True, write_filename='NN_output', show_graph=False)
+        NN = NeuralNetwork(channel='a1_a1', binary=True, write_filename='NN_output', show_graph=False)
         # NN.run(3, read=True, from_pickle=True, epochs=25, batch_size=10000)
-        NN.run(4, read=False, from_pickle=False, epochs=10, batch_size=10000)
+        NN.run(1, read=False, from_pickle=False, epochs=10, batch_size=10000)
         
         # for _ in range(7):
         #     NN.run(1, read=False, from_pickle=False, epochs=10, batch_size=10000)

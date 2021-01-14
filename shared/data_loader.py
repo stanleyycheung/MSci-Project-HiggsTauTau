@@ -172,7 +172,7 @@ class DataLoader:
             df_inputs_data, boost = self.calculateRhoA1Data(df, len(df_ps))
         else:
             # no need to check here as checked in cleanRecoData
-            df_inputs_data, boost = self.calculateA1A1Data(df)
+            df_inputs_data, boost = self.calculateA1A1Data(df, len(df_ps))
         df_inputs = pd.DataFrame(df_inputs_data)
         if binary:
             df_inputs['y'] = y
@@ -631,7 +631,7 @@ class DataLoader:
         pi0_1_boosted_rot[np.isnan(pi0_1_boosted_rot)] == np.mean(pi0_1_boosted_rot)
         pi2_2_boosted_rot[np.isnan(pi2_2_boosted_rot)] == np.mean(pi2_2_boosted_rot)
         pi3_2_boosted_rot[np.isnan(pi3_2_boosted_rot)] == np.mean(pi3_2_boosted_rot)
-            
+        
         df_inputs_data = {
             'pi_E_1_br': pi_1_boosted[0],
             'pi_px_1_br': pi_1_boosted_rot[:, 0],
@@ -679,10 +679,105 @@ class DataLoader:
         }
         return df_inputs_data, boost
 
-    def calculateA1A1Data(self, df):
+    def calculateA1A1Data(self, df, len_df_ps=0):
         # TODO: include this channel
-        df_inputs_data = {}
-        boost = None
+        pi_1 = Momentum4(df['pi_E_1'], df["pi_px_1"], df["pi_py_1"], df["pi_pz_1"])
+        pi_2 = Momentum4(df['pi_E_2'], df["pi_px_2"], df["pi_py_2"], df["pi_pz_2"])
+        pi2_1 = Momentum4(df['pi2_E_1'], df["pi2_px_1"], df["pi2_py_1"], df["pi2_pz_1"])
+        pi3_1 = Momentum4(df['pi3_E_1'], df["pi3_px_1"], df["pi3_py_1"], df["pi3_pz_1"])
+        pi2_2 = Momentum4(df['pi2_E_2'], df["pi2_px_2"], df["pi2_py_2"], df["pi2_pz_2"])
+        pi3_2 = Momentum4(df['pi3_E_2'], df["pi3_px_2"], df["pi3_py_2"], df["pi3_pz_2"])
+        
+        rest_frame = pi_1 + pi_2
+        # boost = Momentum4(rest_frame[0], -rest_frame[1], -rest_frame[2], -rest_frame[3])
+        boost = - rest_frame
+        pi_1_boosted = pi_1.boost_particle(boost)
+        pi_2_boosted = pi_2.boost_particle(boost)
+        pi2_1_boosted = pi2_1.boost_particle(boost)
+        pi3_1_boosted = pi3_1.boost_particle(boost)
+        pi2_2_boosted = pi2_2.boost_particle(boost)
+        pi3_2_boosted = pi3_2.boost_particle(boost)
+        
+        rho_1 = pi_1_boosted + pi2_1_boosted
+        a1 = rho_1 + pi3_1_boosted
+        rho_2 = pi_2_boosted + pi2_2_boosted
+        a2 = rho_2 + pi3_2_boosted
+        
+        # rotations
+        # not doing properly rotations, just reassign variables
+        pi_1_boosted_rot = pi_1_boosted[1:, :].T
+        pi_2_boosted_rot = pi_2_boosted[1:, :].T
+        pi2_1_boosted_rot = pi2_1_boosted[1:, :].T
+        pi2_2_boosted_rot = pi2_2_boosted[1:, :].T
+        pi3_1_boosted_rot = pi3_1_boosted[1:, :].T
+        pi3_2_boosted_rot = pi3_2_boosted[1:, :].T
+
+        def padded(vect3):
+            zeros = np.reshape(np.zeros(len(vect3)), (-1, 1))
+            return np.concatenate([zeros, vect3], axis=1)        
+        aco_angle_2 = self.calc_aco_angles_alie(padded(pi_1_boosted_rot[:]), padded(pi_2_boosted_rot[:]), padded(pi2_1_boosted_rot[:]), padded(pi2_2_boosted_rot[:]), df['y_1_1'].to_numpy(), df['y_1_2'].to_numpy())
+        aco_angle_2 = np.array(aco_angle_2)
+        aco_angle_2[np.isnan(aco_angle_2)] = np.pi
+            
+        plt.figure(12)
+        aco_angle_2_ps = aco_angle_2[:len_df_ps]
+        aco_angle_2_sm = aco_angle_2[len_df_ps:]
+        plt.hist(aco_angle_2_ps, bins=50, alpha=0.5)
+        plt.hist(aco_angle_2_sm, bins=50, alpha=0.5)
+        
+        # plt.figure(15)
+        # plt.title('filtered difference between given and calculated aco_angle')
+        # df_ps_aco = df['aco_angle_1'][:len_df_ps]
+        # df_sm_aco = df['aco_angle_1'][len_df_ps:]
+        # diff_ps = aco_angle_2_ps - df_ps_aco.to_numpy()
+        # diff_sm = aco_angle_2_sm - df_sm_aco.to_numpy()
+        # print('Number of insensible given values:', len([x for x in df_ps_aco if x>9000 or x<-9000]) + len([x for x in df_sm_aco if x>9000 or x<-9000]))
+        # print('Mean of insensible given values:', np.mean([x for x in df_ps_aco if x>9000 or x<-9000]))
+        # print('Number of calculated nans:', np.sum(np.isnan(aco_angle_2)))
+        # print('Incorrect calculations:', np.sum(diff_ps>0.001) + np.sum(diff_sm>0.001))
+        # diff_ps = np.array([x for x in diff_ps if x<0.0015 and x>-0.0015])
+        # diff_sm = np.array([x for x in diff_sm if x<0.0015 and x>-0.0015])
+        # plt.hist(diff_ps, bins=50, alpha=0.5)
+        # plt.hist(diff_sm, bins=50, alpha=0.5)
+        
+        df_inputs_data = {
+            'pi_E_1_br': pi_1_boosted[0],
+            'pi_px_1_br': pi_1_boosted_rot[:, 0],
+            'pi_py_1_br': pi_1_boosted_rot[:, 1],
+            'pi_pz_1_br': pi_1_boosted_rot[:, 2],
+            'pi_E_2_br': pi_2_boosted[0],
+            'pi_px_2_br': pi_2_boosted_rot[:, 0],
+            'pi_py_2_br': pi_2_boosted_rot[:, 1],
+            'pi_pz_2_br': pi_2_boosted_rot[:, 2],
+            
+            'pi2_E_1_br': pi2_1_boosted[0],
+            'pi2_px_1_br': pi2_1_boosted_rot[:, 0],
+            'pi2_py_1_br': pi2_1_boosted_rot[:, 1],
+            'pi2_pz_1_br': pi2_1_boosted_rot[:, 2],
+            'pi3_E_1_br': pi3_1_boosted[0],
+            'pi3_px_1_br': pi3_1_boosted_rot[:, 0],
+            'pi3_py_1_br': pi3_1_boosted_rot[:, 1],
+            'pi3_pz_1_br': pi3_1_boosted_rot[:, 2],
+            
+            'pi2_E_2_br': pi2_2_boosted[0],
+            'pi2_px_2_br': pi2_2_boosted_rot[:, 0],
+            'pi2_py_2_br': pi2_2_boosted_rot[:, 1],
+            'pi2_pz_2_br': pi2_2_boosted_rot[:, 2],
+            'pi3_E_2_br': pi3_2_boosted[0],
+            'pi3_px_2_br': pi3_2_boosted_rot[:, 0],
+            'pi3_py_2_br': pi3_2_boosted_rot[:, 1],
+            'pi3_pz_2_br': pi3_2_boosted_rot[:, 2],
+            'aco_angle_1': df['aco_angle_1'],
+            # 'aco_angle_1': aco_angle_danny,
+            # 'aco_angle_1': aco_angle_2,
+            # 'aco_angle_2': aco_angle_2,
+            'y_1_1': df['y_1_1'],
+            'y_1_2': df['y_1_2'],
+            'w_a': df.wt_cp_sm,
+            'w_b': df.wt_cp_ps,
+             'm_1': a1.m,
+             'm_2': a2.m,
+        }
         return df_inputs_data, boost
 
     def createAddons(self, addons, df, df_inputs, binary, addons_configs={}, **kwargs):
