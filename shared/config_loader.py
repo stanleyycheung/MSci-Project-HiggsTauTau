@@ -87,6 +87,30 @@ class ConfigLoader:
                 return config_map_norhoa1   
             else:
                 raise Exception('Wrong config mode inputted')
+                
+        elif self.channel == 'a1_a1':
+            print(f'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Loadeded in mode {mode} (a1-a1 channel)~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+            pi_1_transformed = np.c_[self.df.pi_E_1_br, self.df.pi_px_1_br, self.df.pi_py_1_br, self.df.pi_pz_1_br, ]
+            pi_2_transformed = np.c_[self.df.pi_E_2_br, self.df.pi_px_2_br, self.df.pi_py_2_br, self.df.pi_pz_2_br, ]
+            pi2_1_transformed = np.c_[self.df.pi2_E_1_br, self.df.pi2_px_1_br, self.df.pi2_py_1_br, self.df.pi2_pz_1_br, ]
+            pi3_1_transformed = np.c_[self.df.pi3_E_1_br, self.df.pi3_px_1_br, self.df.pi3_py_1_br, self.df.pi3_pz_1_br, ]
+            pi2_2_transformed = np.c_[self.df.pi2_E_2_br, self.df.pi2_px_2_br, self.df.pi2_py_2_br, self.df.pi2_pz_2_br, ]
+            pi3_2_transformed = np.c_[self.df.pi3_E_2_br, self.df.pi3_px_2_br, self.df.pi3_py_2_br, self.df.pi3_pz_2_br, ]
+            if mode == 0:
+                config_map_noa1a1 = {
+                    1: np.c_[self.df.aco_angle_1],
+                    # 1: np.c_[self.df.aco_angle_1, self.df.aco_angle_2],
+                    2: np.c_[self.df.aco_angle_1, self.df.y_1_1, self.df.y_1_2],
+                    3: np.c_[pi2_1_transformed, pi3_1_transformed, pi2_2_transformed, pi3_2_transformed, pi_1_transformed, pi_2_transformed],
+                    # 4: np.c_[pi_1_transformed, pi_2_transformed, pi2_1_transformed, pi3_1_transformed, pi2_2_transformed, pi3_2_transformed, self.df.aco_angle_1],
+                    4: np.c_[self.df.aco_angle_1, pi_1_transformed, pi_2_transformed], # reduced config 4 to exclude all variables not existing in rho-rho
+                    5: np.c_[self.df.aco_angle_1, self.df.y_1_1, self.df.y_1_2, self.df.m_1**2, self.df.m_2**2],
+                    6: np.c_[pi_1_transformed, pi_2_transformed, pi2_1_transformed, pi3_1_transformed, pi2_2_transformed, pi3_2_transformed, self.df.aco_angle_1, self.df.y_1_1, self.df.y_1_2, self.df.m_1**2, self.df.m_2**2],
+                }
+                return config_map_noa1a1   
+            else:
+                raise Exception('Wrong config mode inputted')
+                
         else:
             raise Exception('Channel not understood!')
 

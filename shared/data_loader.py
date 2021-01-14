@@ -725,20 +725,20 @@ class DataLoader:
         plt.hist(aco_angle_2_ps, bins=50, alpha=0.5)
         plt.hist(aco_angle_2_sm, bins=50, alpha=0.5)
         
-        # plt.figure(15)
-        # plt.title('filtered difference between given and calculated aco_angle')
-        # df_ps_aco = df['aco_angle_1'][:len_df_ps]
-        # df_sm_aco = df['aco_angle_1'][len_df_ps:]
-        # diff_ps = aco_angle_2_ps - df_ps_aco.to_numpy()
-        # diff_sm = aco_angle_2_sm - df_sm_aco.to_numpy()
-        # print('Number of insensible given values:', len([x for x in df_ps_aco if x>9000 or x<-9000]) + len([x for x in df_sm_aco if x>9000 or x<-9000]))
-        # print('Mean of insensible given values:', np.mean([x for x in df_ps_aco if x>9000 or x<-9000]))
-        # print('Number of calculated nans:', np.sum(np.isnan(aco_angle_2)))
-        # print('Incorrect calculations:', np.sum(diff_ps>0.001) + np.sum(diff_sm>0.001))
-        # diff_ps = np.array([x for x in diff_ps if x<0.0015 and x>-0.0015])
-        # diff_sm = np.array([x for x in diff_sm if x<0.0015 and x>-0.0015])
-        # plt.hist(diff_ps, bins=50, alpha=0.5)
-        # plt.hist(diff_sm, bins=50, alpha=0.5)
+        plt.figure(15)
+        plt.title('filtered difference between given and calculated aco_angle')
+        df_ps_aco = df['aco_angle_1'][:len_df_ps]
+        df_sm_aco = df['aco_angle_1'][len_df_ps:]
+        diff_ps = aco_angle_2_ps - df_ps_aco.to_numpy()
+        diff_sm = aco_angle_2_sm - df_sm_aco.to_numpy()
+        print('Number of insensible given values:', len([x for x in df_ps_aco if x>9000 or x<-9000]) + len([x for x in df_sm_aco if x>9000 or x<-9000]))
+        print('Mean of insensible given values:', np.mean([x for x in df_ps_aco if x>9000 or x<-9000]))
+        print('Number of calculated nans:', np.sum(np.isnan(aco_angle_2)))
+        print('Incorrect calculations:', np.sum(diff_ps>0.001) + np.sum(diff_sm>0.001))
+        diff_ps = np.array([x for x in diff_ps if x<0.0015 and x>-0.0015])
+        diff_sm = np.array([x for x in diff_sm if x<0.0015 and x>-0.0015])
+        plt.hist(diff_ps, bins=50, alpha=0.5)
+        plt.hist(diff_sm, bins=50, alpha=0.5)
         
         df_inputs_data = {
             'pi_E_1_br': pi_1_boosted[0],
@@ -767,9 +767,9 @@ class DataLoader:
             'pi3_px_2_br': pi3_2_boosted_rot[:, 0],
             'pi3_py_2_br': pi3_2_boosted_rot[:, 1],
             'pi3_pz_2_br': pi3_2_boosted_rot[:, 2],
-            'aco_angle_1': df['aco_angle_1'],
+            # 'aco_angle_1': df['aco_angle_1'],
             # 'aco_angle_1': aco_angle_danny,
-            # 'aco_angle_1': aco_angle_2,
+            'aco_angle_1': aco_angle_2,
             # 'aco_angle_2': aco_angle_2,
             'y_1_1': df['y_1_1'],
             'y_1_2': df['y_1_2'],
