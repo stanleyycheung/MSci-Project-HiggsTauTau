@@ -153,16 +153,16 @@ class NeuralNetwork:
             )
             grid = GridSearchCV(estimator=model, param_grid=param_grid, cv=2, verbose=2, scoring='roc_auc')
         elif search_mode == 1:
-            # layers = np.arange(1,11)
-            # batch_norms = [True, False]
-            # dropouts = [None, 0.1, 0.2, 0.3, 0.4, 0.5]
-            # epochs = [50, 100, 200, 500]
-            # batch_sizes = [2**i for i in range(8, 19)]
-            layers = [2,3]
+            layers = np.arange(1,11)
             batch_norms = [True, False]
-            dropouts = [None, 0.2]
-            epochs = [200, 500]
-            batch_sizes = [8192, 16384, 65536, 131072]
+            dropouts = [None, 0.1, 0.2, 0.3, 0.4, 0.5]
+            epochs = [50, 100, 200, 500]
+            batch_sizes = [2**i for i in range(8, 19)]
+            # layers = [2,3]
+            # batch_norms = [True, False]
+            # dropouts = [None, 0.2]
+            # epochs = [200, 500]
+            # batch_sizes = [8192, 16384, 65536, 131072]
             param_grid = dict(
                 layers=layers,
                 batch_norm=batch_norms,
@@ -369,6 +369,12 @@ class NeuralNetwork:
         model.compile(loss='binary_crossentropy', optimizer=opt, metrics=metrics)
         return model
 
+def runGridSearchOverConfigs(search_mode, start=1, end=6):
+    print(f'Grid searching with search_mode={search_mode}')
+    for i in range(start, end+1):
+        print(f'Grid searching over config {i}')
+        NN.runGridSearch(6, read=True, from_pickle=True, search_mode=search_mode)
+
 
 if __name__ == '__main__':
     if not os.path.exists('C:\\Kristof'):  # then we are on Stanley's computer
@@ -378,7 +384,8 @@ if __name__ == '__main__':
         # configs = [1,2,3,4,5,6]
         # NN.runMultiple(configs, epochs=1, batch_size=10000)
         # NN.runHPTuning(3, read=True, from_pickle=True, epochs=200, tuner_epochs=200, batch_size=8192, tuner_batch_size=8192, tuner_mode=1)
-        NN.runGridSearch(6, read=True, from_pickle=True, search_mode=1)
+        # NN.runGridSearch(6, read=True, from_pickle=True, search_mode=1)
+        runGridSearchOverConfigs(1)
 
     else:  # if we are on Kristof's computer
         # NN = NeuralNetwork(channel='rho_rho', binary=True, write_filename='NN_output', show_graph=False)
