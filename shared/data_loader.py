@@ -30,6 +30,14 @@ class DataLoader:
     - Hardcoded gen level variables
     """
 
+    reco_root_path = "./MVAFILE_AllHiggs_tt.root"
+    gen_root_path = "./MVAFILE_GEN_AllHiggs_tt.root"
+    if os.path.exists("C:\\Users\\krist\\Downloads\\MVAFILE_ALLHiggs_tt_new.root"):
+        print('Using Kristof\'s .root file')
+        reco_root_path = "C:\\Users\\krist\\Downloads\\MVAFILE_ALLHiggs_tt_new.root"
+    reco_df_path = './df_tt'
+    gen_df_path = './df_tt_gen'
+
     def __init__(self, variables, channel, input_df_save_dir='./input_df_reco'):
         """
         DataLoader should be near stateless, exceptions of the channel and variables needed to load
@@ -38,13 +46,6 @@ class DataLoader:
         self.channel = channel
         self.variables = variables
         self.input_df_save_dir = input_df_save_dir
-        self.reco_root_path = "./MVAFILE_AllHiggs_tt.root"
-        self.gen_root_path = "./MVAFILE_GEN_AllHiggs_tt.root"
-        if os.path.exists("C:\\Users\\krist\\Downloads\\MVAFILE_ALLHiggs_tt_new.root"):
-            print('Using Kristof\'s .root file')
-            self.reco_root_path = "C:\\Users\\krist\\Downloads\\MVAFILE_ALLHiggs_tt_new.root"
-        self.reco_df_path = './df_tt'
-        self.gen_df_path = './df_tt_gen'
 
     def loadRecoData(self, binary, addons=[]):
         """
@@ -77,13 +78,13 @@ class DataLoader:
         Reads the reco root file, can save contents into .pkl for fast read/write abilities
         """
         if not from_pickle:
-            tree_tt = uproot.open(self.reco_root_path)["ntuple"]
+            tree_tt = uproot.open(DataLoader.reco_root_path)["ntuple"]
             # tree_et = uproot.open("/eos/user/s/stcheung/SWAN_projects/Masters_CP/MVAFILE_AllHiggs_et.root")["ntuple"]
             # tree_mt = uproot.open("/eos/user/s/stcheung/SWAN_projects/Masters_CP/MVAFILE_AllHiggs_mt.root")["ntuple"]
             df = tree_tt.pandas.df(self.variables)
-            df.to_pickle(f"{self.reco_df_path}_{self.channel}.pkl")
+            df.to_pickle(f"{DataLoader.reco_df_path}_{self.channel}.pkl")
         else:
-            df = pd.read_pickle(f"{self.reco_df_path}_{self.channel}.pkl")
+            df = pd.read_pickle(f"{DataLoader.reco_df_path}_{self.channel}.pkl")
         return df
 
     def readGenData(self, from_pickle=False):
@@ -101,11 +102,11 @@ class DataLoader:
             'metx', 'mety',
             'sv_x_1', 'sv_y_1', 'sv_z_1', 'sv_x_2', 'sv_y_2', 'sv_z_2',]
         if not from_pickle:
-            tree_tt = uproot.open(self.gen_root_path)["ntuple"]
+            tree_tt = uproot.open(DataLoader.gen_root_path)["ntuple"]
             df = tree_tt.pandas.df(variables_gen)
-            df.to_pickle(f"{self.gen_df_path}_{self.channel}.pkl")
+            df.to_pickle(f"{DataLoader.gen_df_path}_{self.channel}.pkl")
         else:
-            df = pd.read_pickle(f"{self.gen_df_path}_{self.channel}.pkl")
+            df = pd.read_pickle(f"{DataLoader.gen_df_path}_{self.channel}.pkl")
         return df
 
     def cleanGenData(self, df):
@@ -780,7 +781,7 @@ class DataLoader:
         }
         return df_inputs_data, boost
 
-    def createAddons(self, addons, df, df_inputs, binary, addons_configs={}, **kwargs):
+    def createAddons(self, addons, df, df_inputs, binary, addons_config={}, **kwargs):
         """
         If you want to create more addon features, put the necessary arguments through kwargs, 
         unpack them at the start of this function, and add an if case to your needs
@@ -789,7 +790,6 @@ class DataLoader:
         boost = None
         if kwargs:
             boost = kwargs["boost"]
-            
         for addon in addons:
             if addon == 'met' and boost is not None:
                 print('Addon MET loaded')
@@ -799,8 +799,8 @@ class DataLoader:
                 df_inputs['E_miss_y'] = E_miss_y
             if addon == 'neutrino':
                 print('Addon neutrino loaded')
-                load_alpha = addons_configs['neutrino']['load_alpha']
-                termination = addons_configs['neutrino']['termination']
+                load_alpha = addons_config['neutrino']['load_alpha']
+                termination = addons_config['neutrino']['termination']
                 alpha_1, alpha_2, E_nu_1, E_nu_2, p_t_nu_1, p_t_nu_2, p_z_nu_1, p_z_nu_2 = self.addonNeutrinos(df, df_inputs, binary, load_alpha, termination=termination)
                 df_inputs['E_nu_1'] = E_nu_1
                 df_inputs['E_nu_2'] = E_nu_2

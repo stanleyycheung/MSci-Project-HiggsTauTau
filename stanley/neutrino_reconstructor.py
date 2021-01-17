@@ -11,7 +11,7 @@ class NeutrinoReconstructor:
     def __init__(self, seed=1):
         np.random.seed(seed)
         self.seed = seed
-        self.reco_data_dir = './df_tt.pkl'
+        self.reco_data_dir = './df_tt_rho_rho.pkl'
         self.gen_data_dir = './df_tt_gen.pkl'
         self.saved_df_dir = './df_saved'
         self.m_higgs = 125.18
@@ -44,7 +44,7 @@ class NeutrinoReconstructor:
     def loadBRData(self):
         return pd.read_pickle(f'{self.saved_df_dir}/rho_rho/df_rho_rho.pkl')
 
-    def runAlphaReconstructor(self, termination=10000):
+    def runAlphaReconstructor(self, termination=1000):
         load_alpha = False
         df_reco = self.loadRecoData(skip=load_alpha)
         df = self.loadBRData()

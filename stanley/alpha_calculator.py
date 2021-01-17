@@ -42,7 +42,7 @@ class AlphaCalculator:
             self.alpha_2.append(alpha_2_loc)
             if alpha_1_loc < 0:
                 rejection += 1
-            if i%100000 == 0:
+            if i%10000 == 0:
                 print(f'getting alpha for {i}, rejection: {rejection}/{self.df.shape[0]}')
         print('Saving alpha')
         np.save(f'{self.alpha_save_dir}/alpha_1_{termination}.npy', self.alpha_1, allow_pickle=True)
