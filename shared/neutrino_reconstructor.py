@@ -190,12 +190,20 @@ if __name__ == '__main__':
     channel = 'rho_rho'
     DL = DataLoader(variables_rho_rho, channel)
     df, df_rho_ps, df_rho_sm = DL.cleanRecoData(DL.readRecoData(from_pickle=True))
-    df_br = DL.loadRecoData(binary=False).reset_index(drop=False)
+    df_br = DL.loadRecoData(binary=False).reset_index(drop=True)
     # augment the binary df
-    # df_reco_gen, _ = DL.augmentDfToBinary(df_rho_ps, df_rho_sm)
+    df_reco_gen, _ = DL.augmentDfToBinary(df_rho_ps, df_rho_sm)
     # slightly different lengths - due to binary/non_binary
+
+    # debug = pd.read_pickle('./misc/debugging_2.pkl')
+
+    # print(df_br.head())
+    # print(df.reset_index(drop=True).head())
+    # exit()
+    # alpha_1, alpha_2, E_nu_1, E_nu_2, p_t_nu_1, p_t_nu_2, p_z_nu_1, p_z_nu_2 = NR.runAlphaReconstructor(debug, debug, load_alpha=False, termination=100)
     # alpha_1, alpha_2, E_nu_1, E_nu_2, p_t_nu_1, p_t_nu_2, p_z_nu_1, p_z_nu_2 = NR.runAlphaReconstructor(df_reco_gen, df_br, load_alpha=False, termination=100)
-    alpha_1, alpha_2, E_nu_1, E_nu_2, p_t_nu_1, p_t_nu_2, p_z_nu_1, p_z_nu_2 = NR.runAlphaReconstructor(df.reset_index(drop=False), df_br, load_alpha=False, termination=1000)
+    alpha_1, alpha_2, E_nu_1, E_nu_2, p_t_nu_1, p_t_nu_2, p_z_nu_1, p_z_nu_2 = NR.runAlphaReconstructor(df.reset_index(drop=True), df_br, load_alpha=False, termination=1000)
+    
     df_br['alpha_1'] = alpha_1
     df_br['alpha_2'] = alpha_2
     df_br['E_nu_1'] = E_nu_1
@@ -207,4 +215,8 @@ if __name__ == '__main__':
     # print(df_br.columns)
     pd.to_pickle(df_br, 'misc/df_br.pkl')
     # NR.test1(df.reset_index(drop=False), df_br, load_alpha=False, termination=1000)
+
+
+    # THIS COMBINATION WORKS -> DON'T KNOW WHY
+
 

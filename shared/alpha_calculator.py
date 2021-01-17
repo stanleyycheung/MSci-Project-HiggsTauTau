@@ -80,15 +80,26 @@ class AlphaCalculator:
         self.alpha_1, self.alpha_2 = [], []
         # p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2 = [], [], [], []
         rejection = 0
+        E_miss_x_col = self.df.metx.to_numpy()
+        E_miss_y_col = self.df.mety.to_numpy()
+        pi_E_1_col = self.df.pi_E_1.to_numpy()
+        pi_px_1_col = self.df.pi_px_1.to_numpy()
+        pi_py_1_col = self.df.pi_py_1.to_numpy()
+        pi_pz_1_col = self.df.pi_pz_1.to_numpy()
+        pi_E_2_col = self.df.pi_E_2.to_numpy()
+        pi_px_2_col = self.df.pi_px_2.to_numpy()
+        pi_py_2_col = self.df.pi_py_2.to_numpy()
+        pi_pz_2_col = self.df.pi_pz_2.to_numpy()
+        metcov00_col = self.df.metcov00.to_numpy()
+        metcov01_col = self.df.metcov01.to_numpy()
+        metcov10_col = self.df.metcov10.to_numpy()
+        metcov11_col = self.df.metcov11.to_numpy()
         for i in range(self.df.shape[0]):
-            E_miss_x_row = self.df.metx.iloc[i] 
-            E_miss_y_row = self.df.mety.iloc[i] 
-            rho_1_row = np.array([self.df.pi_E_1.iloc[i],self.df.pi_px_1.iloc[i],self.df.pi_py_1.iloc[i],self.df.pi_pz_1.iloc[i]])
-            rho_2_row = np.array([self.df.pi_E_2.iloc[i],self.df.pi_px_2.iloc[i],self.df.pi_py_2.iloc[i],self.df.pi_pz_2.iloc[i]])
-            row_mean = np.array([self.df.metx.iloc[i], self.df.mety.iloc[i]])
-            row_cov = np.array(([self.df.metcov00.iloc[i],self.df.metcov01.iloc[i]],[self.df.metcov10.iloc[i],self.df.metcov11.iloc[i]]))
+            rho_1_row = np.array([pi_E_1_col[i], pi_px_1_col[i], pi_py_1_col[i], pi_pz_1_col[i]])
+            rho_2_row = np.array([pi_E_2_col[i], pi_px_2_col[i], pi_py_2_col[i], pi_pz_2_col[i]])
+            row_cov = np.array(([metcov00_col[i], metcov01_col[i]], [metcov10_col[i], metcov11_col[i]]))
             # (alpha_1_loc, alpha_2_loc), (p_z_nu_1_loc, E_nu_1_loc, p_z_nu_2_loc, E_nu_2_loc) = self.getAlpha(i, E_miss_x_row, E_miss_y_row, rho_1_row, rho_2_row, row_mean, row_cov, termination=termination)
-            alpha_1_loc, alpha_2_loc = self.getAlpha(i, E_miss_x_row, E_miss_y_row, rho_1_row, rho_2_row, row_mean, row_cov, termination=termination)
+            alpha_1_loc, alpha_2_loc = self.getAlpha(i, E_miss_x_col[i], E_miss_y_col[i], rho_1_row, rho_2_row, row_cov, termination=termination)
             # alpha_1_loc, alpha_2_loc = self.getAlphaOld(E_miss_x_row, E_miss_y_row, rho_1_row, rho_2_row, row_mean, row_cov, termination=termination)
             # p_z_nu_1.append(p_z_nu_1_loc)
             # E_nu_1.append(E_nu_1_loc)
@@ -124,7 +135,7 @@ class AlphaCalculator:
         return -1, -1
 
 
-    def getAlpha(self, idx, E_miss_x, E_miss_y, rho_1, rho_2, mean, cov, mode=1, termination=1000):
+    def getAlpha(self, idx, E_miss_x, E_miss_y, rho_1, rho_2, cov, mode=1, termination=1000):
         """
         Calculates alpha with constraints, returns -1 if not possible
         Returns: (alpha_1, alpha_2), (p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2)
@@ -140,6 +151,7 @@ class AlphaCalculator:
         pi_E_2_br = self.df_br.pi_E_2_br.to_numpy()
         pi0_E_1_br = self.df_br.pi0_E_1_br.to_numpy()
         pi0_E_2_br = self.df_br.pi0_E_2_br.to_numpy()
+        mean = np.array([E_miss_x, E_miss_y])
         p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2 = self.getReconstructedInfo2(idx, alpha_1, alpha_2, pi_pz_1_br, pi_pz_2_br, pi0_pz_1_br, pi0_pz_2_br, pi_E_1_br, pi_E_2_br, pi0_E_1_br, pi0_E_2_br)
         if alpha_1 < 0 or alpha_2 < 0 or np.abs(E_nu_1) < np.abs(p_z_nu_1) or np.abs(E_nu_2) < np.abs(p_z_nu_2) or E_nu_1 < 0 or E_nu_2 < 0:
         # if alpha_1 < 0 or alpha_2 < 0:
@@ -165,10 +177,6 @@ class AlphaCalculator:
                 return alpha_1[i], alpha_2[i]
         # return (-1, -1), (-1, -1, -1, -1)
         return -1, -1
-
-    def alphaCriteria(mode, alpha_1, alpha_2, E_nu_1, E_nu_2, p_z_nu_1, p_z_nu2):
-        if mode == 0:
-            pass
 
     def getReconstructedInfo(self, i, alpha_1, alpha_2):
         """
