@@ -278,8 +278,6 @@ class NeuralNetwork:
             raise ValueError('Incorrect channel inputted')
         CC = ConfigChecker(self.channel, self.binary)
         CC.checkInitialize(self.DL, addons_config, read, from_pickle)
-
-        return
         if read:
             print("WARNING: skipping over creating new configs")
             df = self.DL.loadRecoData(self.binary, addons)
