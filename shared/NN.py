@@ -1,3 +1,4 @@
+from numpy.core.numeric import True_
 from evaluator import Evaluator
 from data_loader import DataLoader
 from config_loader import ConfigLoader
@@ -433,13 +434,14 @@ def runGridSearchOverConfigs(search_mode, start=1, end=6):
 
 if __name__ == '__main__':
     if not os.path.exists('C:\\Kristof'):  # then we are on Stanley's computer
-        NN = NeuralNetwork(channel='rho_rho', binary=False, write_filename='NN_output', show_graph=False)
-        NN.initialize(addons_config={'neutrino': {'load_alpha':False, 'termination':1000}}, read=False, from_pickle=True)
+        NN = NeuralNetwork(channel='rho_rho', binary=True, write_filename='NN_output', show_graph=False)
+        # NN.initialize(addons_config={'neutrino': {'load_alpha':False, 'termination':1000}}, read=False, from_pickle=True)
         # NN.initialize(addons_config={}, read=False, from_pickle=True)
         # NN.model = NN.seq_model(units=(300, 300, 300), batch_norm=True, dropout=0.2)
         # NN.run(3, read=True, from_pickle=True, epochs=100, batch_size=8192) # 16384, 131072
         # configs = [1,2,3,4,5,6]
         # NN.runMultiple(configs, epochs=1, batch_size=10000)
+        NN.runWithNeutrino(1, load_alpha=False, termination=100, read=False, from_pickle=True, epochs=50, batch_size=1024)
         # NN.runHPTuning(3, read=True, from_pickle=True, epochs=200, tuner_epochs=200, batch_size=8192, tuner_batch_size=8192, tuner_mode=1)
         # NN.runGridSearch(6, read=True, from_pickle=True, search_mode=1)
         # runGridSearchOverConfigs(1)

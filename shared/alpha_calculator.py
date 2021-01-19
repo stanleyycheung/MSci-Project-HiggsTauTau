@@ -5,12 +5,11 @@ import matplotlib.pyplot as plt
 from utils import profileplot, sps, profileplot_plain
 
 class AlphaCalculator:
-
     # changed file paths to class variables
     pickle_dir = './df_tt_rho_rho.pkl'
     alpha_save_dir = './alpha_analysis'
 
-    def __init__(self, df_reco, df_br, binary, m_higgs, m_tau, load=False, seed=1):
+    def __init__(self, df_reco, df_br, binary, m_higgs, m_tau, default_value, load=False, seed=1):
         np.random.seed(seed)
         self.m_higgs = m_higgs
         self.m_tau = m_tau
@@ -18,7 +17,7 @@ class AlphaCalculator:
         self.df = df_reco
         self.df_br = df_br
         self.load = load
-        
+        self.DEFAULT_VALUE = default_value
 
     def loadData(self, channel='rho_rho'):
         df_tt = pd.read_pickle(AlphaCalculator.pickle_dir)
@@ -60,8 +59,10 @@ class AlphaCalculator:
         """
         Runs alpha calculation, and automatically saves them
         -- Return type: alpha_1, alpha_2, p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2 --
-        Changed to not return neutrino reconstructed info (15/01)
-        Returns: alpha_1, alpha_2
+        -- Changed to not return neutrino reconstructed info (15/01) --
+        -- Returns: alpha_1, alpha_2 --
+        Changed back return type to original (19/01)
+        Return type: alpha_1, alpha_2, p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2
         """
         if self.load:
             binary_str = ''
@@ -78,7 +79,7 @@ class AlphaCalculator:
             # return self.alpha_1, self.alpha_2, p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2
             return self.alpha_1, self.alpha_2
         self.alpha_1, self.alpha_2 = [], []
-        # p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2 = [], [], [], []
+        p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2 = [], [], [], []
         rejection = 0
         E_miss_x_col = self.df.metx.to_numpy()
         E_miss_y_col = self.df.mety.to_numpy()
@@ -98,16 +99,16 @@ class AlphaCalculator:
             rho_1_row = np.array([pi_E_1_col[i], pi_px_1_col[i], pi_py_1_col[i], pi_pz_1_col[i]])
             rho_2_row = np.array([pi_E_2_col[i], pi_px_2_col[i], pi_py_2_col[i], pi_pz_2_col[i]])
             row_cov = np.array(([metcov00_col[i], metcov01_col[i]], [metcov10_col[i], metcov11_col[i]]))
-            # (alpha_1_loc, alpha_2_loc), (p_z_nu_1_loc, E_nu_1_loc, p_z_nu_2_loc, E_nu_2_loc) = self.getAlpha(i, E_miss_x_row, E_miss_y_row, rho_1_row, rho_2_row, row_mean, row_cov, termination=termination)
-            alpha_1_loc, alpha_2_loc = self.getAlpha(i, E_miss_x_col[i], E_miss_y_col[i], rho_1_row, rho_2_row, row_cov, termination=termination)
+            (alpha_1_loc, alpha_2_loc), (p_z_nu_1_loc, E_nu_1_loc, p_z_nu_2_loc, E_nu_2_loc) = self.getAlpha(i, E_miss_x_col[i], E_miss_y_col[i], rho_1_row, rho_2_row, row_cov, termination=termination)
+            # alpha_1_loc, alpha_2_loc = self.getAlpha(i, E_miss_x_col[i], E_miss_y_col[i], rho_1_row, rho_2_row, row_cov, termination=termination)
             # alpha_1_loc, alpha_2_loc = self.getAlphaOld(E_miss_x_row, E_miss_y_row, rho_1_row, rho_2_row, row_mean, row_cov, termination=termination)
-            # p_z_nu_1.append(p_z_nu_1_loc)
-            # E_nu_1.append(E_nu_1_loc)
-            # p_z_nu_2.append(p_z_nu_2_loc)
-            # E_nu_2.append(E_nu_2_loc)
+            p_z_nu_1.append(p_z_nu_1_loc)
+            E_nu_1.append(E_nu_1_loc)
+            p_z_nu_2.append(p_z_nu_2_loc)
+            E_nu_2.append(E_nu_2_loc)
             self.alpha_1.append(alpha_1_loc)
             self.alpha_2.append(alpha_2_loc)
-            if alpha_1_loc == -1:
+            if alpha_1_loc == self.DEFAULT_VALUE:
                 rejection += 1
             if i%10000 == 0:
                 print(f'getting alpha for {i}, rejection: {rejection}/{self.df.shape[0]}')
@@ -117,8 +118,8 @@ class AlphaCalculator:
             binary_str += "_b"
         np.save(f'{AlphaCalculator.alpha_save_dir}/alpha_1_{termination}'+binary_str+".npy", self.alpha_1, allow_pickle=True)
         np.save(f'{AlphaCalculator.alpha_save_dir}/alpha_2_{termination}'+binary_str+".npy", self.alpha_2, allow_pickle=True)
-        # return self.alpha_1, self.alpha_2, p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2
-        return self.alpha_1, self.alpha_2
+        return self.alpha_1, self.alpha_2, p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2
+        # return self.alpha_1, self.alpha_2
 
     def getAlphaOld(self, E_miss_x, E_miss_y, rho_1, rho_2, mean, cov, mode=1, termination=1000):
         alpha_1, alpha_2 = self.calcAlpha(E_miss_x, E_miss_y, rho_1, rho_2, mode)
@@ -132,12 +133,12 @@ class AlphaCalculator:
             # print(E_miss_x, E_miss_y, alpha_1, alpha_2)
             if alpha_1 > 0 and alpha_2 > 0:
                 return alpha_1, alpha_2
-        return -1, -1
+        return self.DEFAULT_VALUE, self.DEFAULT_VALUE
 
 
     def getAlpha(self, idx, E_miss_x, E_miss_y, rho_1, rho_2, cov, mode=1, termination=1000):
         """
-        Calculates alpha with constraints, returns -1 if not possible
+        Calculates alpha with constraints, returns self.DEFAULT_VALUE if not possible
         Returns: (alpha_1, alpha_2), (p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2)
         """
         alpha_1, alpha_2 = self.calcAlpha(E_miss_x, E_miss_y, rho_1, rho_2, mode)
@@ -158,8 +159,8 @@ class AlphaCalculator:
         # if alpha_1 < 0 or alpha_2 < 0 or np.abs(E_nu_1) < np.abs(p_z_nu_1) or np.abs(E_nu_2) < np.abs(p_z_nu_2):
             E_miss_gen = np.random.multivariate_normal(mean, cov, termination)
         else:
-            # return (alpha_1, alpha_2), (p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2)
-            return alpha_1, alpha_2
+            return (alpha_1, alpha_2), (p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2)
+            # return alpha_1, alpha_2
         # turn into vectorised calculations
         E_miss_x = E_miss_gen[:, 0]
         E_miss_y = E_miss_gen[:, 1]
@@ -174,9 +175,10 @@ class AlphaCalculator:
             # if alpha_1[i] > 0 and alpha_2[i] > 0:
             # if alpha_1[i] > 0 and alpha_2[i] > 0 and np.abs(E_nu_1) > np.abs(p_z_nu_1) and np.abs(E_nu_2) > np.abs(p_z_nu_2):
                 # return (alpha_1[i], alpha_2[i]), (p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2)
-                return alpha_1[i], alpha_2[i]
+                return (alpha_1[i], alpha_2[i]), (p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2)
         # return (-1, -1), (-1, -1, -1, -1)
-        return -1, -1
+        # return self.DEFAULT_VALUE, self.DEFAULT_VALUE
+        return (self.DEFAULT_VALUE, self.DEFAULT_VALUE), (self.DEFAULT_VALUE, self.DEFAULT_VALUE, self.DEFAULT_VALUE, self.DEFAULT_VALUE)
 
     def getReconstructedInfo(self, i, alpha_1, alpha_2):
         """

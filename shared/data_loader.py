@@ -37,15 +37,15 @@ class DataLoader:
         reco_root_path = "C:\\Users\\krist\\Downloads\\MVAFILE_ALLHiggs_tt_new.root"
     reco_df_path = './df_tt'
     gen_df_path = './df_tt_gen'
+    input_df_save_dir = './input_df_reco'
 
-    def __init__(self, variables, channel, input_df_save_dir='./input_df_reco'):
+    def __init__(self, variables, channel):
         """
         DataLoader should be near stateless, exceptions of the channel and variables needed to load
         Other instance variables should only deal with load/save directories
         """
         self.channel = channel
         self.variables = variables
-        self.input_df_save_dir = input_df_save_dir
 
     def loadRecoData(self, binary, addons=[]):
         """
@@ -55,7 +55,7 @@ class DataLoader:
         addons_loaded = ""
         if addons:
             addons_loaded = '_'+'_'.join(addons)
-        pickle_file_name = f'{self.input_df_save_dir}/input_{self.channel}{addons_loaded}'
+        pickle_file_name = f'{DataLoader.input_df_save_dir}/input_{self.channel}{addons_loaded}'
         if binary:
             pickle_file_name += '_b'
         df_inputs = pd.read_pickle(pickle_file_name+'.pkl')
@@ -186,7 +186,7 @@ class DataLoader:
             addons_loaded = '_'+'_'.join(addons)
         if save:
             print('Saving df to pickle')
-            pickle_file_name = f'{self.input_df_save_dir}/input_{self.channel}{addons_loaded}'
+            pickle_file_name = f'{DataLoader.input_df_save_dir}/input_{self.channel}{addons_loaded}'
             if binary:
                 pickle_file_name += '_b'
             df_inputs.to_pickle(pickle_file_name+'.pkl')
@@ -903,6 +903,8 @@ class DataLoader:
                 load_alpha = addons_config['neutrino']['load_alpha']
                 termination = addons_config['neutrino']['termination']
                 alpha_1, alpha_2, E_nu_1, E_nu_2, p_t_nu_1, p_t_nu_2, p_z_nu_1, p_z_nu_2 = self.addonNeutrinos(df, df_inputs, binary, load_alpha, termination=termination)
+                df_inputs['alpha_1'] = alpha_1
+                df_inputs['alpha_2'] = alpha_2
                 df_inputs['E_nu_1'] = E_nu_1
                 df_inputs['E_nu_2'] = E_nu_2
                 df_inputs['p_t_nu_1'] = p_t_nu_1

@@ -22,9 +22,10 @@ class ConfigChecker:
             addons_loaded = ""
             if addons:
                 addons_loaded = '_'+'_'.join(addons)
-            pickle_file_name = f'{DataLoader.input_df_save_dir}/input_{DataLoader.channel}{addons_loaded}'
+            pickle_file_name = f'{DataLoader.input_df_save_dir}/input_{DL.channel}{addons_loaded}'
             if self.binary:
                 pickle_file_name += '_b'
+            pickle_file_name =+ '.pkl'
             result[pickle_file_name] = os.path.isfile(pickle_file_name)
         else:
             # check createRecoData

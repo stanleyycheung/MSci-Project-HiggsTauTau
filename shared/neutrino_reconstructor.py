@@ -15,7 +15,9 @@ class NeutrinoReconstructor:
     reco_data_dir = './df_tt_rho_rho.pkl'
     gen_data_dir = './df_tt_gen_rho_rho.pkl'
     saved_df_dir = '../stanley/df_saved'
-    def __init__(self, binary, seed=1):
+    DEFAULT_VALUE = 0
+
+    def __init__(self, binary, seed=1,):
         np.random.seed(seed)
         self.seed = seed
         self.binary = binary
@@ -56,20 +58,20 @@ class NeutrinoReconstructor:
         Returns: alpha_1, alpha_2, E_nu_1, E_nu_2, p_t_nu_1, p_t_nu_2, p_z_nu_1, p_z_nu_2
         """
         AC = AlphaCalculator(df_reco_gen, df_br, self.binary, self.m_higgs,
-                             self.m_tau, load=load_alpha, seed=self.seed)
-        # alpha_1, alpha_2, p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2 = AC.runAlpha(termination=termination)
-        alpha_1, alpha_2 = AC.runAlpha(termination=termination)
+                             self.m_tau, load=load_alpha, seed=self.seed, default_value=NeutrinoReconstructor.DEFAULT_VALUE)
+        alpha_1, alpha_2, p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2 = AC.runAlpha(termination=termination)
+        # alpha_1, alpha_2 = AC.runAlpha(termination=termination)
         # alpha_1, alpha_2 = AC.runAlphaOld(termination=termination)
-        p_z_nu_1 = alpha_1*(df_br.pi_pz_1_br + df_br.pi0_pz_1_br)
-        p_z_nu_2 = alpha_2*(df_br.pi_pz_2_br + df_br.pi0_pz_2_br)
-        E_nu_1 = (self.m_tau**2 - (df_br.pi_E_1_br+df_br.pi0_E_1_br)**2 + (df_br.pi_pz_1_br + df_br.pi0_pz_1_br)
-                  ** 2 + 2*p_z_nu_1*(df_br.pi_pz_1_br + df_br.pi0_pz_1_br))/(2*(df_br.pi_E_1_br+df_br.pi0_E_1_br))
-        E_nu_2 = (self.m_tau**2 - (df_br.pi_E_2_br+df_br.pi0_E_2_br)**2 + (df_br.pi_pz_2_br + df_br.pi0_pz_2_br)
-                  ** 2 + 2*p_z_nu_2*(df_br.pi_pz_2_br + df_br.pi0_pz_2_br))/(2*(df_br.pi_E_2_br+df_br.pi0_E_2_br))
+        # p_z_nu_1 = alpha_1*(df_br.pi_pz_1_br + df_br.pi0_pz_1_br)
+        # p_z_nu_2 = alpha_2*(df_br.pi_pz_2_br + df_br.pi0_pz_2_br)
+        # E_nu_1 = (self.m_tau**2 - (df_br.pi_E_1_br+df_br.pi0_E_1_br)**2 + (df_br.pi_pz_1_br + df_br.pi0_pz_1_br)
+        #           ** 2 + 2*p_z_nu_1*(df_br.pi_pz_1_br + df_br.pi0_pz_1_br))/(2*(df_br.pi_E_1_br+df_br.pi0_E_1_br))
+        # E_nu_2 = (self.m_tau**2 - (df_br.pi_E_2_br+df_br.pi0_E_2_br)**2 + (df_br.pi_pz_2_br + df_br.pi0_pz_2_br)
+        #           ** 2 + 2*p_z_nu_2*(df_br.pi_pz_2_br + df_br.pi0_pz_2_br))/(2*(df_br.pi_E_2_br+df_br.pi0_E_2_br))
         p_t_nu_1 = np.sqrt(np.array(E_nu_1)**2 - np.array(p_z_nu_1)**2)
         p_t_nu_2 = np.sqrt(np.array(E_nu_2)**2 - np.array(p_z_nu_2)**2)
-        p_t_nu_1[np.isnan(p_t_nu_1)] = -1
-        p_t_nu_2[np.isnan(p_t_nu_2)] = -1
+        p_t_nu_1[np.isnan(p_t_nu_1)] = NeutrinoReconstructor.DEFAULT_VALUE
+        p_t_nu_2[np.isnan(p_t_nu_2)] = NeutrinoReconstructor.DEFAULT_VALUE
         # populate input df with neutrino variables
         # df_br['E_nu_1'] = E_nu_1
         # df_br['E_nu_2'] = E_nu_2
@@ -152,21 +154,9 @@ class NeutrinoReconstructor:
         # AC.profileAlphaPz(df_red)
         return df, df_red
 
-
     def evaluateNegative(self, var):
         print(f"Fraction of < 0: {(var<0).sum()/len(var):.3f}")
 
-
-    # def loadGenData(self, channel='rho_rho', skip=False):
-    #     if skip:
-    #         return None
-    #     df_tt = pd.read_pickle(NeutrinoReconstructor.gen_data_dir)
-    #     df = None
-    #     if channel == 'rho_rho':
-    #         df = df_tt[(df_tt['dm_1'] == 1) & (df_tt['dm_2'] == 1)]
-    #     # TODO: To add other channels
-    #     self.df = df.drop(["dm_1", "dm_2", "wt_cp_sm", "wt_cp_ps",
-    #                        "wt_cp_mm", "rand"], axis=1).reset_index(drop=True)
 
 if __name__ == '__main__':
     from data_loader import DataLoader
@@ -197,13 +187,9 @@ if __name__ == '__main__':
 
     # debug = pd.read_pickle('./misc/debugging_2.pkl')
 
-    # print(df_br.head())
-    # print(df.reset_index(drop=True).head())
-    # exit()
     # alpha_1, alpha_2, E_nu_1, E_nu_2, p_t_nu_1, p_t_nu_2, p_z_nu_1, p_z_nu_2 = NR.runAlphaReconstructor(debug, debug, load_alpha=False, termination=100)
     # alpha_1, alpha_2, E_nu_1, E_nu_2, p_t_nu_1, p_t_nu_2, p_z_nu_1, p_z_nu_2 = NR.runAlphaReconstructor(df_reco_gen, df_br, load_alpha=False, termination=100)
-    alpha_1, alpha_2, E_nu_1, E_nu_2, p_t_nu_1, p_t_nu_2, p_z_nu_1, p_z_nu_2 = NR.runAlphaReconstructor(df.reset_index(drop=True), df_br, load_alpha=False, termination=1000)
-    
+    alpha_1, alpha_2, E_nu_1, E_nu_2, p_t_nu_1, p_t_nu_2, p_z_nu_1, p_z_nu_2 = NR.runAlphaReconstructor(df.reset_index(drop=True), df_br, load_alpha=False, termination=100)
     df_br['alpha_1'] = alpha_1
     df_br['alpha_2'] = alpha_2
     df_br['E_nu_1'] = E_nu_1
