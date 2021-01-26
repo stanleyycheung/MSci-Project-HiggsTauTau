@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from pylorentz import Momentum4, Position4
 from alpha_calculator import AlphaCalculator
 
+
 class NeutrinoReconstructor:
     """
     Requires: 
@@ -40,10 +41,11 @@ class NeutrinoReconstructor:
                            "wt_cp_sm", "wt_cp_ps", "wt_cp_mm", "rand"], axis=1).reset_index(drop=True)
         return df_reco
 
-
     def loadBRGenData(self):
         return pd.read_pickle(f'{NeutrinoReconstructor.saved_df_dir}/rho_rho/df_rho_rho.pkl')
 
+    def getGenBRNeutrino(self):
+        pass
 
     def runAlphaReconstructor(self, df_reco_gen, df_br, load_alpha, termination=1000):
         """
@@ -79,7 +81,37 @@ class NeutrinoReconstructor:
         # df_br['p_t_nu_2'] = p_t_nu_2
         # df_br['p_z_nu_1'] = p_z_nu_1
         # df_br['p_z_nu_2'] = p_z_nu_2
+        # df_red = df[(df['alpha_1'] != NeutrinoReconstructor.DEFAULT_VALUE) & (df['alpha_2'] != NeutrinoReconstructor.DEFAULT_VALUE) & (
+        #     df['E_nu_1'] != NeutrinoReconstructor.DEFAULT_VALUE) & (df['E_nu_2'] != NeutrinoReconstructor.DEFAULT_VALUE)].reset_index(drop=True)
+        # AC.profileAlphaPz(df_red)
         return alpha_1, alpha_2, E_nu_1, E_nu_2, p_t_nu_1, p_t_nu_2, p_z_nu_1, p_z_nu_2
+
+    def runGraphs(self, df_reco_gen, termination=1000):
+        """
+        Creates profile graph and other graphs
+        """
+        load_alpha = True
+        # df_reco_gen = self.loadRecoData(skip=load_alpha)
+        df_br = self.loadBRGenData()
+        AC = AlphaCalculator(df_reco_gen, df_br, self.binary, self.m_higgs,
+                             self.m_tau, load=load_alpha, seed=self.seed, default_value=NeutrinoReconstructor.DEFAULT_VALUE)
+        alpha_1, alpha_2, p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2 = AC.runAlpha(termination=termination)
+        p_t_nu_1 = np.sqrt(np.array(E_nu_1)**2 - np.array(p_z_nu_1)**2)
+        p_t_nu_2 = np.sqrt(np.array(E_nu_2)**2 - np.array(p_z_nu_2)**2)
+        p_t_nu_1[np.isnan(p_t_nu_1)] = NeutrinoReconstructor.DEFAULT_VALUE
+        p_t_nu_2[np.isnan(p_t_nu_2)] = NeutrinoReconstructor.DEFAULT_VALUE
+        df_br['alpha_1'] = alpha_1
+        df_br['alpha_2'] = alpha_2
+        df_br['E_nu_1'] = E_nu_1
+        df_br['E_nu_2'] = E_nu_2
+        df_br['p_t_nu_1'] = p_t_nu_1
+        df_br['p_t_nu_2'] = p_t_nu_2
+        df_br['p_z_nu_1'] = p_z_nu_1
+        df_br['p_z_nu_2'] = p_z_nu_2
+        df_red = df_br[(df_br['alpha_1'] != NeutrinoReconstructor.DEFAULT_VALUE)].reset_index(drop=True)
+        print(f'Rejected {(len(df.index)-len(df_red.index))/len(df_red.index)*100:.4f}% events due to physical reasons')
+        AC.profileAlphaPz(df_red, termination=termination)
+        # AC.checkAlphaPz(df_red, termination=termination)
 
     def test1(self, df_reco_gen, df_br, load_alpha, termination=1000):
         """
@@ -174,8 +206,8 @@ if __name__ == '__main__':
         "y_1_1", "y_1_2",
         'met', 'metx', 'mety',
         'metcov00', 'metcov01', 'metcov10', 'metcov11',
-        "gen_nu_p_1", "gen_nu_phi_1", "gen_nu_eta_1", #leading neutrino, gen level
-        "gen_nu_p_2", "gen_nu_phi_2", "gen_nu_eta_2" #subleading neutrino, gen level
+        "gen_nu_p_1", "gen_nu_phi_1", "gen_nu_eta_1",  # leading neutrino, gen level
+        "gen_nu_p_2", "gen_nu_phi_2", "gen_nu_eta_2"  # subleading neutrino, gen level
     ]
     channel = 'rho_rho'
     DL = DataLoader(variables_rho_rho, channel)
@@ -186,10 +218,11 @@ if __name__ == '__main__':
     # slightly different lengths - due to binary/non_binary
 
     # debug = pd.read_pickle('./misc/debugging_2.pkl')
-
     # alpha_1, alpha_2, E_nu_1, E_nu_2, p_t_nu_1, p_t_nu_2, p_z_nu_1, p_z_nu_2 = NR.runAlphaReconstructor(debug, debug, load_alpha=False, termination=100)
     # alpha_1, alpha_2, E_nu_1, E_nu_2, p_t_nu_1, p_t_nu_2, p_z_nu_1, p_z_nu_2 = NR.runAlphaReconstructor(df_reco_gen, df_br, load_alpha=False, termination=100)
-    alpha_1, alpha_2, E_nu_1, E_nu_2, p_t_nu_1, p_t_nu_2, p_z_nu_1, p_z_nu_2 = NR.runAlphaReconstructor(df.reset_index(drop=True), df_br, load_alpha=False, termination=100)
+    # alpha_1, alpha_2, E_nu_1, E_nu_2, p_t_nu_1, p_t_nu_2, p_z_nu_1, p_z_nu_2 = NR.runAlphaReconstructor(df.reset_index(drop=True), df_br, load_alpha=True, termination=1000)
+    NR.runGraphs(df.reset_index(drop=True))
+    exit()
     df_br['alpha_1'] = alpha_1
     df_br['alpha_2'] = alpha_2
     df_br['E_nu_1'] = E_nu_1
@@ -202,7 +235,4 @@ if __name__ == '__main__':
     pd.to_pickle(df_br, 'misc/df_br.pkl')
     # NR.test1(df.reset_index(drop=False), df_br, load_alpha=False, termination=1000)
 
-
     # THIS COMBINATION WORKS -> DON'T KNOW WHY
-
-

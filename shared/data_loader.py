@@ -468,14 +468,20 @@ class DataLoader:
         
         return self.calc_aco_angles(p1[:].T, p2[:].T, p3[:].T, p4[:].T, y1, y2)
 
-    def getAcoAngles(self):
+    def getAcoAngles(self, **kwargs):
         """
         Returns all the aco angles for different channels
         """
         aco_angles = []
         if self.channel == 'rho_rho':
-            pass
+            pi_1_boosted = kwargs['pi_1_boosted']
+            pi_2_boosted = kwargs['pi_2_boosted'] 
+            pi0_1_boosted = kwargs['pi0_1_boosted']
+            pi0_2_boosted = kwargs['pi0_2_boosted']
+            aco_angle_1 = self.getAcoAnglesForOneRF(pi0_1_boosted, pi0_2_boosted, pi_1_boosted, pi_2_boosted)
+            aco_angles.append(aco_angle_1)
         elif self.channel == 'rho_a1':
+
             pass
         elif self.channel == 'a1_a1':
             pass
@@ -485,17 +491,30 @@ class DataLoader:
 
     def getAcoAnglesForOneRF(self, p1, p2, p3, p4, rest_frame):
         """
+        TO TEST: (swapping p1 and p3)
+        all inputs are Momentum4
         p1, p3 from same decay
         p2, p4 from same decay
+        calculates the angle that spans between p1, p3 plane and p2, p4 plane
         """
         boost = Momentum4(rest_frame[0], -rest_frame[1], -rest_frame[2], -rest_frame[3])
         p1_boosted = p1.boost_particle(boost)
         p2_boosted = p2.boost_particle(boost)
         p3_boosted = p3.boost_particle(boost)
         p4_boosted = p4.boost_particle(boost)
-        # to translate
-        n1 = p1.Vect() - p1.Vect().Dot(p3.Vect().Unit())*p3.Vect().Unit();    
-        n2 = p2.Vect() - p2.Vect().Dot(p4.Vect().Unit())*p4.Vect().Unit();
+        p1_b_p = np.c_[p1_boosted.p_x, p1_boosted.p_y, p1_boosted.p_z]
+        p2_b_p = np.c_[p2_boosted.p_x, p2_boosted.p_y, p2_boosted.p_z]
+        p3_b_p = np.c_[p3_boosted.p_x, p3_boosted.p_y, p3_boosted.p_z]
+        p4_b_p = np.c_[p4_boosted.p_x, p4_boosted.p_y, p4_boosted.p_z]
+        n1 = p1_b_p - np.multiply(np.einsum('ij, ij->i', p1_b_p, self.normaliseVector(p3_b_p))[:, None], self.normaliseVector(p3_b_p))
+        n2 = p2_b_p - np.multiply(np.einsum('ij, ij->i', p2_b_p, self.normaliseVector(p4_b_p))[:, None], self.normaliseVector(p4_b_p))
+        # vectorised form of
+        # n1 = p1.Vect() - p1.Vect().Dot(p3.Vect().Unit())*p3.Vect().Unit();    
+        # n2 = p2.Vect() - p2.Vect().Dot(p4.Vect().Unit())*p4.Vect().Unit();
+        return np.arccos(np.einsum('ij, ij->i', n1, n2))
+
+    def normaliseVector(vec):
+        return np.sqrt(np.einsum('...i,...i', vec, vec))
 
     def calc_aco_angles(self, pp1, pp2, pp3, pp4, yy1, yy2):
         angles = []
