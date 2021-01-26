@@ -294,12 +294,32 @@ class DataLoader:
             pi_2_boosted = kwargs['pi_2_boosted'] 
             pi0_1_boosted = kwargs['pi0_1_boosted']
             pi0_2_boosted = kwargs['pi0_2_boosted']
-            aco_angle_1 = self.getAcoAnglesForOneRF(pi0_1_boosted, pi0_2_boosted, pi_1_boosted, pi_2_boosted)
+            zmf = pi_1_boosted + pi_2_boosted + pi0_1_boosted + pi0_2_boosted
+            aco_angle_1 = self.getAcoAnglesForOneRF(pi0_1_boosted, pi0_2_boosted, pi_1_boosted, pi_2_boosted, zmf)
             aco_angles.append(aco_angle_1)
         elif self.channel == 'rho_a1':
-            pass
+            pi_1_boosted = kwargs['pi_1_boosted']
+            pi_2_boosted = kwargs['pi_2_boosted'] 
+            pi0_1_boosted = kwargs['pi0_1_boosted']
+            pi2_2_boosted = kwargs['pi2_2_boosted'] 
+            pi3_2_boosted = kwargs['pi3_2_boosted']
+            zmf = pi_1_boosted + pi_2_boosted
+            aco_angle_1 = self.getAcoAnglesForOneRF(pi0_1_boosted, pi_2_boosted, pi_1_boosted, pi2_2_boosted, zmf)
+            aco_angles.append(aco_angle_1)
         elif self.channel == 'a1_a1':
-            pass
+            pi_1_boosted = kwargs['pi_1_boosted']
+            pi_2_boosted = kwargs['pi_2_boosted'] 
+            pi2_1_boosted = kwargs['pi2_1_boosted']
+            pi3_1_boosted = kwargs['pi3_1_boosted']
+            pi2_2_boosted = kwargs['pi2_2_boosted'] 
+            pi3_2_boosted = kwargs['pi3_2_boosted']
+            zmf = pi_1_boosted + pi_2_boosted
+            aco_angle_1 = self.getAcoAnglesForOneRF(pi_1_boosted, pi_2_boosted, pi2_1_boosted, pi2_2_boosted, zmf)
+            aco_angle_2 = self.getAcoAnglesForOneRF(pi_1_boosted, pi_2_boosted+pi3_2_boosted, pi2_1_boosted, pi2_2_boosted, zmf)
+            aco_angle_3 = self.getAcoAnglesForOneRF(pi_1_boosted+pi3_1_boosted, pi_2_boosted, pi2_1_boosted, pi2_2_boosted, zmf)
+            aco_angles.append(aco_angle_1)
+            aco_angles.append(aco_angle_2)
+            aco_angles.append(aco_angle_3)
         else:
             raise ValueError('Channel not understood')
         return aco_angles
