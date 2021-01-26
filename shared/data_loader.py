@@ -468,6 +468,35 @@ class DataLoader:
         
         return self.calc_aco_angles(p1[:].T, p2[:].T, p3[:].T, p4[:].T, y1, y2)
 
+    def getAcoAngles(self):
+        """
+        Returns all the aco angles for different channels
+        """
+        aco_angles = []
+        if self.channel == 'rho_rho':
+            pass
+        elif self.channel == 'rho_a1':
+            pass
+        elif self.channel == 'a1_a1':
+            pass
+        else:
+            raise ValueError('Channel not understood')
+        return aco_angles
+
+    def getAcoAnglesForOneRF(self, p1, p2, p3, p4, rest_frame):
+        """
+        p1, p3 from same decay
+        p2, p4 from same decay
+        """
+        boost = Momentum4(rest_frame[0], -rest_frame[1], -rest_frame[2], -rest_frame[3])
+        p1_boosted = p1.boost_particle(boost)
+        p2_boosted = p2.boost_particle(boost)
+        p3_boosted = p3.boost_particle(boost)
+        p4_boosted = p4.boost_particle(boost)
+        # to translate
+        n1 = p1.Vect() - p1.Vect().Dot(p3.Vect().Unit())*p3.Vect().Unit();    
+        n2 = p2.Vect() - p2.Vect().Dot(p4.Vect().Unit())*p4.Vect().Unit();
+
     def calc_aco_angles(self, pp1, pp2, pp3, pp4, yy1, yy2):
         angles = []
         for i in range(len(pp1)):
