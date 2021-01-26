@@ -1,6 +1,8 @@
+from numpy.core.numeric import True_
 from evaluator import Evaluator
 from data_loader import DataLoader
 from config_loader import ConfigLoader
+from config_checker import ConfigChecker
 import os
 import tensorflow as tf
 import random
@@ -88,6 +90,20 @@ class NeuralNetwork:
     def run(self, config_num, read=True, from_pickle=True, epochs=50, batch_size=1024, patience=10, addons_config={}):
         df = self.initialize(addons_config, read=read, from_pickle=from_pickle)
         X_train, X_test, y_train, y_test = self.configure(df, config_num)
+        print(f'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Training config {config_num}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+        model = self.train(X_train, X_test, y_train, y_test, epochs=epochs, batch_size=batch_size, patience=patience)
+        if self.binary:
+            auc = self.evaluateBinary(model, X_test, y_test, self.history)
+        else:
+            w_a = df.w_a
+            w_b = df.w_b
+            auc = self.evaluate(model, X_test, y_test, self.history, w_a, w_b)
+        self.write(auc, self.history)
+
+    def runWithNeutrino(self, config_num, load_alpha=False, termination=1000, read=True, from_pickle=True, epochs=50, batch_size=1024, patience=10):
+        addons_config={'neutrino': {'load_alpha':load_alpha, 'termination':termination}, 'met':{}}
+        df = self.initialize(addons_config, read=read, from_pickle=from_pickle)
+        X_train, X_test, y_train, y_test = self.configure(df, config_num, mode=1)
         print(f'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Training config {config_num}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
         model = self.train(X_train, X_test, y_train, y_test, epochs=epochs, batch_size=batch_size, patience=patience)
         if self.binary:
@@ -275,19 +291,22 @@ class NeuralNetwork:
             self.DL = DataLoader(self.variables_a1_a1, self.channel)
         else:
             raise ValueError('Incorrect channel inputted')
+        CC = ConfigChecker(self.channel, self.binary)
+        CC.checkInitialize(self.DL, addons_config, read, from_pickle)
         if read:
+            print("WARNING: skipping over creating new configs")
             df = self.DL.loadRecoData(self.binary, addons)
         else:
             df = self.DL.createRecoData(self.binary, from_pickle, addons, addons_config)
         return df
 
-    def configure(self, df, config_num):
+    def configure(self, df, config_num, mode=0):
         """
         Configures NN inputs - selects config_num and creates train/test split
         """
         self.config_num = config_num
         CL = ConfigLoader(df, self.channel)
-        X_train, X_test, y_train, y_test = CL.configTrainTestData(self.config_num, self.binary)
+        X_train, X_test, y_train, y_test = CL.configTrainTestData(self.config_num, self.binary, mode)
         return X_train, X_test, y_train, y_test
 
 
@@ -316,13 +335,20 @@ class NeuralNetwork:
         auc = E.evaluate(X_test, y_test, history, show=self.show_graph, w_a=w_a, w_b=w_b)
         return auc
 
-    def write(self, auc, history):
+    def write(self, auc, history, addons_config):
+        if not addons_config:
+            addons = []
+        else:
+            addons = addons_config.keys()
+        addons_loaded = ""
+        if addons:
+            addons_loaded = '_'+'_'.join(addons)
         file = f'{self.write_dir}/{self.write_filename}.txt'
         with open(file, 'a+') as f:
             print(f'Writing to {file}')
             time_str = datetime.datetime.now().strftime('%Y/%m/%d|%H:%M:%S')
             actual_epochs = len(history.history["loss"])
-            f.write(f'{time_str},{auc},{self.config_num},{self.layers},{self.epochs},{actual_epochs},{self.batch_size},{self.binary},{self.model_str}\n')
+            f.write(f'{time_str},{auc},{self.config_num},{self.layers},{self.epochs},{actual_epochs},{self.batch_size},{self.binary},{self.model_str},{addons_loaded}\n')
         print('Finish writing')
         f.close()
 
@@ -409,14 +435,16 @@ def runGridSearchOverConfigs(search_mode, start=1, end=6):
 if __name__ == '__main__':
     if not os.path.exists('C:\\Kristof'):  # then we are on Stanley's computer
         NN = NeuralNetwork(channel='rho_rho', binary=True, write_filename='NN_output', show_graph=False)
-        NN.initialize(addons_config={'neutrino': {'load_alpha':False, 'termination':100}}, read=False, from_pickle=True)
+        # NN.initialize(addons_config={'neutrino': {'load_alpha':False, 'termination':1000}}, read=False, from_pickle=True)
+        # NN.initialize(addons_config={}, read=False, from_pickle=True)
         # NN.model = NN.seq_model(units=(300, 300, 300), batch_norm=True, dropout=0.2)
         # NN.run(3, read=True, from_pickle=True, epochs=100, batch_size=8192) # 16384, 131072
         # configs = [1,2,3,4,5,6]
         # NN.runMultiple(configs, epochs=1, batch_size=10000)
+        NN.runWithNeutrino(1, load_alpha=False, termination=100, read=False, from_pickle=True, epochs=50, batch_size=1024)
         # NN.runHPTuning(3, read=True, from_pickle=True, epochs=200, tuner_epochs=200, batch_size=8192, tuner_batch_size=8192, tuner_mode=1)
         # NN.runGridSearch(6, read=True, from_pickle=True, search_mode=1)
-        runGridSearchOverConfigs(1)
+        # runGridSearchOverConfigs(1)
 
     else:  # if we are on Kristof's computer
         # NN = NeuralNetwork(channel='rho_rho', binary=True, write_filename='NN_output', show_graph=False)
