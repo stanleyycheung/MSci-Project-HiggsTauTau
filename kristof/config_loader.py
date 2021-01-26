@@ -1,7 +1,7 @@
 from multiprocessing import Value
 import numpy as np
 from sklearn.model_selection import train_test_split
-from neutrino_reconstructor import NeutrinoReconstructor
+
 
 class ConfigLoader:
     """
@@ -55,8 +55,7 @@ class ConfigLoader:
                 2: flag
                 3: flag + met
                 """
-                default_value = NeutrinoReconstructor.DEFAULT_VALUE
-                flag = np.where((self.df['p_t_nu_1']==default_value) | (self.df['alpha_1']==default_value) | (self.df['p_t_nu_2']==default_value) | (self.df['alpha_2']==default_value), 0, 1)
+                flag = np.where((self.df['p_t_nu_1']==-1) | (self.df['alpha_1']==-1) | (self.df['p_t_nu_2']==-1) | (self.df['alpha_2']==-1), 0, 1)
                 config_map_neutrino = {
                     1: np.c_[pi0_1_transformed, pi0_2_transformed, pi_1_transformed, pi_2_transformed, self.df['E_nu_1'], self.df['E_nu_2'], self.df['p_t_nu_1'], self.df['p_t_nu_2'], self.df['p_z_nu_1'], self.df['p_z_nu_2']],
                     2: np.c_[pi0_1_transformed, pi0_2_transformed, pi_1_transformed, pi_2_transformed, self.df['E_nu_1'], self.df['E_nu_2'], self.df['p_t_nu_1'], self.df['p_t_nu_2'], self.df['p_z_nu_1'], self.df['p_z_nu_2'], flag],
@@ -123,7 +122,7 @@ class ConfigLoader:
         try:
             config_map = self.chooseConfigMap(mode=mode)
         except KeyError as e:
-            raise ValueError(f'Wrong config input : {e}')
+            raise ValueError('Wrong config input number')
         X = config_map[config_num]
         if binary:
             y = self.df['y']

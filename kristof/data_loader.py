@@ -30,22 +30,21 @@ class DataLoader:
     - Hardcoded gen level variables
     """
 
-    reco_root_path = "./MVAFILE_AllHiggs_tt.root"
-    gen_root_path = "./MVAFILE_GEN_AllHiggs_tt.root"
-    if os.path.exists("C:\\Users\\krist\\Downloads\\MVAFILE_ALLHiggs_tt_new.root"):
-        print('Using Kristof\'s .root file')
-        reco_root_path = "C:\\Users\\krist\\Downloads\\MVAFILE_ALLHiggs_tt_new.root"
-    reco_df_path = './df_tt'
-    gen_df_path = './df_tt_gen'
-    input_df_save_dir = './input_df_reco'
-
-    def __init__(self, variables, channel):
+    def __init__(self, variables, channel, input_df_save_dir='./input_df_reco'):
         """
         DataLoader should be near stateless, exceptions of the channel and variables needed to load
         Other instance variables should only deal with load/save directories
         """
         self.channel = channel
         self.variables = variables
+        self.input_df_save_dir = input_df_save_dir
+        self.reco_root_path = "./MVAFILE_AllHiggs_tt.root"
+        self.gen_root_path = "./MVAFILE_GEN_AllHiggs_tt.root"
+        if os.path.exists("C:\\Users\\krist\\Downloads\\MVAFILE_ALLHiggs_tt_new.root"):
+            print('Using Kristof\'s .root file')
+            self.reco_root_path = "C:\\Users\\krist\\Downloads\\MVAFILE_ALLHiggs_tt_new.root"
+        self.reco_df_path = './df_tt'
+        self.gen_df_path = './df_tt_gen'
 
     def loadRecoData(self, binary, addons=[]):
         """
@@ -55,7 +54,7 @@ class DataLoader:
         addons_loaded = ""
         if addons:
             addons_loaded = '_'+'_'.join(addons)
-        pickle_file_name = f'{DataLoader.input_df_save_dir}/input_{self.channel}{addons_loaded}'
+        pickle_file_name = f'{self.input_df_save_dir}/input_{self.channel}{addons_loaded}'
         if binary:
             pickle_file_name += '_b'
         df_inputs = pd.read_pickle(pickle_file_name+'.pkl')
@@ -78,13 +77,13 @@ class DataLoader:
         Reads the reco root file, can save contents into .pkl for fast read/write abilities
         """
         if not from_pickle:
-            tree_tt = uproot.open(DataLoader.reco_root_path)["ntuple"]
+            tree_tt = uproot.open(self.reco_root_path)["ntuple"]
             # tree_et = uproot.open("/eos/user/s/stcheung/SWAN_projects/Masters_CP/MVAFILE_AllHiggs_et.root")["ntuple"]
             # tree_mt = uproot.open("/eos/user/s/stcheung/SWAN_projects/Masters_CP/MVAFILE_AllHiggs_mt.root")["ntuple"]
             df = tree_tt.pandas.df(self.variables)
-            df.to_pickle(f"{DataLoader.reco_df_path}_{self.channel}.pkl")
+            df.to_pickle(f"{self.reco_df_path}_{self.channel}.pkl")
         else:
-            df = pd.read_pickle(f"{DataLoader.reco_df_path}_{self.channel}.pkl")
+            df = pd.read_pickle(f"{self.reco_df_path}_{self.channel}.pkl")
         return df
 
     def readGenData(self, from_pickle=False):
@@ -102,11 +101,11 @@ class DataLoader:
             'metx', 'mety',
             'sv_x_1', 'sv_y_1', 'sv_z_1', 'sv_x_2', 'sv_y_2', 'sv_z_2',]
         if not from_pickle:
-            tree_tt = uproot.open(DataLoader.gen_root_path)["ntuple"]
+            tree_tt = uproot.open(self.gen_root_path)["ntuple"]
             df = tree_tt.pandas.df(variables_gen)
-            df.to_pickle(f"{DataLoader.gen_df_path}_{self.channel}.pkl")
+            df.to_pickle(f"{self.gen_df_path}_{self.channel}.pkl")
         else:
-            df = pd.read_pickle(f"{DataLoader.gen_df_path}_{self.channel}.pkl")
+            df = pd.read_pickle(f"{self.gen_df_path}_{self.channel}.pkl")
         return df
 
     def cleanGenData(self, df):
@@ -168,15 +167,12 @@ class DataLoader:
         else:
             y = None
         if self.channel == 'rho_rho':
-            # df_inputs_data, boost = self.calculateRhoRhoData(df, len(df_ps))
-            df_inputs_data, boost = self.calculateRhoRhoData_old(df)
+            df_inputs_data, boost = self.calculateRhoRhoData(df, len(df_ps))
         elif self.channel == 'rho_a1':
             df_inputs_data, boost = self.calculateRhoA1Data(df, len(df_ps))
         else:
             # no need to check here as checked in cleanRecoData
             df_inputs_data, boost = self.calculateA1A1Data(df, len(df_ps))
-        # df.to_pickle('misc/debugging_2.pkl')
-        # return 
         df_inputs = pd.DataFrame(df_inputs_data)
         if binary:
             df_inputs['y'] = y
@@ -186,83 +182,11 @@ class DataLoader:
             addons_loaded = '_'+'_'.join(addons)
         if save:
             print('Saving df to pickle')
-            pickle_file_name = f'{DataLoader.input_df_save_dir}/input_{self.channel}{addons_loaded}'
+            pickle_file_name = f'{self.input_df_save_dir}/input_{self.channel}{addons_loaded}'
             if binary:
                 pickle_file_name += '_b'
             df_inputs.to_pickle(pickle_file_name+'.pkl')
         return df_inputs
-
-    def calculateRhoRhoData_old(self, df):
-        pi_1 = Momentum4(df['pi_E_1'], df["pi_px_1"], df["pi_py_1"], df["pi_pz_1"])
-        pi_2 = Momentum4(df['pi_E_2'], df["pi_px_2"], df["pi_py_2"], df["pi_pz_2"])
-        pi0_1 = Momentum4(df['pi0_E_1'], df["pi0_px_1"], df["pi0_py_1"], df["pi0_pz_1"])
-        pi0_2 = Momentum4(df['pi0_E_2'], df["pi0_px_2"], df["pi0_py_2"], df["pi0_pz_2"])
-        rho_1 = pi_1 + pi0_1
-        rho_2 = pi_2 + pi0_2
-        # boost into rest frame of resonances
-        rest_frame = pi_1 + pi_2 + pi0_1 + pi0_2
-        boost = Momentum4(rest_frame[0], -rest_frame[1], -rest_frame[2], -rest_frame[3])
-        pi_1_boosted = pi_1.boost_particle(boost)
-        pi_2_boosted = pi_2.boost_particle(boost)
-        pi0_1_boosted = pi0_1.boost_particle(boost)
-        pi0_2_boosted = pi0_2.boost_particle(boost)
-        rho_1_boosted = pi_1_boosted + pi0_1_boosted
-        rho_2_boosted = pi_2_boosted + pi0_2_boosted
-        # rotations
-        pi_1_boosted_rot, pi_2_boosted_rot = [], []
-        pi0_1_boosted_rot, pi0_2_boosted_rot = [], []
-        rho_1_boosted_rot, rho_2_boosted_rot = [], []
-        for i in range(pi_1_boosted[:].shape[1]):
-            rot_mat = self.rotation_matrix_from_vectors(rho_1_boosted[1:, i], [0, 0, 1])
-            pi_1_boosted_rot.append(rot_mat.dot(pi_1_boosted[1:, i]))
-            pi0_1_boosted_rot.append(rot_mat.dot(pi0_1_boosted[1:, i]))
-            pi_2_boosted_rot.append(rot_mat.dot(pi_2_boosted[1:, i]))
-            pi0_2_boosted_rot.append(rot_mat.dot(pi0_2_boosted[1:, i]))
-            rho_1_boosted_rot.append(rot_mat.dot(rho_1_boosted[1:, i]))
-            rho_2_boosted_rot.append(rot_mat.dot(rho_2_boosted[1:, i]))
-            if i % 100000 == 0:
-                print('finished getting rotated 4-vector', i)
-        pi_1_boosted_rot = np.array(pi_1_boosted_rot)
-        pi_2_boosted_rot = np.array(pi_2_boosted_rot)
-        pi0_1_boosted_rot = np.array(pi0_1_boosted_rot)
-        pi0_2_boosted_rot = np.array(pi0_2_boosted_rot)
-        rho_1_boosted_rot = np.array(rho_1_boosted_rot)
-        rho_2_boosted_rot = np.array(rho_2_boosted_rot)
-        df_inputs_data = {
-            'pi_E_1_br': pi_1_boosted[0],
-            'pi_px_1_br': pi_1_boosted_rot[:, 0],
-            'pi_py_1_br': pi_1_boosted_rot[:, 1],
-            'pi_pz_1_br': pi_1_boosted_rot[:, 2],
-            'pi_E_2_br': pi_2_boosted[0],
-            'pi_px_2_br': pi_2_boosted_rot[:, 0],
-            'pi_py_2_br': pi_2_boosted_rot[:, 1],
-            'pi_pz_2_br': pi_2_boosted_rot[:, 2],
-            'pi0_E_1_br': pi0_1_boosted[0],
-            'pi0_px_1_br': pi0_1_boosted_rot[:, 0],
-            'pi0_py_1_br': pi0_1_boosted_rot[:, 1],
-            'pi0_pz_1_br': pi0_1_boosted_rot[:, 2],
-            'pi0_E_2_br': pi0_2_boosted[0],
-            'pi0_px_2_br': pi0_2_boosted_rot[:, 0],
-            'pi0_py_2_br': pi0_2_boosted_rot[:, 1],
-            'pi0_pz_2_br': pi0_2_boosted_rot[:, 2],
-            'rho_E_1_br': rho_1_boosted[0],
-            'rho_px_1_br': rho_1_boosted_rot[:, 0],
-            'rho_py_1_br': rho_1_boosted_rot[:, 1],
-            'rho_pz_1_br': rho_1_boosted_rot[:, 2],
-            'rho_E_2_br': rho_2_boosted[0],
-            'rho_px_2_br': rho_2_boosted_rot[:, 0],
-            'rho_py_2_br': rho_2_boosted_rot[:, 1],
-            'rho_pz_2_br': rho_2_boosted_rot[:, 2],
-            'aco_angle_1': df['aco_angle_1'],
-            'y_1_1': df['y_1_1'],
-            'y_1_2': df['y_1_2'],
-            'w_a': df.wt_cp_sm,
-            'w_b': df.wt_cp_ps,
-            'm_1': rho_1.m,
-            'm_2': rho_2.m,
-        }
-        return df_inputs_data, boost
-
 
     def calculateRhoRhoData(self, df, len_df_ps=0):
         """
@@ -358,32 +282,6 @@ class DataLoader:
         # plt.hist(diff_ps, bins=50, alpha=0.5, range=[-1e-12, 1e-12])
         # plt.hist(diff_sm, bins=50, alpha=0.5, range=[-1e-12, 1e-12])
         
-        # FOR DEBUGGING:
-        # df['pi_E_1_br'] = pi_1_boosted[0]
-        # df['pi_px_1_br'] = pi_1_boosted_rot[:, 0]
-        # df['pi_py_1_br'] = pi_1_boosted_rot[:, 1]
-        # df['pi_pz_1_br'] = pi_1_boosted_rot[:, 2]
-        # df['pi_E_2_br'] = pi_2_boosted[0]
-        # df['pi_px_2_br'] = pi_2_boosted_rot[:, 0]
-        # df['pi_py_2_br'] = pi_2_boosted_rot[:, 1]
-        # df['pi_pz_2_br'] = pi_2_boosted_rot[:, 2]
-        # df['pi0_E_1_br'] = pi0_1_boosted[0]
-        # df['pi0_px_1_br'] = pi0_1_boosted_rot[:, 0]
-        # df['pi0_py_1_br'] = pi0_1_boosted_rot[:, 1]
-        # df['pi0_pz_1_br'] = pi0_1_boosted_rot[:, 2]
-        # df['pi0_E_2_br'] = pi0_2_boosted[0]
-        # df['pi0_px_2_br'] = pi0_2_boosted_rot[:, 0]
-        # df['pi0_py_2_br'] = pi0_2_boosted_rot[:, 1]
-        # df['pi0_pz_2_br'] = pi0_2_boosted_rot[:, 2]
-        # df['rho_E_1_br'] = rho_1_boosted[0]
-        # df['rho_px_1_br'] = rho_1_boosted_rot[:, 0]
-        # df['rho_py_1_br'] = rho_1_boosted_rot[:, 1]
-        # df['rho_pz_1_br'] = rho_1_boosted_rot[:, 2]
-        # df['rho_E_2_br'] = rho_2_boosted[0]
-        # df['rho_px_2_br'] = rho_2_boosted_rot[:, 0]
-        # df['rho_py_2_br'] = rho_2_boosted_rot[:, 1]
-        # df['rho_pz_2_br'] = rho_2_boosted_rot[:, 2]
-
         df_inputs_data = {
             'pi_E_1_br': pi_1_boosted[0],
             'pi_px_1_br': pi_1_boosted_rot[:, 0],
@@ -467,54 +365,6 @@ class DataLoader:
             # p4 = pi3
         
         return self.calc_aco_angles(p1[:].T, p2[:].T, p3[:].T, p4[:].T, y1, y2)
-
-    def getAcoAngles(self, **kwargs):
-        """
-        Returns all the aco angles for different channels
-        """
-        aco_angles = []
-        if self.channel == 'rho_rho':
-            pi_1_boosted = kwargs['pi_1_boosted']
-            pi_2_boosted = kwargs['pi_2_boosted'] 
-            pi0_1_boosted = kwargs['pi0_1_boosted']
-            pi0_2_boosted = kwargs['pi0_2_boosted']
-            aco_angle_1 = self.getAcoAnglesForOneRF(pi0_1_boosted, pi0_2_boosted, pi_1_boosted, pi_2_boosted)
-            aco_angles.append(aco_angle_1)
-        elif self.channel == 'rho_a1':
-
-            pass
-        elif self.channel == 'a1_a1':
-            pass
-        else:
-            raise ValueError('Channel not understood')
-        return aco_angles
-
-    def getAcoAnglesForOneRF(self, p1, p2, p3, p4, rest_frame):
-        """
-        TO TEST: (swapping p1 and p3)
-        all inputs are Momentum4
-        p1, p3 from same decay
-        p2, p4 from same decay
-        calculates the angle that spans between p1, p3 plane and p2, p4 plane
-        """
-        boost = Momentum4(rest_frame[0], -rest_frame[1], -rest_frame[2], -rest_frame[3])
-        p1_boosted = p1.boost_particle(boost)
-        p2_boosted = p2.boost_particle(boost)
-        p3_boosted = p3.boost_particle(boost)
-        p4_boosted = p4.boost_particle(boost)
-        p1_b_p = np.c_[p1_boosted.p_x, p1_boosted.p_y, p1_boosted.p_z]
-        p2_b_p = np.c_[p2_boosted.p_x, p2_boosted.p_y, p2_boosted.p_z]
-        p3_b_p = np.c_[p3_boosted.p_x, p3_boosted.p_y, p3_boosted.p_z]
-        p4_b_p = np.c_[p4_boosted.p_x, p4_boosted.p_y, p4_boosted.p_z]
-        n1 = p1_b_p - np.multiply(np.einsum('ij, ij->i', p1_b_p, self.normaliseVector(p3_b_p))[:, None], self.normaliseVector(p3_b_p))
-        n2 = p2_b_p - np.multiply(np.einsum('ij, ij->i', p2_b_p, self.normaliseVector(p4_b_p))[:, None], self.normaliseVector(p4_b_p))
-        # vectorised form of
-        # n1 = p1.Vect() - p1.Vect().Dot(p3.Vect().Unit())*p3.Vect().Unit();    
-        # n2 = p2.Vect() - p2.Vect().Dot(p4.Vect().Unit())*p4.Vect().Unit();
-        return np.arccos(np.einsum('ij, ij->i', n1, n2))
-
-    def normaliseVector(vec):
-        return np.sqrt(np.einsum('...i,...i', vec, vec))
 
     def calc_aco_angles(self, pp1, pp2, pp3, pp4, yy1, yy2):
         angles = []
@@ -986,7 +836,7 @@ class DataLoader:
         }
         return df_inputs_data, boost
 
-    def createAddons(self, addons, df, df_inputs, binary, addons_config={}, **kwargs):
+    def createAddons(self, addons, df, df_inputs, binary, addons_configs={}, **kwargs):
         """
         If you want to create more addon features, put the necessary arguments through kwargs, 
         unpack them at the start of this function, and add an if case to your needs
@@ -995,6 +845,7 @@ class DataLoader:
         boost = None
         if kwargs:
             boost = kwargs["boost"]
+            
         for addon in addons:
             if addon == 'met' and boost is not None:
                 print('Addon MET loaded')
@@ -1004,11 +855,9 @@ class DataLoader:
                 df_inputs['E_miss_y'] = E_miss_y
             if addon == 'neutrino':
                 print('Addon neutrino loaded')
-                load_alpha = addons_config['neutrino']['load_alpha']
-                termination = addons_config['neutrino']['termination']
+                load_alpha = addons_configs['neutrino']['load_alpha']
+                termination = addons_configs['neutrino']['termination']
                 alpha_1, alpha_2, E_nu_1, E_nu_2, p_t_nu_1, p_t_nu_2, p_z_nu_1, p_z_nu_2 = self.addonNeutrinos(df, df_inputs, binary, load_alpha, termination=termination)
-                df_inputs['alpha_1'] = alpha_1
-                df_inputs['alpha_2'] = alpha_2
                 df_inputs['E_nu_1'] = E_nu_1
                 df_inputs['E_nu_2'] = E_nu_2
                 df_inputs['p_t_nu_1'] = p_t_nu_1
