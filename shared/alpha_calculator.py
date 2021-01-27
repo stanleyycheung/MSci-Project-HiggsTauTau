@@ -135,7 +135,6 @@ class AlphaCalculator:
                 return alpha_1, alpha_2
         return self.DEFAULT_VALUE, self.DEFAULT_VALUE
 
-
     def getAlpha(self, idx, E_miss_x, E_miss_y, rho_1, rho_2, cov, mode=1, termination=1000):
         """
         Calculates alpha with constraints, returns self.DEFAULT_VALUE if not possible

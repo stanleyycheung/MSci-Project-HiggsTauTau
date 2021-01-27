@@ -98,7 +98,7 @@ class NeuralNetwork:
             w_a = df.w_a
             w_b = df.w_b
             auc = self.evaluate(model, X_test, y_test, self.history, w_a, w_b)
-        self.write(auc, self.history)
+        self.write(auc, self.history, addons_config)
 
     def runWithNeutrino(self, config_num, load_alpha=False, termination=1000, read=True, from_pickle=True, epochs=50, batch_size=1024, patience=10):
         addons_config={'neutrino': {'load_alpha':load_alpha, 'termination':termination}, 'met':{}}
@@ -112,7 +112,7 @@ class NeuralNetwork:
             w_a = df.w_a
             w_b = df.w_b
             auc = self.evaluate(model, X_test, y_test, self.history, w_a, w_b)
-        self.write(auc, self.history)
+        self.write(auc, self.history, addons_config)
 
     def runMultiple(self, configs, read=True, from_pickle=True, epochs=50, batch_size=1024, patience=10, addons_config={}):
         df = self.initialize(addons_config, read=read, from_pickle=from_pickle)
@@ -126,7 +126,7 @@ class NeuralNetwork:
                 w_a = df.w_a
                 w_b = df.w_b
                 auc = self.evaluate(model, X_test, y_test, self.history, w_a, w_b)
-            self.write(auc, self.history)
+            self.write(auc, self.history, addons_config)
 
     def runHPTuning(self, config_num, read=True, from_pickle=True, epochs=50, tuner_epochs=50, batch_size=10000, tuner_batch_size=10000, patience=10, tuner_mode=0, addons_config={}):
         df = self.initialize(addons_config, read=read, from_pickle=from_pickle)
@@ -340,7 +340,7 @@ class NeuralNetwork:
             addons = []
         else:
             addons = addons_config.keys()
-        addons_loaded = ""
+        addons_loaded = "None"
         if addons:
             addons_loaded = '_'+'_'.join(addons)
         file = f'{self.write_dir}/{self.write_filename}.txt'

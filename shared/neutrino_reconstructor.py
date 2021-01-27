@@ -5,6 +5,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from pylorentz import Momentum4, Position4
 from alpha_calculator import AlphaCalculator
+from sklearn.experimental import enable_iterative_imputer
+from sklearn.impute import SimpleImputer, IterativeImputer, KNNImputer
 
 
 class NeutrinoReconstructor:
@@ -44,7 +46,14 @@ class NeutrinoReconstructor:
     def loadBRGenData(self):
         return pd.read_pickle(f'{NeutrinoReconstructor.saved_df_dir}/rho_rho/df_rho_rho.pkl')
 
-    def getGenBRNeutrino(self):
+
+    def dealWithMissingData(self, df_br, mode):
+        # change to return df_br and modify in place
+        if mode == 0:
+            # simple imputer
+            simpleImp = SimpleImputer(missing_values=NeutrinoReconstructor.DEFAULT_VALUE, strategy='mean')
+        elif mode == 1:
+            itImp = IterativeImputer(random_state=0)
         pass
 
     def runAlphaReconstructor(self, df_reco_gen, df_br, load_alpha, termination=1000):
@@ -57,7 +66,8 @@ class NeutrinoReconstructor:
         - include azimuthal angles of the neutrinos
         Notes:
         - not inserting four-vector -> other components are just 0
-        Returns: alpha_1, alpha_2, E_nu_1, E_nu_2, p_t_nu_1, p_t_nu_2, p_z_nu_1, p_z_nu_2
+        -- Returns: alpha_1, alpha_2, E_nu_1, E_nu_2, p_t_nu_1, p_t_nu_2, p_z_nu_1, p_z_nu_2 --
+        Returns: df_br (with neutrino information contained)
         """
         AC = AlphaCalculator(df_reco_gen, df_br, self.binary, self.m_higgs,
                              self.m_tau, load=load_alpha, seed=self.seed, default_value=NeutrinoReconstructor.DEFAULT_VALUE)
@@ -75,16 +85,17 @@ class NeutrinoReconstructor:
         p_t_nu_1[np.isnan(p_t_nu_1)] = NeutrinoReconstructor.DEFAULT_VALUE
         p_t_nu_2[np.isnan(p_t_nu_2)] = NeutrinoReconstructor.DEFAULT_VALUE
         # populate input df with neutrino variables
-        # df_br['E_nu_1'] = E_nu_1
-        # df_br['E_nu_2'] = E_nu_2
-        # df_br['p_t_nu_1'] = p_t_nu_1
-        # df_br['p_t_nu_2'] = p_t_nu_2
-        # df_br['p_z_nu_1'] = p_z_nu_1
-        # df_br['p_z_nu_2'] = p_z_nu_2
+        df_br['E_nu_1'] = E_nu_1
+        df_br['E_nu_2'] = E_nu_2
+        df_br['p_t_nu_1'] = p_t_nu_1
+        df_br['p_t_nu_2'] = p_t_nu_2
+        df_br['p_z_nu_1'] = p_z_nu_1
+        df_br['p_z_nu_2'] = p_z_nu_2
         # df_red = df[(df['alpha_1'] != NeutrinoReconstructor.DEFAULT_VALUE) & (df['alpha_2'] != NeutrinoReconstructor.DEFAULT_VALUE) & (
         #     df['E_nu_1'] != NeutrinoReconstructor.DEFAULT_VALUE) & (df['E_nu_2'] != NeutrinoReconstructor.DEFAULT_VALUE)].reset_index(drop=True)
         # AC.profileAlphaPz(df_red)
-        return alpha_1, alpha_2, E_nu_1, E_nu_2, p_t_nu_1, p_t_nu_2, p_z_nu_1, p_z_nu_2
+        # return alpha_1, alpha_2, E_nu_1, E_nu_2, p_t_nu_1, p_t_nu_2, p_z_nu_1, p_z_nu_2
+        return df_br
 
     def runGraphs(self, df_reco_gen, termination=1000):
         """

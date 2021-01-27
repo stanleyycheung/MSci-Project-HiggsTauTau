@@ -181,7 +181,7 @@ class DataLoader:
             df_inputs['y'] = y
         addons_loaded = ""
         if addons:
-            self.createAddons(addons, df, df_inputs, binary, addons_config, boost=boost)
+            df_inputs = self.createAddons(addons, df, df_inputs, binary, addons_config, boost=boost)
             addons_loaded = '_'+'_'.join(addons)
         if save:
             print('Saving df to pickle')
@@ -306,7 +306,7 @@ class DataLoader:
 
     def getAcoAnglesForOneRF(self, p1, p2, p3, p4, rest_frame):
         """
-        TO TEST: (swapping p1 and p3)
+        TODO: TO TEST (swapping p1 and p3)
         all inputs are Momentum4
         p1, p3 from same decay
         p2, p4 from same decay
@@ -554,6 +554,7 @@ class DataLoader:
         If you want to create more addon features, put the necessary arguments through kwargs, 
         unpack them at the start of this function, and add an if case to your needs
         TODO: need to catch incorrectly loaded kwargs
+        Return: df_inputs (modified)
         """
         boost = None
         if kwargs:
@@ -569,15 +570,17 @@ class DataLoader:
                 print('Addon neutrino loaded')
                 load_alpha = addons_config['neutrino']['load_alpha']
                 termination = addons_config['neutrino']['termination']
-                alpha_1, alpha_2, E_nu_1, E_nu_2, p_t_nu_1, p_t_nu_2, p_z_nu_1, p_z_nu_2 = self.addonNeutrinos(df, df_inputs, binary, load_alpha, termination=termination)
-                df_inputs['alpha_1'] = alpha_1
-                df_inputs['alpha_2'] = alpha_2
-                df_inputs['E_nu_1'] = E_nu_1
-                df_inputs['E_nu_2'] = E_nu_2
-                df_inputs['p_t_nu_1'] = p_t_nu_1
-                df_inputs['p_t_nu_2'] = p_t_nu_2
-                df_inputs['p_z_nu_1'] = p_z_nu_1
-                df_inputs['p_z_nu_2'] = p_z_nu_2
+                # alpha_1, alpha_2, E_nu_1, E_nu_2, p_t_nu_1, p_t_nu_2, p_z_nu_1, p_z_nu_2 = self.addonNeutrinos(df, df_inputs, binary, load_alpha, termination=termination)
+                # df_inputs['alpha_1'] = alpha_1
+                # df_inputs['alpha_2'] = alpha_2
+                # df_inputs['E_nu_1'] = E_nu_1
+                # df_inputs['E_nu_2'] = E_nu_2
+                # df_inputs['p_t_nu_1'] = p_t_nu_1
+                # df_inputs['p_t_nu_2'] = p_t_nu_2
+                # df_inputs['p_z_nu_1'] = p_z_nu_1
+                # df_inputs['p_z_nu_2'] = p_z_nu_2
+                df_inputs = self.addonNeutrinos(df, df_inputs, binary, load_alpha, termination=termination)
+        return df_inputs
 
     def addonMET(self, df, boost):
         """
@@ -598,7 +601,8 @@ class DataLoader:
         Addon configuration for neutrino information
         TODO:
         - load in neutrino phis
-        Returns: alpha_1, alpha_2, E_nu_1, E_nu_2, p_t_nu_1, p_t_nu_2, p_z_nu_1, p_z_nu_2
+        -- Returns: alpha_1, alpha_2, E_nu_1, E_nu_2, p_t_nu_1, p_t_nu_2, p_z_nu_1, p_z_nu_2 --
+        Returns: df_inputs (modified)
         """
         NR = NeutrinoReconstructor(binary=binary)
         return NR.runAlphaReconstructor(df.reset_index(drop=False), df_inputs.reset_index(drop=False), load_alpha=load_alpha, termination=termination)
