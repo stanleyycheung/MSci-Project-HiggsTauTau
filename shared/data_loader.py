@@ -294,12 +294,32 @@ class DataLoader:
             pi_2_boosted = kwargs['pi_2_boosted'] 
             pi0_1_boosted = kwargs['pi0_1_boosted']
             pi0_2_boosted = kwargs['pi0_2_boosted']
-            aco_angle_1 = self.getAcoAnglesForOneRF(pi0_1_boosted, pi0_2_boosted, pi_1_boosted, pi_2_boosted)
+            zmf = pi_1_boosted + pi_2_boosted + pi0_1_boosted + pi0_2_boosted
+            aco_angle_1 = self.getAcoAnglesForOneRF(pi0_1_boosted, pi0_2_boosted, pi_1_boosted, pi_2_boosted, zmf)
             aco_angles.append(aco_angle_1)
         elif self.channel == 'rho_a1':
-            pass
+            pi_1_boosted = kwargs['pi_1_boosted']
+            pi_2_boosted = kwargs['pi_2_boosted'] 
+            pi0_1_boosted = kwargs['pi0_1_boosted']
+            pi2_2_boosted = kwargs['pi2_2_boosted'] 
+            pi3_2_boosted = kwargs['pi3_2_boosted']
+            zmf = pi_1_boosted + pi_2_boosted
+            aco_angle_1 = self.getAcoAnglesForOneRF(pi0_1_boosted, pi_2_boosted, pi_1_boosted, pi2_2_boosted, zmf)
+            aco_angles.append(aco_angle_1)
         elif self.channel == 'a1_a1':
-            pass
+            pi_1_boosted = kwargs['pi_1_boosted']
+            pi_2_boosted = kwargs['pi_2_boosted'] 
+            pi2_1_boosted = kwargs['pi2_1_boosted']
+            pi3_1_boosted = kwargs['pi3_1_boosted']
+            pi2_2_boosted = kwargs['pi2_2_boosted'] 
+            pi3_2_boosted = kwargs['pi3_2_boosted']
+            zmf = pi_1_boosted + pi_2_boosted
+            aco_angle_1 = self.getAcoAnglesForOneRF(pi_1_boosted, pi_2_boosted, pi2_1_boosted, pi2_2_boosted, zmf)
+            aco_angle_2 = self.getAcoAnglesForOneRF(pi_1_boosted, pi_2_boosted+pi3_2_boosted, pi2_1_boosted, pi2_2_boosted, zmf)
+            aco_angle_3 = self.getAcoAnglesForOneRF(pi_1_boosted+pi3_1_boosted, pi_2_boosted, pi2_1_boosted, pi2_2_boosted, zmf)
+            aco_angles.append(aco_angle_1)
+            aco_angles.append(aco_angle_2)
+            aco_angles.append(aco_angle_3)
         else:
             raise ValueError('Channel not understood')
         return aco_angles
@@ -457,9 +477,9 @@ class DataLoader:
             'a1_px_br': a1_boosted_rot[:, 0],
             'a1_py_br': a1_boosted_rot[:, 1],
             'a1_pz_br': a1_boosted_rot[:, 2],
-            # 'aco_angle_1': df['aco_angle_1'],
+            'aco_angle_1': df['aco_angle_1'],
             # 'aco_angle_1': aco_angle_danny,
-            'aco_angle_1': aco_angle_2,
+            # 'aco_angle_1': aco_angle_2,
             # 'aco_angle_2': aco_angle_2,
             'y_1_1': df['y_1_1'],
             'y_1_2': df['y_1_2'],
@@ -532,14 +552,14 @@ class DataLoader:
             'pi3_px_2_br': pi3_2_boosted_rot[:, 0],
             'pi3_py_2_br': pi3_2_boosted_rot[:, 1],
             'pi3_pz_2_br': pi3_2_boosted_rot[:, 2],
-            # 'aco_angle_1': df['aco_angle_1'],
+            'aco_angle_1': df['aco_angle_1'],
             # 'aco_angle_1': aco_angle_danny,
-            'aco_angle_1': aco_angle_2,
-            'aco_angle_2': aco_angle_3,
-            'aco_angle_3': aco_angle_4,
-            'aco_angle_6': aco_angle_6,
-            'aco_angle_7': aco_angle_7,
-            'aco_angle_8': aco_angle_8,
+            # 'aco_angle_1': aco_angle_2,
+            # 'aco_angle_2': aco_angle_3,
+            # 'aco_angle_3': aco_angle_4,
+            # 'aco_angle_6': aco_angle_6,
+            # 'aco_angle_7': aco_angle_7,
+            # 'aco_angle_8': aco_angle_8,
             'y_1_1': df['y_1_1'],
             'y_1_2': df['y_1_2'],
             'w_a': df.wt_cp_sm,
