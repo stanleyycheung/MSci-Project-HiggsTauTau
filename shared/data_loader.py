@@ -227,6 +227,10 @@ class DataLoader:
         pi0_2_boosted_rot = np.array(pi0_2_boosted_rot)
         rho_1_boosted_rot = np.array(rho_1_boosted_rot)
         rho_2_boosted_rot = np.array(rho_2_boosted_rot)
+        
+        #aco angle calculation
+        aco_angle_1 = self.getAcoAngles(pi0_1=pi0_1, pi0_2=pi0_2, pi_1=pi_1, pi_2=pi_2)[0]
+        
         df_inputs_data = {
             'pi_E_1_br': pi_1_boosted[0],
             'pi_px_1_br': pi_1_boosted_rot[:, 0],
@@ -252,7 +256,8 @@ class DataLoader:
             'rho_px_2_br': rho_2_boosted_rot[:, 0],
             'rho_py_2_br': rho_2_boosted_rot[:, 1],
             'rho_pz_2_br': rho_2_boosted_rot[:, 2],
-            'aco_angle_1': df['aco_angle_1'],
+            # 'aco_angle_1': df['aco_angle_1'],
+            'aco_angle_1': aco_angle_1,
             'y_1_1': df['y_1_1'],
             'y_1_2': df['y_1_2'],
             'w_a': df.wt_cp_sm,
@@ -290,29 +295,29 @@ class DataLoader:
         """
         aco_angles = []
         if self.channel == 'rho_rho':
-            pi_1_boosted = kwargs['pi_1_boosted']
-            pi_2_boosted = kwargs['pi_2_boosted'] 
-            pi0_1_boosted = kwargs['pi0_1_boosted']
-            pi0_2_boosted = kwargs['pi0_2_boosted']
+            pi_1_boosted = kwargs['pi_1']
+            pi_2_boosted = kwargs['pi_2'] 
+            pi0_1_boosted = kwargs['pi0_1']
+            pi0_2_boosted = kwargs['pi0_2']
             zmf = pi_1_boosted + pi_2_boosted + pi0_1_boosted + pi0_2_boosted
             aco_angle_1 = self.getAcoAnglesForOneRF(pi0_1_boosted, pi0_2_boosted, pi_1_boosted, pi_2_boosted, zmf)
             aco_angles.append(aco_angle_1)
         elif self.channel == 'rho_a1':
-            pi_1_boosted = kwargs['pi_1_boosted']
-            pi_2_boosted = kwargs['pi_2_boosted'] 
-            pi0_1_boosted = kwargs['pi0_1_boosted']
-            pi2_2_boosted = kwargs['pi2_2_boosted'] 
-            pi3_2_boosted = kwargs['pi3_2_boosted']
+            pi_1_boosted = kwargs['pi_1']
+            pi_2_boosted = kwargs['pi_2']
+            pi0_1_boosted = kwargs['pi0_1']
+            pi2_2_boosted = kwargs['pi2_2'] 
+            pi3_2_boosted = kwargs['pi3_2']
             zmf = pi_1_boosted + pi_2_boosted
             aco_angle_1 = self.getAcoAnglesForOneRF(pi0_1_boosted, pi_2_boosted, pi_1_boosted, pi2_2_boosted, zmf)
             aco_angles.append(aco_angle_1)
         elif self.channel == 'a1_a1':
-            pi_1_boosted = kwargs['pi_1_boosted']
-            pi_2_boosted = kwargs['pi_2_boosted'] 
-            pi2_1_boosted = kwargs['pi2_1_boosted']
-            pi3_1_boosted = kwargs['pi3_1_boosted']
-            pi2_2_boosted = kwargs['pi2_2_boosted'] 
-            pi3_2_boosted = kwargs['pi3_2_boosted']
+            pi_1_boosted = kwargs['pi_1']
+            pi_2_boosted = kwargs['pi_2']
+            pi2_1_boosted = kwargs['pi2_1']
+            pi3_1_boosted = kwargs['pi3_1']
+            pi2_2_boosted = kwargs['pi2_2']
+            pi3_2_boosted = kwargs['pi3_2']
             zmf = pi_1_boosted + pi_2_boosted
             aco_angle_1 = self.getAcoAnglesForOneRF(pi_1_boosted, pi_2_boosted, pi2_1_boosted, pi2_2_boosted, zmf)
             aco_angle_2 = self.getAcoAnglesForOneRF(pi_1_boosted, pi_2_boosted+pi3_2_boosted, pi2_1_boosted, pi2_2_boosted, zmf)
@@ -366,7 +371,7 @@ class DataLoader:
             raise ValueError('Channel not understood')
         return y
 
-    def normaliseVector(vec):
+    def normaliseVector(self, vec):
         """
         Normalises an array of vectors
         """
@@ -443,6 +448,10 @@ class DataLoader:
             rho_1_boosted_rot = np.array(rho_1_boosted_rot)
             rho_2_boosted_rot = np.array(rho_2_boosted_rot)
             a1_boosted_rot = np.array(a1_boosted_rot)
+        
+        #aco_angle calculation
+        aco_angles = self.getAcoAngles(pi0_1=pi0_1, pi2_2=pi2_2, pi3_2=pi3_2, pi_1=pi_1, pi_2=pi_2)
+        aco_angle_1 = aco_angles[0]
         
         df_inputs_data = {
             'pi_E_1_br': pi_1_boosted[0],
