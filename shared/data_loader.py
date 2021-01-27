@@ -368,9 +368,10 @@ class DataLoader:
 
     def normaliseVector(vec):
         """
+        
         Normalises an array of vectors
         """
-        return np.sqrt(np.einsum('...i,...i', vec, vec))
+        return vec/np.sqrt((vec ** 2).sum(-1))[..., np.newaxis]
 
     def calculateRhoA1Data(self, df, len_df_ps=0):
         # TODO: kristof implement:

@@ -46,14 +46,60 @@ class NeutrinoReconstructor:
     def loadBRGenData(self):
         return pd.read_pickle(f'{NeutrinoReconstructor.saved_df_dir}/rho_rho/df_rho_rho.pkl')
 
+    def boostAndRotateNeutrinos(self, df):
+        """
+        Returns the neutrino data rotated and boosted
+        """
+        nu_1 = Momentum4.m_eta_phi_p(np.zeros(len(df["gen_nu_phi_1"])), df["gen_nu_eta_1"], df["gen_nu_phi_1"], df["gen_nu_p_1"])
+        nu_2 = Momentum4.m_eta_phi_p(np.zeros(len(df["gen_nu_phi_2"])), df["gen_nu_eta_2"], df["gen_nu_phi_2"], df["gen_nu_p_2"])
+        pi_1 = Momentum4(df['pi_E_1'], df["pi_px_1"], df["pi_py_1"], df["pi_pz_1"])
+        pi_2 = Momentum4(df['pi_E_2'], df["pi_px_2"], df["pi_py_2"], df["pi_pz_2"])
+        pi0_1 = Momentum4(df['pi0_E_1'], df["pi0_px_1"], df["pi0_py_1"], df["pi0_pz_1"])
+        pi0_2 = Momentum4(df['pi0_E_2'], df["pi0_px_2"], df["pi0_py_2"], df["pi0_pz_2"])
+        # boost into rest frame of resonances
+        rest_frame = pi_1 + pi_2 + pi0_1 + pi0_2
+        boost = Momentum4(rest_frame[0], -rest_frame[1], -rest_frame[2], -rest_frame[3])
+        nu_1_boosted = nu_1.boost_particle(boost)
+        nu_2_boosted = nu_2.boost_particle(boost)
+        rho_1_boosted = pi_1.boost_particle(boost) + pi0_1.boost_particle(boost)
+        rho_2_boosted = pi_2.boost_particle(boost) + pi0_2.boost_particle(boost)
+        nu_1_boosted_rot, nu_2_boosted_rot = []
+        for i in range(rho_1_boosted[:].shape[1]):
+            rot_mat = self.rotation_matrix_from_vectors(rho_1_boosted[1:, i], [0, 0, 1])
+            nu_1_boosted_rot.append(rot_mat.dot(nu_1_boosted[1:, i]))
+            nu_2_boosted_rot.append(rot_mat.dot(nu_2_boosted[1:, i]))
+            if i % 100000 == 0:
+                print('finished getting rotated 4-vector', i)
+        return nu_1_boosted_rot, nu_2_boosted_rot
+
+    def rotation_matrix_from_vectors(self, vec1, vec2):
+        """ Find the rotation matrix that aligns vec1 to vec2
+        :param vec1: A 3d "source" vector
+        :param vec2: A 3d "destination" vector
+        :return mat: A transform matrix (3x3) which when applied to vec1, aligns it with vec2.
+        """
+        a, b = (vec1 / np.linalg.norm(vec1)).reshape(3), (vec2 / np.linalg.norm(vec2)).reshape(3)
+        v = np.cross(a, b)
+        c = np.dot(a, b)
+        s = np.linalg.norm(v)
+        kmat = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
+        rotation_matrix = np.eye(3) + kmat + kmat.dot(kmat) * ((1 - c) / (s ** 2))
+        return rotation_matrix
 
     def dealWithMissingData(self, df_br, mode):
         # change to return df_br and modify in place
         if mode == 0:
             # simple imputer
             simpleImp = SimpleImputer(missing_values=NeutrinoReconstructor.DEFAULT_VALUE, strategy='mean')
+            # completeEvents = df_br[(df_br['alpha_1']!=NeutrinoReconstructor.DEFAULT_VALUE)]
+            # incompleteEvents = df_br[(df_br['alpha_1']==NeutrinoReconstructor.DEFAULT_VALUE)]
+            return pd.DataFrame(simpleImp.fit_transform(df_br))
         elif mode == 1:
-            itImp = IterativeImputer(random_state=0)
+            # default is BayesianRidge
+            itImp = IterativeImputer(missing_values=NeutrinoReconstructor.DEFAULT_VALUE, random_state=0)
+            return pd.DataFrame(itImp.fit_transform(df_br))
+        elif mode == 2:
+            KNNImp = KNNImputer(missing_values=NeutrinoReconstructor.DEFAULT_VALUE,)
         pass
 
     def runAlphaReconstructor(self, df_reco_gen, df_br, load_alpha, termination=1000):
@@ -80,11 +126,14 @@ class NeutrinoReconstructor:
         #           ** 2 + 2*p_z_nu_1*(df_br.pi_pz_1_br + df_br.pi0_pz_1_br))/(2*(df_br.pi_E_1_br+df_br.pi0_E_1_br))
         # E_nu_2 = (self.m_tau**2 - (df_br.pi_E_2_br+df_br.pi0_E_2_br)**2 + (df_br.pi_pz_2_br + df_br.pi0_pz_2_br)
         #           ** 2 + 2*p_z_nu_2*(df_br.pi_pz_2_br + df_br.pi0_pz_2_br))/(2*(df_br.pi_E_2_br+df_br.pi0_E_2_br))
+        idx = alpha_1==NeutrinoReconstructor.DEFAULT_VALUE
         p_t_nu_1 = np.sqrt(np.array(E_nu_1)**2 - np.array(p_z_nu_1)**2)
         p_t_nu_2 = np.sqrt(np.array(E_nu_2)**2 - np.array(p_z_nu_2)**2)
-        p_t_nu_1[np.isnan(p_t_nu_1)] = NeutrinoReconstructor.DEFAULT_VALUE
-        p_t_nu_2[np.isnan(p_t_nu_2)] = NeutrinoReconstructor.DEFAULT_VALUE
+        p_t_nu_1[idx] = NeutrinoReconstructor.DEFAULT_VALUE
+        p_t_nu_2[idx] = NeutrinoReconstructor.DEFAULT_VALUE
         # populate input df with neutrino variables
+        df_br['alpha_1'] = alpha_1
+        df_br['alpha_2'] = alpha_2
         df_br['E_nu_1'] = E_nu_1
         df_br['E_nu_2'] = E_nu_2
         df_br['p_t_nu_1'] = p_t_nu_1
@@ -232,7 +281,10 @@ if __name__ == '__main__':
     # alpha_1, alpha_2, E_nu_1, E_nu_2, p_t_nu_1, p_t_nu_2, p_z_nu_1, p_z_nu_2 = NR.runAlphaReconstructor(debug, debug, load_alpha=False, termination=100)
     # alpha_1, alpha_2, E_nu_1, E_nu_2, p_t_nu_1, p_t_nu_2, p_z_nu_1, p_z_nu_2 = NR.runAlphaReconstructor(df_reco_gen, df_br, load_alpha=False, termination=100)
     # alpha_1, alpha_2, E_nu_1, E_nu_2, p_t_nu_1, p_t_nu_2, p_z_nu_1, p_z_nu_2 = NR.runAlphaReconstructor(df.reset_index(drop=True), df_br, load_alpha=True, termination=1000)
-    NR.runGraphs(df.reset_index(drop=True))
+    # NR.runGraphs(df.reset_index(drop=True))
+    df_inputs = NR.runAlphaReconstructor(df.reset_index(drop=True), df_br, load_alpha=True, termination=1000)
+    # print(df_inputs.head())
+    NR.dealWithMissingData(df_inputs, mode=0)
     exit()
     df_br['alpha_1'] = alpha_1
     df_br['alpha_2'] = alpha_2
