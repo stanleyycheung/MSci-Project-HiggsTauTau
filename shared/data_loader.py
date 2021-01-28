@@ -300,7 +300,12 @@ class DataLoader:
             pi0_1_boosted = kwargs['pi0_1']
             pi0_2_boosted = kwargs['pi0_2']
             zmf = pi_1_boosted + pi_2_boosted + pi0_1_boosted + pi0_2_boosted
-            aco_angle_1 = self.getAcoAnglesForOneRF(pi0_1_boosted, pi0_2_boosted, pi_1_boosted, pi_2_boosted, zmf)
+            # aco_angle_1 = self.getAcoAnglesForOneRF(pi0_1_boosted, pi0_2_boosted, pi_1_boosted, pi_2_boosted, zmf)
+            # print('number of nans using Stanleys calculation:', np.sum(np.isnan(aco_angle_1)))
+            # aco_angle_1[np.isnan(aco_angle_1)] = np.pi
+            aco_angle_1 = self.getAcoAnglesPerpFormula(pi0_1_boosted, pi0_2_boosted, pi_1_boosted, pi_2_boosted, zmf)
+            print('number of nans using perp calculation:', np.sum(np.isnan(aco_angle_1)))
+            aco_angle_1[np.isnan(aco_angle_1)] = np.pi
             aco_angles.append(aco_angle_1)
         elif self.channel == 'rho_a1':
             pi_1_boosted = kwargs['pi_1']
@@ -352,6 +357,59 @@ class DataLoader:
         # n1 = p1.Vect() - p1.Vect().Dot(p3.Vect().Unit())*p3.Vect().Unit();    
         # n2 = p2.Vect() - p2.Vect().Dot(p4.Vect().Unit())*p4.Vect().Unit();
         return np.arccos(np.einsum('ij, ij->i', n1, n2))
+
+    def getAcoAnglesPerpFormula(self, p1, p2, p3, p4, rest_frame):
+        boost = Momentum4(rest_frame[0], -rest_frame[1], -rest_frame[2], -rest_frame[3])
+        p1 = p1.boost_particle(boost)
+        p2 = p2.boost_particle(boost)
+        p3 = p3.boost_particle(boost)
+        p4 = p4.boost_particle(boost)
+        
+        #Some geometrical functions
+        def cross_product(vector3_1,vector3_2):
+            if len(vector3_1)!=3 or len(vector3_1)!=3:
+                print('These are not 3D arrays !')
+            x_perp_vector=vector3_1[1]*vector3_2[2]-vector3_1[2]*vector3_2[1]
+            y_perp_vector=vector3_1[2]*vector3_2[0]-vector3_1[0]*vector3_2[2]
+            z_perp_vector=vector3_1[0]*vector3_2[1]-vector3_1[1]*vector3_2[0]
+            return np.array([x_perp_vector,y_perp_vector,z_perp_vector])
+        
+        def dot_product(vector1,vector2):
+            if len(vector1)!=len(vector2):
+                print('vector1 =', vector1)
+                print('vector2 =', vector2)
+                raise Exception('Arrays_of_different_size')
+            prod=0
+            for i in range(len(vector1)):
+                prod=prod+vector1[i]*vector2[i]
+            return prod
+    
+        def norm(vector):
+            if len(vector)!=3:
+                print('This is only for a 3d vector')
+            return np.sqrt(vector[0]**2+vector[1]**2+vector[2]**2)
+        
+        #calculating the perpependicular component
+        pi0_1_3Mom_star_perp=cross_product(p1[1:], p3[1:])
+        pi0_2_3Mom_star_perp=cross_product(p2[1:], p4[1:])
+        #Now normalise:
+        pi0_1_3Mom_star_perp=pi0_1_3Mom_star_perp/norm(pi0_1_3Mom_star_perp)
+        pi0_2_3Mom_star_perp=pi0_2_3Mom_star_perp/norm(pi0_2_3Mom_star_perp)
+        #Calculating phi_star
+        phi_CP=np.arccos(dot_product(pi0_1_3Mom_star_perp,pi0_2_3Mom_star_perp))
+        #The O variable
+        cross=np.cross(pi0_1_3Mom_star_perp.transpose(),pi0_2_3Mom_star_perp.transpose()).transpose()
+        bigO=dot_product(p4[1:],cross)
+        #perform the shift w.r.t. O* sign
+        phi_CP=np.where(bigO>=0, 2*np.pi-phi_CP, phi_CP)#, phi_CP)
+        
+        # #The energy ratios
+        # y_T = np.array(y1 * y2)        
+        # #additionnal shift that needs to be done do see differences between odd and even scenarios, with y=Energy ratios
+        # #phi_CP=np.where(y_T<0, 2*np.pi-phi_CP, np.pi-phi_CP)
+        # phi_CP=np.where(y_T>=0, np.where(phi_CP<np.pi, phi_CP+np.pi, phi_CP-np.pi), phi_CP)
+        
+        return phi_CP  
 
     def getY(self, **kwargs):
         y = []
