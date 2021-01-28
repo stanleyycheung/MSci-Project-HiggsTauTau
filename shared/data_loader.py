@@ -300,9 +300,9 @@ class DataLoader:
             pi0_1_boosted = kwargs['pi0_1']
             pi0_2_boosted = kwargs['pi0_2']
             zmf = pi_1_boosted + pi_2_boosted + pi0_1_boosted + pi0_2_boosted
-            # aco_angle_1 = self.getAcoAnglesForOneRF(pi0_1_boosted, pi0_2_boosted, pi_1_boosted, pi_2_boosted, zmf)
-            # print('number of nans using Stanleys calculation:', np.sum(np.isnan(aco_angle_1)))
-            # aco_angle_1[np.isnan(aco_angle_1)] = np.pi
+            aco_angle_1 = self.getAcoAnglesForOneRF(pi0_1_boosted, pi0_2_boosted, pi_1_boosted, pi_2_boosted, zmf)
+            print('number of nans using Stanleys calculation:', np.sum(np.isnan(aco_angle_1)))
+            aco_angle_1[np.isnan(aco_angle_1)] = np.pi
             aco_angle_1 = self.getAcoAnglesPerpFormula(pi0_1_boosted, pi0_2_boosted, pi_1_boosted, pi_2_boosted, zmf)
             print('number of nans using perp calculation:', np.sum(np.isnan(aco_angle_1)))
             aco_angle_1[np.isnan(aco_angle_1)] = np.pi
@@ -351,8 +351,14 @@ class DataLoader:
         p2_b_p = np.c_[p2_boosted.p_x, p2_boosted.p_y, p2_boosted.p_z]
         p3_b_p = np.c_[p3_boosted.p_x, p3_boosted.p_y, p3_boosted.p_z]
         p4_b_p = np.c_[p4_boosted.p_x, p4_boosted.p_y, p4_boosted.p_z]
+        print('number of nans in p1_b_p', np.sum(np.isnan(p1_b_p)))
+        print('number of nans in p2_b_p', np.sum(np.isnan(p2_b_p)))
+        print('number of nans in p3_b_p', np.sum(np.isnan(p3_b_p)))
+        print('number of nans in p4_b_p', np.sum(np.isnan(p4_b_p)))
         n1 = p1_b_p - np.multiply(np.einsum('ij, ij->i', p1_b_p, self.normaliseVector(p3_b_p))[:, None], self.normaliseVector(p3_b_p))
         n2 = p2_b_p - np.multiply(np.einsum('ij, ij->i', p2_b_p, self.normaliseVector(p4_b_p))[:, None], self.normaliseVector(p4_b_p))
+        print('number of nans in n1', np.sum(np.isnan(n1)))
+        print('number of nans in n2', np.sum(np.isnan(n2)))
         # vectorised form of
         # n1 = p1.Vect() - p1.Vect().Dot(p3.Vect().Unit())*p3.Vect().Unit();    
         # n2 = p2.Vect() - p2.Vect().Dot(p4.Vect().Unit())*p4.Vect().Unit();
