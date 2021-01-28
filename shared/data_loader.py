@@ -299,17 +299,14 @@ class DataLoader:
             pi0_1_boosted = kwargs['pi0_1']
             pi0_2_boosted = kwargs['pi0_2']
             zmf = pi_1_boosted + pi_2_boosted + pi0_1_boosted + pi0_2_boosted
-<<<<<<< HEAD
             aco_angle_1 = self.getAcoAnglesForOneRF(pi0_1_boosted, pi0_2_boosted, pi_1_boosted, pi_2_boosted, zmf)
             print('number of nans using Stanleys calculation:', np.sum(np.isnan(aco_angle_1)))
             aco_angle_1[np.isnan(aco_angle_1)] = np.pi
             aco_angle_1 = self.getAcoAnglesPerpFormula(pi0_1_boosted, pi0_2_boosted, pi_1_boosted, pi_2_boosted, zmf)
-=======
             # aco_angle_1 = self.getAcoAnglesForOneRF(pi0_1_boosted, pi0_2_boosted, pi_1_boosted, pi_2_boosted, zmf)
             # print('number of nans using Stanleys calculation:', np.sum(np.isnan(aco_angle_1)))
             # aco_angle_1[np.isnan(aco_angle_1)] = np.pi
             aco_angle_1 = self.getAcoAnglesForOneRF(pi0_1_boosted, pi0_2_boosted, pi_1_boosted, pi_2_boosted, zmf)
->>>>>>> d4e1b3aecece8658b4ebdc4869bf533d58554ad9
             print('number of nans using perp calculation:', np.sum(np.isnan(aco_angle_1)))
             aco_angle_1[np.isnan(aco_angle_1)] = np.pi
             aco_angles.append(aco_angle_1)
