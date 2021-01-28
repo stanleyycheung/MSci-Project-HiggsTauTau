@@ -427,8 +427,8 @@ class DataLoader:
             pi_2_boosted = kwargs['pi_2_boosted']
             pi0_1_boosted = kwargs['pi0_1_boosted']
             pi0_2_boosted = kwargs['pi0_2_boosted']
-            y_1 = (pi_1_boosted.E - pi0_1_boosted.E)/(pi_1_boosted.E + pi0_1_boosted.E)
-            y_2 = (pi_2_boosted.E - pi0_2_boosted.E)/(pi_2_boosted.E + pi0_2_boosted.E)
+            y_1 = (pi_1_boosted.e - pi0_1_boosted.e)/(pi_1_boosted.e + pi0_1_boosted.e)
+            y_2 = (pi_2_boosted.e - pi0_2_boosted.e)/(pi_2_boosted.e + pi0_2_boosted.e)
             y.extend([y_1, y_2])
         elif self.channel == 'rho_a1':
             pass
