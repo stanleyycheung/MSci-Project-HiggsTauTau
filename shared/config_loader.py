@@ -18,12 +18,13 @@ class ConfigLoader:
         self.df = df_inputs
         self.channel = channel
 
-    def chooseConfigMap(self, mode=0):
+    def chooseConfigMap(self, config_num, binary, mode=0):
         """
         Chooses which configurations of inputs to load to NN training
         Modes:
         0: normal configs
         1: with neutrino data
+        Returns input features X
         """
         # TODO: fail safe for extra information
         if self.channel == 'rho_rho':
@@ -48,7 +49,7 @@ class ConfigLoader:
                     # 10: np.c_[pi_1_transformed, pi_2_transformed, pi0_1_transformed, pi0_2_transformed, self.df.E_miss],
                     # 11: np.c_[pi_1_transformed, pi_2_transformed, pi0_1_transformed, pi0_2_transformed, self.df.aco_angle_1, self.df.y_1_1, self.df.y_1_2, self.df.m_1**2, self.df.m_2**2, self.df.aco_angle_5, self.df.aco_angle_6, self.df.aco_angle_7, self.df.E_miss],
                 }
-                return config_map_norho
+                return config_map_norho[config_num]
             if mode == 1:
                 """
                 TO CHANGE
@@ -56,12 +57,21 @@ class ConfigLoader:
                 2: flag
                 3: flag + met
                 """
-                NeutrinoReconstructor
+                NR = NeutrinoReconstructor(binary)
+                df = None
+                if config_num == 1:
+                    df = NR.dealWithMissingData(self.df, mode=0)
+                elif config_num == 2:
+                    df = NR.dealWithMissingData(self.df, mode=1)
+                elif config_num == 3:
+                    df = NR.dealWithMissingData(self.df, mode=2)
                 config_map_neutrino = {
-                    1: np.c_[pi0_1_transformed, pi0_2_transformed, pi_1_transformed, pi_2_transformed, self.df['E_nu_1'], self.df['E_nu_2'], self.df['p_t_nu_1'], self.df['p_t_nu_2'], self.df['p_z_nu_1'], self.df['p_z_nu_2']],
-                    2: np.c_[pi0_1_transformed, pi0_2_transformed, pi_1_transformed, pi_2_transformed, self.df['E_nu_1'], self.df['E_nu_2'], self.df['p_t_nu_1'], self.df['p_t_nu_2'], self.df['p_z_nu_1'], self.df['p_z_nu_2'], flag],
+                    1: np.c_[pi0_1_transformed, pi0_2_transformed, pi_1_transformed, pi_2_transformed, df['E_nu_1'], df['E_nu_2'], df['p_t_nu_1'], df['p_t_nu_2'], df['p_z_nu_1'], df['p_z_nu_2'], df['flag']],
+                    2: np.c_[pi0_1_transformed, pi0_2_transformed, pi_1_transformed, pi_2_transformed, df['E_nu_1'], df['E_nu_2'], df['p_t_nu_1'], df['p_t_nu_2'], df['p_z_nu_1'], df['p_z_nu_2']],
+                    3: np.c_[pi0_1_transformed, pi0_2_transformed, pi_1_transformed, pi_2_transformed, df['E_nu_1'], df['E_nu_2'], df['p_t_nu_1'], df['p_t_nu_2'], df['p_z_nu_1'], df['p_z_nu_2']],
+
                 }
-                return config_map_neutrino
+                return config_map_neutrino[config_num]
             else:
                 raise Exception('Wrong config mode inputted')
         
@@ -84,7 +94,7 @@ class ConfigLoader:
                     5: np.c_[self.df.aco_angle_1, self.df.y_1_1, self.df.y_1_2, self.df.m_1**2, self.df.m_2**2],
                     6: np.c_[pi_1_transformed, pi_2_transformed, pi0_1_transformed, pi2_2_transformed, pi3_2_transformed, self.df.aco_angle_1, self.df.y_1_1, self.df.y_1_2, self.df.m_1**2, self.df.m_2**2],
                 }
-                return config_map_norhoa1   
+                return config_map_norhoa1[config_num]
             else:
                 raise Exception('Wrong config mode inputted')
                 
@@ -108,7 +118,7 @@ class ConfigLoader:
                     5: np.c_[self.df.aco_angle_1, self.df.y_1_1, self.df.y_1_2, self.df.m_1**2, self.df.m_2**2],
                     6: np.c_[pi_1_transformed, pi_2_transformed, pi2_1_transformed, pi3_1_transformed, pi2_2_transformed, pi3_2_transformed, self.df.aco_angle_1, self.df.y_1_1, self.df.y_1_2, self.df.m_1**2, self.df.m_2**2],
                 }
-                return config_map_noa1a1   
+                return config_map_noa1a1[config_num]
             else:
                 raise Exception('Wrong config mode inputted')
                 
@@ -120,10 +130,11 @@ class ConfigLoader:
         Loads specific configuration of input NN and splits inputs in test/train set
         """
         try:
-            config_map = self.chooseConfigMap(mode=mode)
+            # config_map = self.chooseConfigMap(binary, mode=mode)
+            X = self.chooseConfigMap(binary, config_num, mode=mode)
         except KeyError as e:
             raise ValueError(f'Wrong config input : {e}')
-        X = config_map[config_num]
+        # X = config_map[config_num]
         if binary:
             y = self.df['y']
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=123456, stratify=y)
