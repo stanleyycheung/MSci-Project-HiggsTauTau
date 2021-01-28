@@ -1,4 +1,5 @@
 # import uproot
+from multiprocessing import Value
 import numpy as np
 import pandas as pd
 # import tensorflow as tf
@@ -87,20 +88,57 @@ class NeutrinoReconstructor:
         return rotation_matrix
 
     def dealWithMissingData(self, df_br, mode):
+        """
+        Deals with rejected events according to mode
+        Mode:
+        0 - Simple flag
+        1 - Linear interpolation - BayesianRidge algorithm
+        2 - KNN algorithm
+        """
+        print('Imputing missing data')
         # change to return df_br and modify in place
+        # alpha_flag = NeutrinoReconstructor.DEFAULT_VALUE + 1
         if mode == 0:
-            # simple imputer
-            simpleImp = SimpleImputer(missing_values=NeutrinoReconstructor.DEFAULT_VALUE, strategy='mean')
-            # completeEvents = df_br[(df_br['alpha_1']!=NeutrinoReconstructor.DEFAULT_VALUE)]
-            # incompleteEvents = df_br[(df_br['alpha_1']==NeutrinoReconstructor.DEFAULT_VALUE)]
-            return pd.DataFrame(simpleImp.fit_transform(df_br))
+            df_br['flag'] = np.where(df_br['alpha_1']==NeutrinoReconstructor.DEFAULT_VALUE, 0, 1)
+            return df_br
         elif mode == 1:
+            # df_br['alpha_1'].replace(NeutrinoReconstructor.DEFAULT_VALUE, alpha_flag, inplace=True)
+            # df_br['alpha_2'].replace(NeutrinoReconstructor.DEFAULT_VALUE, alpha_flag, inplace=True)
+            # print(df_br.head())
             # default is BayesianRidge
-            itImp = IterativeImputer(missing_values=NeutrinoReconstructor.DEFAULT_VALUE, random_state=0)
-            return pd.DataFrame(itImp.fit_transform(df_br))
+            # itImp = IterativeImputer(missing_values=alpha_flag, random_state=0, verbose=1)
+            itImp = IterativeImputer(missing_values=NeutrinoReconstructor.DEFAULT_VALUE, random_state=0, verbose=1)
+            df_br_imputed = pd.DataFrame(itImp.fit_transform(df_br), columns=df_br.columns)
+            return df_br_imputed
+            # return self.calculateFromAlpha(df_br_imputed, df_br_imputed['alpha_1'], df_br_imputed['alpha_2'])
         elif mode == 2:
-            KNNImp = KNNImputer(missing_values=NeutrinoReconstructor.DEFAULT_VALUE,)
-        pass
+            # df_br['alpha_1'].replace(NeutrinoReconstructor.DEFAULT_VALUE, alpha_flag, inplace=True)
+            # df_br['alpha_2'].replace(NeutrinoReconstructor.DEFAULT_VALUE, alpha_flag, inplace=True)
+            # KNNImp = KNNImputer(missing_values=alpha_flag, n_neighbors=2) 
+            KNNImp = KNNImputer(missing_values=NeutrinoReconstructor.DEFAULT_VALUE, n_neighbors=2)
+            df_br_imputed = pd.DataFrame(KNNImp.fit_transform(df_br), columns=df_br.columns)
+            return df_br_imputed
+            # return self.calculateFromAlpha(df_br_imputed, df_br_imputed['alpha_1'], df_br_imputed['alpha_2'])
+        else:
+            raise ValueError('Missing data mode not understood')
+
+    def calculateFromAlpha(self, df_br, alpha_1, alpha_2):
+        p_z_nu_1 = alpha_1*(df_br.pi_pz_1_br + df_br.pi0_pz_1_br)
+        p_z_nu_2 = alpha_2*(df_br.pi_pz_2_br + df_br.pi0_pz_2_br)
+        E_nu_1 = (self.m_tau**2 - (df_br.pi_E_1_br+df_br.pi0_E_1_br)**2 + (df_br.pi_pz_1_br + df_br.pi0_pz_1_br)
+                  ** 2 + 2*p_z_nu_1*(df_br.pi_pz_1_br + df_br.pi0_pz_1_br))/(2*(df_br.pi_E_1_br+df_br.pi0_E_1_br))
+        E_nu_2 = (self.m_tau**2 - (df_br.pi_E_2_br+df_br.pi0_E_2_br)**2 + (df_br.pi_pz_2_br + df_br.pi0_pz_2_br)
+                  ** 2 + 2*p_z_nu_2*(df_br.pi_pz_2_br + df_br.pi0_pz_2_br))/(2*(df_br.pi_E_2_br+df_br.pi0_E_2_br))
+        p_t_nu_1 = np.sqrt(np.array(E_nu_1)**2 - np.array(p_z_nu_1)**2)
+        p_t_nu_2 = np.sqrt(np.array(E_nu_2)**2 - np.array(p_z_nu_2)**2)
+        df_br['E_nu_1'] = E_nu_1
+        df_br['E_nu_2'] = E_nu_2
+        df_br['p_t_nu_1'] = p_t_nu_1
+        df_br['p_t_nu_2'] = p_t_nu_2
+        df_br['p_z_nu_1'] = p_z_nu_1
+        df_br['p_z_nu_2'] = p_z_nu_2
+        return df_br
+        
 
     def runAlphaReconstructor(self, df_reco_gen, df_br, load_alpha, termination=1000):
         """
@@ -284,16 +322,16 @@ if __name__ == '__main__':
     # NR.runGraphs(df.reset_index(drop=True))
     df_inputs = NR.runAlphaReconstructor(df.reset_index(drop=True), df_br, load_alpha=True, termination=1000)
     # print(df_inputs.head())
-    NR.dealWithMissingData(df_inputs, mode=0)
+    print(NR.dealWithMissingData(df_inputs, mode=1).head())
     exit()
-    df_br['alpha_1'] = alpha_1
-    df_br['alpha_2'] = alpha_2
-    df_br['E_nu_1'] = E_nu_1
-    df_br['E_nu_2'] = E_nu_2
-    df_br['p_t_nu_1'] = p_t_nu_1
-    df_br['p_t_nu_2'] = p_t_nu_2
-    df_br['p_z_nu_1'] = p_z_nu_1
-    df_br['p_z_nu_2'] = p_z_nu_2
+    # df_br['alpha_1'] = alpha_1
+    # df_br['alpha_2'] = alpha_2
+    # df_br['E_nu_1'] = E_nu_1
+    # df_br['E_nu_2'] = E_nu_2
+    # df_br['p_t_nu_1'] = p_t_nu_1
+    # df_br['p_t_nu_2'] = p_t_nu_2
+    # df_br['p_z_nu_1'] = p_z_nu_1
+    # df_br['p_z_nu_2'] = p_z_nu_2
     # print(df_br.columns)
     pd.to_pickle(df_br, 'misc/df_br.pkl')
     # NR.test1(df.reset_index(drop=False), df_br, load_alpha=False, termination=1000)

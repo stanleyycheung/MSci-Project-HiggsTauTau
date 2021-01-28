@@ -51,16 +51,15 @@ class ConfigLoader:
                 return config_map_norho
             if mode == 1:
                 """
+                TO CHANGE
                 1: no flag
                 2: flag
                 3: flag + met
                 """
-                default_value = NeutrinoReconstructor.DEFAULT_VALUE
-                flag = np.where((self.df['p_t_nu_1']==default_value) | (self.df['alpha_1']==default_value) | (self.df['p_t_nu_2']==default_value) | (self.df['alpha_2']==default_value), 0, 1)
+                NeutrinoReconstructor
                 config_map_neutrino = {
                     1: np.c_[pi0_1_transformed, pi0_2_transformed, pi_1_transformed, pi_2_transformed, self.df['E_nu_1'], self.df['E_nu_2'], self.df['p_t_nu_1'], self.df['p_t_nu_2'], self.df['p_z_nu_1'], self.df['p_z_nu_2']],
                     2: np.c_[pi0_1_transformed, pi0_2_transformed, pi_1_transformed, pi_2_transformed, self.df['E_nu_1'], self.df['E_nu_2'], self.df['p_t_nu_1'], self.df['p_t_nu_2'], self.df['p_z_nu_1'], self.df['p_z_nu_2'], flag],
-                    3: np.c_[pi0_1_transformed, pi0_2_transformed, pi_1_transformed, pi_2_transformed, self.df['E_nu_1'], self.df['E_nu_2'], self.df['p_t_nu_1'], self.df['p_t_nu_2'], self.df['p_z_nu_1'], self.df['p_z_nu_2'], flag, self.df['E_miss_x'], self.df['E_miss_y']],
                 }
                 return config_map_neutrino
             else:

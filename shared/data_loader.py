@@ -95,12 +95,12 @@ class DataLoader:
         variables_gen = [
             "wt_cp_sm", "wt_cp_ps", "wt_cp_mm", "rand",
             "dm_1", "dm_2",
-            "pi_E_1", "pi_px_1", "pi_py_1", "pi_pz_1", # charged pion 1
-            "pi_E_2", "pi_px_2", "pi_py_2", "pi_pz_2", # charged pion 2
-            "pi0_E_1", "pi0_px_1", "pi0_py_1", "pi0_pz_1", # neutral pion 1
-            "pi0_E_2", "pi0_px_2", "pi0_py_2", "pi0_pz_2", # neutral pion 2,
+            "pi_E_1", "pi_px_1", "pi_py_1", "pi_pz_1",  # charged pion 1
+            "pi_E_2", "pi_px_2", "pi_py_2", "pi_pz_2",  # charged pion 2
+            "pi0_E_1", "pi0_px_1", "pi0_py_1", "pi0_pz_1",  # neutral pion 1
+            "pi0_E_2", "pi0_px_2", "pi0_py_2", "pi0_pz_2",  # neutral pion 2,
             'metx', 'mety',
-            'sv_x_1', 'sv_y_1', 'sv_z_1', 'sv_x_2', 'sv_y_2', 'sv_z_2',]
+            'sv_x_1', 'sv_y_1', 'sv_z_1', 'sv_x_2', 'sv_y_2', 'sv_z_2', ]
         if not from_pickle:
             tree_tt = uproot.open(DataLoader.gen_root_path)["ntuple"]
             df = tree_tt.pandas.df(variables_gen)
@@ -114,11 +114,11 @@ class DataLoader:
         Selects correct channel for gen data
         """
         if self.channel == 'rho_rho':
-            df_clean = df[(df['dm_1']==1) & (df['dm_2']==1)]
+            df_clean = df[(df['dm_1'] == 1) & (df['dm_2'] == 1)]
         elif self.channel == 'rho_a1':
-            df_clean = df[(df['dm_1']==1) & (df['dm_2']==10)]
+            df_clean = df[(df['dm_1'] == 1) & (df['dm_2'] == 10)]
         elif self.channel == 'a1_a1':
-            df_clean = df[(df['dm_1']==10) & (df['dm_2']==10)]
+            df_clean = df[(df['dm_1'] == 10) & (df['dm_2'] == 10)]
         else:
             raise ValueError('Incorrect channel inputted')
         return df_clean
@@ -136,11 +136,11 @@ class DataLoader:
             # drop unnecessary labels
             # df_clean = df_rho.drop(["mva_dm_1", "mva_dm_2", "tau_decay_mode_1", "tau_decay_mode_2", "wt_cp_sm", "wt_cp_ps", "wt_cp_mm", "rand"], axis=1).reset_index(drop=True)
         elif self.channel == 'rho_a1':
-            df_clean = df[(df['mva_dm_1']==1) & (df['mva_dm_2']==10) & (df["tau_decay_mode_1"] == 1)]
+            df_clean = df[(df['mva_dm_1'] == 1) & (df['mva_dm_2'] == 10) & (df["tau_decay_mode_1"] == 1)]
             df_rho_ps = df_clean[(df_clean["rand"] < df_clean["wt_cp_ps"]/2)]
             df_rho_sm = df_clean[(df_clean["rand"] < df_clean["wt_cp_sm"]/2)]
         elif self.channel == 'a1_a1':
-            df_clean = df[(df['mva_dm_1']==10) & (df['mva_dm_2']==10)]
+            df_clean = df[(df['mva_dm_1'] == 10) & (df['mva_dm_2'] == 10)]
             df_rho_ps = df_clean[(df_clean["rand"] < df_clean["wt_cp_ps"]/2)]
             df_rho_sm = df_clean[(df_clean["rand"] < df_clean["wt_cp_sm"]/2)]
         else:
@@ -175,7 +175,7 @@ class DataLoader:
             # no need to check here as checked in cleanRecoData
             df_inputs_data, boost = self.calculateA1A1Data(df, len(df_ps))
         # df.to_pickle('misc/debugging_2.pkl')
-        # return 
+        # return
         df_inputs = pd.DataFrame(df_inputs_data)
         if binary:
             df_inputs['y'] = y
@@ -227,10 +227,10 @@ class DataLoader:
         pi0_2_boosted_rot = np.array(pi0_2_boosted_rot)
         rho_1_boosted_rot = np.array(rho_1_boosted_rot)
         rho_2_boosted_rot = np.array(rho_2_boosted_rot)
-        
-        #aco angle calculation
+
+        # aco angle calculation
         aco_angle_1 = self.getAcoAngles(pi0_1=pi0_1, pi0_2=pi0_2, pi_1=pi_1, pi_2=pi_2)[0]
-        
+
         df_inputs_data = {
             'pi_E_1_br': pi_1_boosted[0],
             'pi_px_1_br': pi_1_boosted_rot[:, 0],
@@ -267,7 +267,6 @@ class DataLoader:
         }
         return df_inputs_data, boost
 
-
     def rotateVectors(**kwargs):
         pass
 
@@ -296,7 +295,7 @@ class DataLoader:
         aco_angles = []
         if self.channel == 'rho_rho':
             pi_1_boosted = kwargs['pi_1']
-            pi_2_boosted = kwargs['pi_2'] 
+            pi_2_boosted = kwargs['pi_2']
             pi0_1_boosted = kwargs['pi0_1']
             pi0_2_boosted = kwargs['pi0_2']
             zmf = pi_1_boosted + pi_2_boosted + pi0_1_boosted + pi0_2_boosted
@@ -308,28 +307,65 @@ class DataLoader:
             aco_angle_1[np.isnan(aco_angle_1)] = np.pi
             aco_angles.append(aco_angle_1)
         elif self.channel == 'rho_a1':
+            # 4 aco angles
             pi_1_boosted = kwargs['pi_1']
-            pi_2_boosted = kwargs['pi_2']
             pi0_1_boosted = kwargs['pi0_1']
-            pi2_2_boosted = kwargs['pi2_2'] 
-            pi3_2_boosted = kwargs['pi3_2']
-            zmf = pi_1_boosted + pi_2_boosted
-            aco_angle_1 = self.getAcoAnglesForOneRF(pi0_1_boosted, pi_2_boosted, pi_1_boosted, pi2_2_boosted, zmf)
-            aco_angles.append(aco_angle_1)
-        elif self.channel == 'a1_a1':
-            pi_1_boosted = kwargs['pi_1']
+            rho_1 = pi_1_boosted + pi0_1_boosted
             pi_2_boosted = kwargs['pi_2']
-            pi2_1_boosted = kwargs['pi2_1']
-            pi3_1_boosted = kwargs['pi3_1']
             pi2_2_boosted = kwargs['pi2_2']
             pi3_2_boosted = kwargs['pi3_2']
-            zmf = pi_1_boosted + pi_2_boosted
-            aco_angle_1 = self.getAcoAnglesForOneRF(pi_1_boosted, pi_2_boosted, pi2_1_boosted, pi2_2_boosted, zmf)
-            aco_angle_2 = self.getAcoAnglesForOneRF(pi_1_boosted, pi_2_boosted+pi3_2_boosted, pi2_1_boosted, pi2_2_boosted, zmf)
-            aco_angle_3 = self.getAcoAnglesForOneRF(pi_1_boosted+pi3_1_boosted, pi_2_boosted, pi2_1_boosted, pi2_2_boosted, zmf)
-            aco_angles.append(aco_angle_1)
-            aco_angles.append(aco_angle_2)
-            aco_angles.append(aco_angle_3)
+            # rho +/- , rho 0 frame
+            zmf_1 = rho_1 + pi_2_boosted + pi2_2_boosted
+            zmf_2 = rho_1 + pi_2_boosted + pi3_2_boosted
+            aco_angle_1 = self.getAcoAnglesForOneRF(pi_1_boosted, pi_2_boosted, pi0_1_boosted, pi2_2_boosted, zmf_1)
+            aco_angle_2 = self.getAcoAnglesForOneRF(pi_1_boosted, pi_2_boosted, pi0_1_boosted, pi3_2_boosted, zmf_2)
+            # rho +/-, a1 frame
+            # a1 -> rho0, pi +/-
+            zmf_3 = rho_1 + pi_2_boosted + pi2_2_boosted + pi3_2_boosted
+            aco_angle_3 = self.getAcoAnglesForOneRF(pi_1_boosted, pi_2_boosted + pi2_2_boosted, pi0_1_boosted, pi3_2_boosted, zmf_1)
+            aco_angle_4 = self.getAcoAnglesForOneRF(pi_1_boosted, pi_2_boosted + pi3_2_boosted, pi0_1_boosted, pi2_2_boosted, zmf_1)
+            aco_angles.extend([aco_angle_1, aco_angle_2, aco_angle_3, aco_angle_4])
+        elif self.channel == 'a1_a1':
+            # 16 aco angles
+            pi_1_boosted = kwargs['pi_1']
+            pi2_1_boosted = kwargs['pi2_1']
+            pi3_1_boosted = kwargs['pi3_1']
+            pi_2_boosted = kwargs['pi_2']
+            pi2_2_boosted = kwargs['pi2_2']
+            pi3_2_boosted = kwargs['pi3_2']
+            a1_1 = pi_1_boosted + pi2_1_boosted + pi3_1_boosted
+            a1_2 = pi_2_boosted + pi2_2_boosted + pi3_2_boosted
+            # rho0, rho0 frame
+            zmf_1 = pi_1_boosted + pi2_1_boosted + pi_2_boosted + pi2_2_boosted
+            zmf_2 = pi_1_boosted + pi3_1_boosted + pi_2_boosted + pi2_2_boosted
+            zmf_3 = pi_1_boosted + pi2_1_boosted + pi_2_boosted + pi3_2_boosted
+            zmf_4 = pi_1_boosted + pi3_1_boosted + pi_2_boosted + pi3_2_boosted
+            aco_angle_1 = self.getAcoAnglesForOneRF(pi_1_boosted, pi_2_boosted, pi2_1_boosted, pi2_2_boosted, zmf_1)
+            aco_angle_2 = self.getAcoAnglesForOneRF(pi_1_boosted, pi_2_boosted, pi3_1_boosted, pi2_2_boosted, zmf_2)
+            aco_angle_3 = self.getAcoAnglesForOneRF(pi_1_boosted, pi_2_boosted, pi2_1_boosted, pi3_2_boosted, zmf_3)
+            aco_angle_4 = self.getAcoAnglesForOneRF(pi_1_boosted, pi_2_boosted, pi3_1_boosted, pi3_2_boosted, zmf_4)
+            # rho0, a1 frame
+            zmf_5 = pi_1_boosted + pi2_1_boosted + a1_2
+            zmf_6 = pi_1_boosted + pi3_1_boosted + a1_2
+            aco_angle_5 = self.getAcoAnglesForOneRF(pi_1_boosted, pi_2_boosted+pi3_2_boosted, pi2_1_boosted, pi2_2_boosted, zmf_5)
+            aco_angle_6 = self.getAcoAnglesForOneRF(pi_1_boosted, pi_2_boosted+pi2_2_boosted, pi2_1_boosted, pi3_2_boosted, zmf_5)
+            aco_angle_7 = self.getAcoAnglesForOneRF(pi_1_boosted, pi_2_boosted+pi3_2_boosted, pi3_1_boosted, pi2_2_boosted, zmf_6)
+            aco_angle_8 = self.getAcoAnglesForOneRF(pi_1_boosted, pi_2_boosted+pi2_2_boosted, pi3_1_boosted, pi3_2_boosted, zmf_6)
+            # a1, rho0 frame
+            zmf_7 = a1_1 + pi_2_boosted + pi2_2_boosted
+            zmf_8 = a1_1 + pi_2_boosted + pi3_2_boosted
+            aco_angle_9 = self.getAcoAnglesForOneRF(pi_1_boosted+pi2_1_boosted, pi_2_boosted, pi3_1_boosted, pi2_2_boosted, zmf_7)
+            aco_angle_10 = self.getAcoAnglesForOneRF(pi_1_boosted+pi3_1_boosted, pi_2_boosted, pi2_1_boosted, pi2_2_boosted, zmf_7)
+            aco_angle_11 = self.getAcoAnglesForOneRF(pi_1_boosted+pi2_1_boosted, pi_2_boosted, pi3_1_boosted, pi3_2_boosted, zmf_8)
+            aco_angle_12 = self.getAcoAnglesForOneRF(pi_1_boosted+pi3_1_boosted, pi_2_boosted, pi2_1_boosted, pi3_2_boosted, zmf_8)
+            # a1, a1 frame
+            zmf_9 = a1_1 + a1_2
+            aco_angle_13 = self.getAcoAnglesForOneRF(pi_1_boosted+pi2_1_boosted, pi_2_boosted+pi2_2_boosted, pi3_1_boosted, pi3_2_boosted, zmf_9)
+            aco_angle_14 = self.getAcoAnglesForOneRF(pi_1_boosted+pi3_1_boosted, pi_2_boosted+pi2_2_boosted, pi2_1_boosted, pi3_2_boosted, zmf_9)
+            aco_angle_15 = self.getAcoAnglesForOneRF(pi_1_boosted+pi2_1_boosted, pi_2_boosted+pi3_2_boosted, pi3_1_boosted, pi2_2_boosted, zmf_9)
+            aco_angle_16 = self.getAcoAnglesForOneRF(pi_1_boosted+pi3_1_boosted, pi_2_boosted+pi3_2_boosted, pi2_1_boosted, pi2_2_boosted, zmf_9)
+            aco_angles.extend([aco_angle_1, aco_angle_2, aco_angle_3, aco_angle_4, aco_angle_5, aco_angle_6, aco_angle_7, aco_angle_8, aco_angle_9,
+                               aco_angle_10, aco_angle_11, aco_angle_12, aco_angle_13, aco_angle_14, aco_angle_15, aco_angle_16])
         else:
             raise ValueError('Channel not understood')
         return aco_angles
@@ -354,7 +390,7 @@ class DataLoader:
         n1 = p1_b_p - np.multiply(np.einsum('ij, ij->i', p1_b_p, self.normaliseVector(p3_b_p))[:, None], self.normaliseVector(p3_b_p))
         n2 = p2_b_p - np.multiply(np.einsum('ij, ij->i', p2_b_p, self.normaliseVector(p4_b_p))[:, None], self.normaliseVector(p4_b_p))
         # vectorised form of
-        # n1 = p1.Vect() - p1.Vect().Dot(p3.Vect().Unit())*p3.Vect().Unit();    
+        # n1 = p1.Vect() - p1.Vect().Dot(p3.Vect().Unit())*p3.Vect().Unit();
         # n2 = p2.Vect() - p2.Vect().Dot(p4.Vect().Unit())*p4.Vect().Unit();
         return np.arccos(np.einsum('ij, ij->i', n1, n2))
 
@@ -364,58 +400,58 @@ class DataLoader:
         p2 = p2.boost_particle(boost)
         p3 = p3.boost_particle(boost)
         p4 = p4.boost_particle(boost)
-        
-        #Some geometrical functions
-        def cross_product(vector3_1,vector3_2):
-            if len(vector3_1)!=3 or len(vector3_1)!=3:
+
+        # Some geometrical functions
+        def cross_product(vector3_1, vector3_2):
+            if len(vector3_1) != 3 or len(vector3_1) != 3:
                 print('These are not 3D arrays !')
-            x_perp_vector=vector3_1[1]*vector3_2[2]-vector3_1[2]*vector3_2[1]
-            y_perp_vector=vector3_1[2]*vector3_2[0]-vector3_1[0]*vector3_2[2]
-            z_perp_vector=vector3_1[0]*vector3_2[1]-vector3_1[1]*vector3_2[0]
-            return np.array([x_perp_vector,y_perp_vector,z_perp_vector])
-        
-        def dot_product(vector1,vector2):
-            if len(vector1)!=len(vector2):
+            x_perp_vector = vector3_1[1]*vector3_2[2]-vector3_1[2]*vector3_2[1]
+            y_perp_vector = vector3_1[2]*vector3_2[0]-vector3_1[0]*vector3_2[2]
+            z_perp_vector = vector3_1[0]*vector3_2[1]-vector3_1[1]*vector3_2[0]
+            return np.array([x_perp_vector, y_perp_vector, z_perp_vector])
+
+        def dot_product(vector1, vector2):
+            if len(vector1) != len(vector2):
                 print('vector1 =', vector1)
                 print('vector2 =', vector2)
                 raise Exception('Arrays_of_different_size')
-            prod=0
+            prod = 0
             for i in range(len(vector1)):
-                prod=prod+vector1[i]*vector2[i]
+                prod = prod+vector1[i]*vector2[i]
             return prod
-    
+
         def norm(vector):
-            if len(vector)!=3:
+            if len(vector) != 3:
                 print('This is only for a 3d vector')
             return np.sqrt(vector[0]**2+vector[1]**2+vector[2]**2)
-        
-        #calculating the perpependicular component
-        pi0_1_3Mom_star_perp=cross_product(p1[1:], p3[1:])
-        pi0_2_3Mom_star_perp=cross_product(p2[1:], p4[1:])
-        #Now normalise:
-        pi0_1_3Mom_star_perp=pi0_1_3Mom_star_perp/norm(pi0_1_3Mom_star_perp)
-        pi0_2_3Mom_star_perp=pi0_2_3Mom_star_perp/norm(pi0_2_3Mom_star_perp)
-        #Calculating phi_star
-        phi_CP=np.arccos(dot_product(pi0_1_3Mom_star_perp,pi0_2_3Mom_star_perp))
-        #The O variable
-        cross=np.cross(pi0_1_3Mom_star_perp.transpose(),pi0_2_3Mom_star_perp.transpose()).transpose()
-        bigO=dot_product(p4[1:],cross)
-        #perform the shift w.r.t. O* sign
-        phi_CP=np.where(bigO>=0, 2*np.pi-phi_CP, phi_CP)#, phi_CP)
-        
+
+        # calculating the perpependicular component
+        pi0_1_3Mom_star_perp = cross_product(p1[1:], p3[1:])
+        pi0_2_3Mom_star_perp = cross_product(p2[1:], p4[1:])
+        # Now normalise:
+        pi0_1_3Mom_star_perp = pi0_1_3Mom_star_perp/norm(pi0_1_3Mom_star_perp)
+        pi0_2_3Mom_star_perp = pi0_2_3Mom_star_perp/norm(pi0_2_3Mom_star_perp)
+        # Calculating phi_star
+        phi_CP = np.arccos(dot_product(pi0_1_3Mom_star_perp, pi0_2_3Mom_star_perp))
+        # The O variable
+        # cross = np.cross(pi0_1_3Mom_star_perp.transpose(), pi0_2_3Mom_star_perp.transpose()).transpose()
+        # bigO = dot_product(p4[1:], cross)
+        # # perform the shift w.r.t. O* sign
+        # phi_CP = np.where(bigO >= 0, 2*np.pi-phi_CP, phi_CP)  # , phi_CP)
+
         # #The energy ratios
-        # y_T = np.array(y1 * y2)        
+        # y_T = np.array(y1 * y2)
         # #additionnal shift that needs to be done do see differences between odd and even scenarios, with y=Energy ratios
         # #phi_CP=np.where(y_T<0, 2*np.pi-phi_CP, np.pi-phi_CP)
         # phi_CP=np.where(y_T>=0, np.where(phi_CP<np.pi, phi_CP+np.pi, phi_CP-np.pi), phi_CP)
-        
-        return phi_CP  
+
+        return phi_CP
 
     def getY(self, **kwargs):
         y = []
         if self.channel == 'rho_rho':
             pi_1_boosted = kwargs['pi_1_boosted']
-            pi_2_boosted = kwargs['pi_2_boosted'] 
+            pi_2_boosted = kwargs['pi_2_boosted']
             pi0_1_boosted = kwargs['pi0_1_boosted']
             pi0_2_boosted = kwargs['pi0_2_boosted']
             y_1 = (pi_1_boosted.E - pi0_1_boosted.E)/(pi_1_boosted.E + pi0_1_boosted.E)
@@ -431,7 +467,7 @@ class DataLoader:
 
     def normaliseVector(self, vec):
         """
-        
+
         Normalises an array of vectors
         """
         return vec/np.sqrt((vec ** 2).sum(-1))[..., np.newaxis]
@@ -445,8 +481,8 @@ class DataLoader:
         pi0_1 = Momentum4(df['pi0_E_1'], df["pi0_px_1"], df["pi0_py_1"], df["pi0_pz_1"])
         pi2_2 = Momentum4(df['pi2_E_2'], df["pi2_px_2"], df["pi2_py_2"], df["pi2_pz_2"])
         pi3_2 = Momentum4(df['pi3_E_2'], df["pi3_px_2"], df["pi3_py_2"], df["pi3_pz_2"])
-        rho_1 = pi_1 + pi0_1 # charged rho
-        rho_2 = pi_2 + pi3_2 # neutral rho, a part of the charged a1 particle
+        rho_1 = pi_1 + pi0_1  # charged rho
+        rho_2 = pi_2 + pi3_2  # neutral rho, a part of the charged a1 particle
         a1 = rho_2 + pi2_2
         # boost into rest frame of resonances
         # rest_frame = pi_1 + pi_2 + pi0_1 + pi2_2 + pi3_2
@@ -464,15 +500,15 @@ class DataLoader:
         a1_boosted = rho_2_boosted + pi2_2_boosted
         rest_frame_boosted = pi_1_boosted + pi_2_boosted + pi0_1_boosted
         # rest_frame_boosted = rest_frame.boost_particle(boost)
-        
-        want_rotations = True # !!! Maybe this should be an input parameter
-        
+
+        want_rotations = True  # !!! Maybe this should be an input parameter
+
         # rotations
         if want_rotations:
             pi_1_boosted_rot, pi_2_boosted_rot = [], []
             pi0_1_boosted_rot, pi2_2_boosted_rot, pi3_2_boosted_rot = [], [], []
             rho_1_boosted_rot, rho_2_boosted_rot, a1_boosted_rot = [], [], []
-            
+
             # MY ROTATIONS:
             # unit vectors along the momenta of the primary resonances
             unit1 = (rho_1_boosted[1:, :] / np.linalg.norm(rho_1_boosted[1:, :], axis=0)).transpose()
@@ -485,7 +521,7 @@ class DataLoader:
             angles1 = np.arccos(dotproduct1)
             dotproduct2 = (unit2*zaxis).sum(1)
             angles2 = np.arccos(dotproduct2)
-            
+
             for i in range(pi_1_boosted[:].shape[1]):
                 # MY ROTATIONS:
                 pi_1_boosted_rot.append(self.rotate(pi_1_boosted[1:, i], axes1[i], angles1[i]))
@@ -496,7 +532,7 @@ class DataLoader:
                 rho_1_boosted_rot.append(self.rotate(rho_1_boosted[1:, i], axes1[i], angles1[i]))
                 rho_2_boosted_rot.append(self.rotate(rho_2_boosted[1:, i], axes1[i], angles1[i]))
                 a1_boosted_rot.append(self.rotate(a1_boosted[1:, i], axes1[i], angles1[i]))
-                
+
                 if i % 100000 == 0:
                     print('finished getting rotated 4-vector', i)
             pi_1_boosted_rot = np.array(pi_1_boosted_rot)
@@ -507,11 +543,11 @@ class DataLoader:
             rho_1_boosted_rot = np.array(rho_1_boosted_rot)
             rho_2_boosted_rot = np.array(rho_2_boosted_rot)
             a1_boosted_rot = np.array(a1_boosted_rot)
-        
-        #aco_angle calculation
+
+        # aco_angle calculation
         aco_angles = self.getAcoAngles(pi0_1=pi0_1, pi2_2=pi2_2, pi3_2=pi3_2, pi_1=pi_1, pi_2=pi_2)
         aco_angle_1 = aco_angles[0]
-        
+
         df_inputs_data = {
             'pi_E_1_br': pi_1_boosted[0],
             'pi_px_1_br': pi_1_boosted_rot[:, 0],
@@ -554,7 +590,7 @@ class DataLoader:
             'w_a': df.wt_cp_sm,
             'w_b': df.wt_cp_ps,
             'm_1': rho_1.m,
-            #'m_2': rho_2.m,
+            # 'm_2': rho_2.m,
             'm_2': a1.m,
         }
         return df_inputs_data, boost
@@ -567,7 +603,7 @@ class DataLoader:
         pi3_1 = Momentum4(df['pi3_E_1'], df["pi3_px_1"], df["pi3_py_1"], df["pi3_pz_1"])
         pi2_2 = Momentum4(df['pi2_E_2'], df["pi2_px_2"], df["pi2_py_2"], df["pi2_pz_2"])
         pi3_2 = Momentum4(df['pi3_E_2'], df["pi3_px_2"], df["pi3_py_2"], df["pi3_pz_2"])
-        
+
         rest_frame = pi_1 + pi_2
         # boost = Momentum4(rest_frame[0], -rest_frame[1], -rest_frame[2], -rest_frame[3])
         boost = - rest_frame
@@ -577,12 +613,12 @@ class DataLoader:
         pi3_1_boosted = pi3_1.boost_particle(boost)
         pi2_2_boosted = pi2_2.boost_particle(boost)
         pi3_2_boosted = pi3_2.boost_particle(boost)
-        
+
         rho_1 = pi_1_boosted + pi2_1_boosted
         a1 = rho_1 + pi3_1_boosted
         rho_2 = pi_2_boosted + pi2_2_boosted
         a2 = rho_2 + pi3_2_boosted
-        
+
         # rotations
         # not doing properly rotations, just reassign variables
         pi_1_boosted_rot = pi_1_boosted[1:, :].T
@@ -592,7 +628,6 @@ class DataLoader:
         pi3_1_boosted_rot = pi3_1_boosted[1:, :].T
         pi3_2_boosted_rot = pi3_2_boosted[1:, :].T
 
-        
         df_inputs_data = {
             'pi_E_1_br': pi_1_boosted[0],
             'pi_px_1_br': pi_1_boosted_rot[:, 0],
@@ -602,7 +637,7 @@ class DataLoader:
             'pi_px_2_br': pi_2_boosted_rot[:, 0],
             'pi_py_2_br': pi_2_boosted_rot[:, 1],
             'pi_pz_2_br': pi_2_boosted_rot[:, 2],
-            
+
             'pi2_E_1_br': pi2_1_boosted[0],
             'pi2_px_1_br': pi2_1_boosted_rot[:, 0],
             'pi2_py_1_br': pi2_1_boosted_rot[:, 1],
@@ -611,7 +646,7 @@ class DataLoader:
             'pi3_px_1_br': pi3_1_boosted_rot[:, 0],
             'pi3_py_1_br': pi3_1_boosted_rot[:, 1],
             'pi3_pz_1_br': pi3_1_boosted_rot[:, 2],
-            
+
             'pi2_E_2_br': pi2_2_boosted[0],
             'pi2_px_2_br': pi2_2_boosted_rot[:, 0],
             'pi2_py_2_br': pi2_2_boosted_rot[:, 1],
@@ -632,8 +667,8 @@ class DataLoader:
             'y_1_2': df['y_1_2'],
             'w_a': df.wt_cp_sm,
             'w_b': df.wt_cp_ps,
-             'm_1': a1.m,
-             'm_2': a2.m,
+            'm_1': a1.m,
+            'm_2': a2.m,
         }
         return df_inputs_data, boost
 
@@ -709,6 +744,7 @@ class DataLoader:
         rotation_matrix = np.eye(3) + kmat + kmat.dot(kmat) * ((1 - c) / (s ** 2))
         return rotation_matrix
 
+
 if __name__ == '__main__':
     variables_rho_rho = [
         "wt_cp_sm", "wt_cp_ps", "wt_cp_mm", "rand",
@@ -722,8 +758,8 @@ if __name__ == '__main__':
         "y_1_1", "y_1_2",
         'met', 'metx', 'mety',
         'metcov00', 'metcov01', 'metcov10', 'metcov11',
-        "gen_nu_p_1", "gen_nu_phi_1", "gen_nu_eta_1", #leading neutrino, gen level
-        "gen_nu_p_2", "gen_nu_phi_2", "gen_nu_eta_2" #subleading neutrino, gen level
+        "gen_nu_p_1", "gen_nu_phi_1", "gen_nu_eta_1",  # leading neutrino, gen level
+        "gen_nu_p_2", "gen_nu_phi_2", "gen_nu_eta_2"  # subleading neutrino, gen level
     ]
     DL = DataLoader(variables_rho_rho, 'rho_rho')
     # DL.createRecoData(binary=True, addons=['met'])
