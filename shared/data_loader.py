@@ -321,6 +321,8 @@ class DataLoader:
         return np.dot(self.rotation_matrix(axis, theta), vect)
 
     def getAcoAngles(self, **kwargs):
+        # WARNING! Naming convention is wrong: these are not boosted,
+        # so should be called eg. pi_1 instead of pi_1_boosted
         """
         Returns all the aco angles for different channels
         """
@@ -331,6 +333,10 @@ class DataLoader:
             pi0_1_boosted = kwargs['pi0_1']
             pi0_2_boosted = kwargs['pi0_2']
             zmf = pi_1_boosted + pi_2_boosted + pi0_1_boosted + pi0_2_boosted
+            aco_angle_1 = self.getAcoAnglesForOneRF(pi0_1_boosted, pi0_2_boosted, pi_1_boosted, pi_2_boosted, zmf)
+            print('number of nans using Stanleys calculation:', np.sum(np.isnan(aco_angle_1)))
+            aco_angle_1[np.isnan(aco_angle_1)] = np.pi
+            aco_angle_1 = self.getAcoAnglesPerpFormula(pi0_1_boosted, pi0_2_boosted, pi_1_boosted, pi_2_boosted, zmf)
             # aco_angle_1 = self.getAcoAnglesForOneRF(pi0_1_boosted, pi0_2_boosted, pi_1_boosted, pi_2_boosted, zmf)
             # print('number of nans using Stanleys calculation:', np.sum(np.isnan(aco_angle_1)))
             # aco_angle_1[np.isnan(aco_angle_1)] = np.pi
@@ -354,8 +360,8 @@ class DataLoader:
             # rho +/-, a1 frame
             # a1 -> rho0, pi +/-
             zmf_3 = rho_1 + pi_2_boosted + pi2_2_boosted + pi3_2_boosted
-            aco_angle_3 = self.getAcoAnglesForOneRF(pi_1_boosted, pi_2_boosted + pi2_2_boosted, pi0_1_boosted, pi3_2_boosted, zmf_1)
-            aco_angle_4 = self.getAcoAnglesForOneRF(pi_1_boosted, pi_2_boosted + pi3_2_boosted, pi0_1_boosted, pi2_2_boosted, zmf_1)
+            aco_angle_3 = self.getAcoAnglesForOneRF(pi_1_boosted, pi_2_boosted + pi2_2_boosted, pi0_1_boosted, pi3_2_boosted, zmf_3)
+            aco_angle_4 = self.getAcoAnglesForOneRF(pi_1_boosted, pi_2_boosted + pi3_2_boosted, pi0_1_boosted, pi2_2_boosted, zmf_3)
             aco_angles.extend([aco_angle_1, aco_angle_2, aco_angle_3, aco_angle_4])
         elif self.channel == 'a1_a1':
             # 16 aco angles
@@ -419,8 +425,14 @@ class DataLoader:
         p2_b_p = np.c_[p2_boosted.p_x, p2_boosted.p_y, p2_boosted.p_z]
         p3_b_p = np.c_[p3_boosted.p_x, p3_boosted.p_y, p3_boosted.p_z]
         p4_b_p = np.c_[p4_boosted.p_x, p4_boosted.p_y, p4_boosted.p_z]
+        print('number of nans in p1_b_p', np.sum(np.isnan(p1_b_p)))
+        print('number of nans in p2_b_p', np.sum(np.isnan(p2_b_p)))
+        print('number of nans in p3_b_p', np.sum(np.isnan(p3_b_p)))
+        print('number of nans in p4_b_p', np.sum(np.isnan(p4_b_p)))
         n1 = p1_b_p - np.multiply(np.einsum('ij, ij->i', p1_b_p, self.normaliseVector(p3_b_p))[:, None], self.normaliseVector(p3_b_p))
         n2 = p2_b_p - np.multiply(np.einsum('ij, ij->i', p2_b_p, self.normaliseVector(p4_b_p))[:, None], self.normaliseVector(p4_b_p))
+        print('number of nans in n1', np.sum(np.isnan(n1)))
+        print('number of nans in n2', np.sum(np.isnan(n2)))
         # vectorised form of
         # n1 = p1.Vect() - p1.Vect().Dot(p3.Vect().Unit())*p3.Vect().Unit();
         # n2 = p2.Vect() - p2.Vect().Dot(p4.Vect().Unit())*p4.Vect().Unit();
@@ -453,6 +465,8 @@ class DataLoader:
         return phi_CP
 
     def getY(self, **kwargs):
+        # WARNING! Naming convention is wrong: these are not boosted,
+        # so should be called eg. pi_1 instead of pi_1_boosted
         y = []
         if self.channel == 'rho_rho':
             pi_1_boosted = kwargs['pi_1_boosted']
@@ -463,7 +477,25 @@ class DataLoader:
             y_2 = (pi_2_boosted.e - pi0_2_boosted.e)/(pi_2_boosted.e + pi0_2_boosted.e)
             y.extend([y_1, y_2])
         elif self.channel == 'rho_a1':
-            pass
+            # 5 ys
+            pi_1_boosted = kwargs['pi_1']
+            pi0_1_boosted = kwargs['pi0_1']
+            rho_1 = pi_1_boosted + pi0_1_boosted
+            pi_2_boosted = kwargs['pi_2']
+            pi2_2_boosted = kwargs['pi2_2']
+            pi3_2_boosted = kwargs['pi3_2']
+            # 1 y from equation 1
+            y_1 = (pi_1_boosted.e - pi0_1_boosted.e)/(pi_1_boosted.e + pi0_1_boosted.e)
+            # from the y_rho0 part, 2 values due to ambiguity: rho0 can either be pi_2+pi2_2 or pi_2+pi3_2
+            y_2 = (pi_2_boosted.e - pi2_2_boosted.e)/(pi_2_boosted.e + pi2_2_boosted.e)
+            y_3 = (pi_2_boosted.e - pi3_2_boosted.e)/(pi_2_boosted.e + pi3_2_boosted.e)
+            # from y_a1 part, 2 values due to ambiguity
+            rho0 = pi_2_boosted + pi2_2_boosted
+            a1 = rho0 + pi3_2_boosted
+            y_4 = (rho0.e - pi3_2_boosted.e) / (rho0.e + pi3_2_boosted.e) - (a1.m**2 - pi3_2_boosted.m**2 + rho0.m**2) / (2 * a1.m**2)
+            rho0_2 = pi_2_boosted + pi3_2_boosted
+            y_5 = (rho0_2.e - pi2_2_boosted.e) / (rho0_2.e + pi2_2_boosted.e) - (a1.m**2 - pi2_2_boosted.m**2 + rho0_2.m**2) / (2 * a1.m**2)            
+            y.extend([y_1, y_2, y_3, y_4, y_5])
         elif self.channel == 'a1_a1':
             pass
         else:
