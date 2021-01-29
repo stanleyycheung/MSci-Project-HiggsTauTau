@@ -1,14 +1,23 @@
+import os
 import tensorflow as tf
 import datetime
 import numpy as np
 from tensorflow.keras.wrappers.scikit_learn import KerasClassifier
 from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
 import kerastuner as kt
+seed_value = 1
+# 1. Set the `PYTHONHASHSEED` environment variable at a fixed value
+os.environ['PYTHONHASHSEED'] = str(seed_value)
+# 2. Set the `python` built-in pseudo-random generator at a fixed value
+os.urandom.seed(seed_value)
+# 3. Set the `numpy` pseudo-random generator at a fixed value
+np.random.seed(seed_value)
+# 4. Set the `tensorflow` pseudo-random generator at a fixed value
+tf.compat.v1.set_random_seed(seed_value)
 
 class Tuner:
     def __init__(self):
         pass
-
     
     def runHPTuning(self, config_num, read=True, from_pickle=True, epochs=50, tuner_epochs=50, batch_size=10000, tuner_batch_size=10000, patience=10, tuner_mode=0, addons_config={}):
         df = self.initialize(addons_config, read=read, from_pickle=from_pickle)

@@ -212,7 +212,6 @@ class DataLoader:
         rho_1_boosted_rot, rho_2_boosted_rot = pi_1_boosted_rot+pi0_1_boosted_rot, pi_2_boosted_rot+pi0_2_boosted_rot
         # aco angle calculation
         aco_angle_1 = self.getAcoAngles(pi0_1=pi0_1, pi0_2=pi0_2, pi_1=pi_1, pi_2=pi_2)[0]
-
         df_inputs_data = {
             'pi_E_1_br': pi_1_boosted[0],
             'pi_px_1_br': pi_1_boosted_rot[:, 0],
