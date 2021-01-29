@@ -333,10 +333,7 @@ class DataLoader:
         """
         Returns all the aco angles for different channels
         """
-<<<<<<< HEAD
         aco_angles = []
-=======
->>>>>>> da64d1a611b82deb643e92352d569bc77760e6bf
         if self.channel == 'rho_rho':
             pi_1 = kwargs['pi_1']
             pi_2 = kwargs['pi_2']
