@@ -325,16 +325,17 @@ class DataLoader:
         Returns all the aco angles for different channels
         """
         aco_angles = []
+        print('\nACO ANGLE CALCULATION\n')
         if self.channel == 'rho_rho':
             pi_1 = kwargs['pi_1']
             pi_2 = kwargs['pi_2']
             pi0_1 = kwargs['pi0_1']
             pi0_2 = kwargs['pi0_2']
             zmf = pi_1 + pi_2 + pi0_1 + pi0_2
-            aco_angle_1 = self.getAcoAnglesForOneRF(pi0_1, pi0_2, pi_1, pi_2, zmf)
-            print('number of nans using Stanleys calculation:', np.sum(np.isnan(aco_angle_1)))
-            aco_angle_1[np.isnan(aco_angle_1)] = np.pi
-            aco_angle_1 = self.getAcoAnglesPerpFormula(pi0_1, pi0_2, pi_1, pi_2, zmf)
+            # aco_angle_1 = self.getAcoAnglesForOneRF(pi0_1, pi0_2, pi_1, pi_2, zmf)
+            # print('number of nans using Stanleys calculation:', np.sum(np.isnan(aco_angle_1)))
+            # aco_angle_1[np.isnan(aco_angle_1)] = np.pi
+            # aco_angle_1 = self.getAcoAnglesPerpFormula(pi0_1, pi0_2, pi_1, pi_2, zmf)
             # aco_angle_1 = self.getAcoAnglesForOneRF(pi0_1, pi0_2, pi_1, pi_2, zmf)
             # print('number of nans using Stanleys calculation:', np.sum(np.isnan(aco_angle_1)))
             # aco_angle_1[np.isnan(aco_angle_1)] = np.pi
