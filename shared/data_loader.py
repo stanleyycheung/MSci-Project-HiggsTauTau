@@ -499,19 +499,16 @@ class DataLoader:
             y_2 = (pi_2.e - pi2_2.e)/(pi_2.e + pi2_2.e)
             y_3 = (pi_2.e - pi3_2.e)/(pi_2.e + pi3_2.e)
             # from y_a1 part, 2 values due to ambiguity
-<<<<<<< HEAD
             rho0 = pi_2 + pi2_2
             a1 = rho0 + pi3_2
             y_4 = (rho0.e - pi3_2.e) / (rho0.e + pi3_2.e) - (a1.m**2 - pi3_2.m**2 + rho0.m**2) / (2 * a1.m**2)
             rho0_2 = pi_2 + pi3_2
             y_5 = (rho0_2.e - pi2_2.e) / (rho0_2.e + pi2_2.e) - (a1.m**2 - pi2_2.m**2 + rho0_2.m**2) / (2 * a1.m**2)            
-=======
             rho0 = pi_2_boosted + pi2_2_boosted
             a1 = rho0 + pi3_2_boosted
             y_4 = (rho0.e - pi3_2_boosted.e) / (rho0.e + pi3_2_boosted.e) - (a1.m**2 - pi3_2_boosted.m**2 + rho0.m**2) / (2 * a1.m**2)
             rho0_2 = pi_2_boosted + pi3_2_boosted
             y_5 = (rho0_2.e - pi2_2_boosted.e) / (rho0_2.e + pi2_2_boosted.e) - (a1.m**2 - pi2_2_boosted.m**2 + rho0_2.m**2) / (2 * a1.m**2)
->>>>>>> da64d1a611b82deb643e92352d569bc77760e6bf
             y.extend([y_1, y_2, y_3, y_4, y_5])
         elif self.channel == 'a1_a1':
             # 8 ys
