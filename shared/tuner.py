@@ -1,4 +1,6 @@
-from NN import tf, datetime
+import tensorflow as tf
+import datetime
+import numpy as np
 from tensorflow.keras.wrappers.scikit_learn import KerasClassifier
 from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
 import kerastuner as kt
