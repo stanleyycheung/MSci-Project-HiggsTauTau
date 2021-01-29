@@ -499,11 +499,6 @@ class DataLoader:
             y_4 = (rho0.e - pi3_2.e) / (rho0.e + pi3_2.e) - (a1.m**2 - pi3_2.m**2 + rho0.m**2) / (2 * a1.m**2)
             rho0_2 = pi_2 + pi3_2
             y_5 = (rho0_2.e - pi2_2.e) / (rho0_2.e + pi2_2.e) - (a1.m**2 - pi2_2.m**2 + rho0_2.m**2) / (2 * a1.m**2)           
-            rho0 = pi_2 + pi2_2
-            a1 = rho0 + pi3_2
-            y_4 = (rho0.e - pi3_2.e) / (rho0.e + pi3_2.e) - (a1.m**2 - pi3_2.m**2 + rho0.m**2) / (2 * a1.m**2)
-            rho0_2 = pi_2 + pi3_2
-            y_5 = (rho0_2.e - pi2_2.e) / (rho0_2.e + pi2_2.e) - (a1.m**2 - pi2_2.m**2 + rho0_2.m**2) / (2 * a1.m**2)
             return y_1, y_2, y_3, y_4, y_5
         elif self.channel == 'a1_a1':
             # 8 ys
