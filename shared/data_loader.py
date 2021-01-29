@@ -208,26 +208,28 @@ class DataLoader:
         rho_1_boosted = pi_1_boosted + pi0_1_boosted
         rho_2_boosted = pi_2_boosted + pi0_2_boosted
         # rotations
-        pi_1_boosted_rot, pi_2_boosted_rot = [], []
-        pi0_1_boosted_rot, pi0_2_boosted_rot = [], []
-        rho_1_boosted_rot, rho_2_boosted_rot = [], []
-        for i in range(pi_1_boosted[:].shape[1]):
-            rot_mat = self.rotation_matrix_from_vectors(rho_1_boosted[1:, i], [0, 0, 1])
-            pi_1_boosted_rot.append(rot_mat.dot(pi_1_boosted[1:, i]))
-            pi0_1_boosted_rot.append(rot_mat.dot(pi0_1_boosted[1:, i]))
-            pi_2_boosted_rot.append(rot_mat.dot(pi_2_boosted[1:, i]))
-            pi0_2_boosted_rot.append(rot_mat.dot(pi0_2_boosted[1:, i]))
-            rho_1_boosted_rot.append(rot_mat.dot(rho_1_boosted[1:, i]))
-            rho_2_boosted_rot.append(rot_mat.dot(rho_2_boosted[1:, i]))
-            if i % 100000 == 0:
-                print('finished getting rotated 4-vector', i)
-        pi_1_boosted_rot = np.array(pi_1_boosted_rot)
-        pi_2_boosted_rot = np.array(pi_2_boosted_rot)
-        pi0_1_boosted_rot = np.array(pi0_1_boosted_rot)
-        pi0_2_boosted_rot = np.array(pi0_2_boosted_rot)
-        rho_1_boosted_rot = np.array(rho_1_boosted_rot)
-        rho_2_boosted_rot = np.array(rho_2_boosted_rot)
+        # pi_1_boosted_rot, pi_2_boosted_rot = [], []
+        # pi0_1_boosted_rot, pi0_2_boosted_rot = [], []
+        # rho_1_boosted_rot, rho_2_boosted_rot = [], []
+        # for i in range(pi_1_boosted[:].shape[1]):
+        #     rot_mat = self.rotation_matrix_from_vectors(rho_1_boosted[1:, i], [0, 0, 1])
+        #     pi_1_boosted_rot.append(rot_mat.dot(pi_1_boosted[1:, i]))
+        #     pi0_1_boosted_rot.append(rot_mat.dot(pi0_1_boosted[1:, i]))
+        #     pi_2_boosted_rot.append(rot_mat.dot(pi_2_boosted[1:, i]))
+        #     pi0_2_boosted_rot.append(rot_mat.dot(pi0_2_boosted[1:, i]))
+        #     rho_1_boosted_rot.append(rot_mat.dot(rho_1_boosted[1:, i]))
+        #     rho_2_boosted_rot.append(rot_mat.dot(rho_2_boosted[1:, i]))
+        #     if i % 100000 == 0:
+        #         print('finished getting rotated 4-vector', i)
+        # pi_1_boosted_rot = np.array(pi_1_boosted_rot)
+        # pi_2_boosted_rot = np.array(pi_2_boosted_rot)
+        # pi0_1_boosted_rot = np.array(pi0_1_boosted_rot)
+        # pi0_2_boosted_rot = np.array(pi0_2_boosted_rot)
+        # rho_1_boosted_rot = np.array(rho_1_boosted_rot)
+        # rho_2_boosted_rot = np.array(rho_2_boosted_rot)
 
+        br_vectors = self.rotateVectors(pi_1=pi_1_boosted, pi_2=pi_2_boosted, pi0_1=pi0_1_boosted, pi0_2=pi0_2_boosted)
+        pi_1_boosted_rot, pi0_1_boosted_rot, pi_2_boosted_rot, pi0_2_boosted_rot, rho_1_boosted_rot, rho_2_boosted_rot = br_vectors
         # aco angle calculation
         aco_angle_1 = self.getAcoAngles(pi0_1=pi0_1, pi0_2=pi0_2, pi_1=pi_1, pi_2=pi_2)[0]
 
@@ -267,8 +269,38 @@ class DataLoader:
         }
         return df_inputs_data, boost
 
-    def rotateVectors(**kwargs):
-        pass
+    def rotateVectors(self, **kwargs):
+        """
+        All kwarg 4 vectors must be boosted!
+        """
+        print(f'Rotating in {self.channel} channel')
+        if self.channel == 'rho_rho':
+            pi_1_boosted = kwargs['pi_1']
+            pi_2_boosted = kwargs['pi_2']
+            pi0_1_boosted = kwargs['pi0_1']
+            pi0_2_boosted = kwargs['pi0_2']
+            rotationMatrices = self.rotationMatrixVectorised((pi_1_boosted + pi0_1_boosted)[1:].T, np.tile(np.array([0, 0, 1]), (pi_1_boosted.e.shape[0],1)))
+            pi_1_boosted_rot = np.einsum('ij,ikj->ik',pi_1_boosted[1:].T, rotationMatrices)
+            pi0_1_boosted_rot = np.einsum('ij,ikj->ik',pi0_1_boosted[1:].T, rotationMatrices)
+            pi_2_boosted_rot = np.einsum('ij,ikj->ik',pi_2_boosted[1:].T, rotationMatrices)
+            pi0_2_boosted_rot = np.einsum('ij,ikj->ik',pi0_2_boosted[1:].T, rotationMatrices)
+            return pi_1_boosted_rot, pi0_1_boosted_rot, pi_2_boosted_rot, pi0_2_boosted_rot, pi_1_boosted_rot+pi0_1_boosted_rot, pi_2_boosted_rot+pi0_2_boosted_rot
+
+    def rotationMatrixVectorised(self, vec1, vec2):
+        """
+        Find the rotation matrix that aligns vec1 to vec2
+        Expects vec1, vec2 to be list of vectors
+        Returns list of matrices
+        """
+        a, b = vec1 / np.linalg.norm(vec1, axis=1)[:,None], vec2 / np.linalg.norm(vec2, axis=1)[:,None]
+        v = np.cross(a, b)
+        c = np.einsum('ij, ij->i', a, b)
+        s = np.linalg.norm(v, axis=1)
+        kmat = np.array([[-np.zeros(len(vec1)), v.T[2], -v.T[1]], [-v.T[2], -np.zeros(len(vec1)), v.T[0]], [v.T[1], -v.T[0], -np.zeros(len(vec1))]]).T
+        rotation_matrix = np.tile(np.eye(3), (len(vec1),1,1)) + kmat + np.linalg.matrix_power(kmat, 2)*((1 - c) / (s ** 2))[:,None][:,np.newaxis]
+        # return np.tile(np.eye(3), (len(vec1),1,1)), kmat, np.linalg.matrix_power(kmat, 2)*((1 - c) / (s ** 2))[:,None][:,np.newaxis]
+        return rotation_matrix
+
 
     def rotation_matrix(self, axis, theta):
         """

@@ -1,4 +1,3 @@
-from numpy.core.numeric import True_
 from evaluator import Evaluator
 from data_loader import DataLoader
 from config_loader import ConfigLoader
@@ -12,14 +11,14 @@ import kerastuner as kt
 from tensorflow.keras.wrappers.scikit_learn import KerasClassifier
 from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
 seed_value = 1
-# # 1. Set the `PYTHONHASHSEED` environment variable at a fixed value
-# os.environ['PYTHONHASHSEED'] = str(seed_value)
-# # 2. Set the `python` built-in pseudo-random generator at a fixed value
-# random.seed(seed_value)
-# # 3. Set the `numpy` pseudo-random generator at a fixed value
-# np.random.seed(seed_value)
-# # 4. Set the `tensorflow` pseudo-random generator at a fixed value
-# tf.compat.v1.set_random_seed(seed_value)
+# 1. Set the `PYTHONHASHSEED` environment variable at a fixed value
+os.environ['PYTHONHASHSEED'] = str(seed_value)
+# 2. Set the `python` built-in pseudo-random generator at a fixed value
+random.seed(seed_value)
+# 3. Set the `numpy` pseudo-random generator at a fixed value
+np.random.seed(seed_value)
+# 4. Set the `tensorflow` pseudo-random generator at a fixed value
+tf.compat.v1.set_random_seed(seed_value)
 
 
 class NeuralNetwork:
@@ -436,9 +435,9 @@ if __name__ == '__main__':
     if not os.path.exists('C:\\Kristof'):  # then we are on Stanley's computer
         NN = NeuralNetwork(channel='rho_rho', binary=True, write_filename='NN_output', show_graph=False)
         # NN.initialize(addons_config={'neutrino': {'load_alpha':False, 'termination':1000}}, read=False, from_pickle=True)
-        # NN.initialize(addons_config={}, read=False, from_pickle=True)
+        NN.initialize(addons_config={}, read=False, from_pickle=True)
         # NN.model = NN.seq_model(units=(300, 300, 300), batch_norm=True, dropout=0.2)
-        NN.run(1, read=True, from_pickle=True, epochs=100, batch_size=8192) # 16384, 131072
+        # NN.run(1, read=True, from_pickle=True, epochs=100, batch_size=8192) # 16384, 131072
         # configs = [1,2,3,4,5,6]
         # NN.runMultiple(configs, epochs=1, batch_size=10000)
         # NN.runWithNeutrino(1, load_alpha=False, termination=100, read=False, from_pickle=True, epochs=50, batch_size=1024)
