@@ -325,7 +325,6 @@ class DataLoader:
         Returns all the aco angles for different channels
         """
         aco_angles = []
-        print('\nACO ANGLE CALCULATION\n')
         if self.channel == 'rho_rho':
             pi_1 = kwargs['pi_1']
             pi_2 = kwargs['pi_2']
@@ -464,39 +463,64 @@ class DataLoader:
         return phi_CP
 
     def getY(self, **kwargs):
-        # WARNING! Naming convention is wrong: these are not boosted,
-        # so should be called eg. pi_1 instead of pi_1_boosted
         y = []
         if self.channel == 'rho_rho':
-            pi_1_boosted = kwargs['pi_1_boosted']
-            pi_2_boosted = kwargs['pi_2_boosted']
-            pi0_1_boosted = kwargs['pi0_1_boosted']
-            pi0_2_boosted = kwargs['pi0_2_boosted']
-            y_1 = (pi_1_boosted.e - pi0_1_boosted.e)/(pi_1_boosted.e + pi0_1_boosted.e)
-            y_2 = (pi_2_boosted.e - pi0_2_boosted.e)/(pi_2_boosted.e + pi0_2_boosted.e)
+            pi_1 = kwargs['pi_1']
+            pi_2 = kwargs['pi_2']
+            pi0_1 = kwargs['pi0_1']
+            pi0_2 = kwargs['pi0_2']
+            y_1 = (pi_1.e - pi0_1.e)/(pi_1.e + pi0_1.e)
+            y_2 = (pi_2.e - pi0_2.e)/(pi_2.e + pi0_2.e)
             y.extend([y_1, y_2])
         elif self.channel == 'rho_a1':
             # 5 ys
-            pi_1_boosted = kwargs['pi_1']
-            pi0_1_boosted = kwargs['pi0_1']
-            rho_1 = pi_1_boosted + pi0_1_boosted
-            pi_2_boosted = kwargs['pi_2']
-            pi2_2_boosted = kwargs['pi2_2']
-            pi3_2_boosted = kwargs['pi3_2']
+            pi_1 = kwargs['pi_1']
+            pi0_1 = kwargs['pi0_1']
+            rho_1 = pi_1 + pi0_1
+            pi_2 = kwargs['pi_2']
+            pi2_2 = kwargs['pi2_2']
+            pi3_2 = kwargs['pi3_2']
             # 1 y from equation 1
-            y_1 = (pi_1_boosted.e - pi0_1_boosted.e)/(pi_1_boosted.e + pi0_1_boosted.e)
+            y_1 = (pi_1.e - pi0_1.e)/(pi_1.e + pi0_1.e)
             # from the y_rho0 part, 2 values due to ambiguity: rho0 can either be pi_2+pi2_2 or pi_2+pi3_2
-            y_2 = (pi_2_boosted.e - pi2_2_boosted.e)/(pi_2_boosted.e + pi2_2_boosted.e)
-            y_3 = (pi_2_boosted.e - pi3_2_boosted.e)/(pi_2_boosted.e + pi3_2_boosted.e)
+            y_2 = (pi_2.e - pi2_2.e)/(pi_2.e + pi2_2.e)
+            y_3 = (pi_2.e - pi3_2.e)/(pi_2.e + pi3_2.e)
             # from y_a1 part, 2 values due to ambiguity
-            rho0 = pi_2_boosted + pi2_2_boosted
-            a1 = rho0 + pi3_2_boosted
-            y_4 = (rho0.e - pi3_2_boosted.e) / (rho0.e + pi3_2_boosted.e) - (a1.m**2 - pi3_2_boosted.m**2 + rho0.m**2) / (2 * a1.m**2)
-            rho0_2 = pi_2_boosted + pi3_2_boosted
-            y_5 = (rho0_2.e - pi2_2_boosted.e) / (rho0_2.e + pi2_2_boosted.e) - (a1.m**2 - pi2_2_boosted.m**2 + rho0_2.m**2) / (2 * a1.m**2)            
+            rho0 = pi_2 + pi2_2
+            a1 = rho0 + pi3_2
+            y_4 = (rho0.e - pi3_2.e) / (rho0.e + pi3_2.e) - (a1.m**2 - pi3_2.m**2 + rho0.m**2) / (2 * a1.m**2)
+            rho0_2 = pi_2 + pi3_2
+            y_5 = (rho0_2.e - pi2_2.e) / (rho0_2.e + pi2_2.e) - (a1.m**2 - pi2_2.m**2 + rho0_2.m**2) / (2 * a1.m**2)            
             y.extend([y_1, y_2, y_3, y_4, y_5])
         elif self.channel == 'a1_a1':
-            pass
+            # 8 ys
+            pi_1 = kwargs['pi_1']
+            pi2_1 = kwargs['pi2_1']
+            pi3_1 = kwargs['pi3_1']
+            pi_2 = kwargs['pi_2']
+            pi2_2 = kwargs['pi2_2']
+            pi3_2 = kwargs['pi3_2']
+            rho0_1_1 = pi_1 + pi2_1
+            rho0_1_2 = pi_1 + pi3_1
+            rho0_2_1 = pi_2 + pi2_2
+            rho0_2_2 = pi_2 + pi3_2
+            a1_1 = rho0_1_1 + pi3_1
+            a1_2 = rho0_2_1 + pi3_2
+            # 4 ys from the y_a1 formula due to ambiguities in the 2 a1s
+            # 2 from the first a1
+            y_1 = (rho0_1_1.e - pi3_1.e) / (a1_1.m**2 - pi3_1.m**2 + rho0_1_1.m) / (2 * a1_1.m**2)
+            y_2 = (rho0_1_2.e - pi2_1.e) / (a1_1.m**2 - pi2_1.m**2 + rho0_1_2.m) / (2 * a1_1.m**2)
+            # 2 from the second a1
+            y_3 = (rho0_2_1.e - pi3_2.e) / (a1_2.m**2 - pi3_2.m**2 + rho0_2_1.m) / (2 * a1_2.m**2)
+            y_4 = (rho0_2_2.e - pi2_2.e) / (a1_2.m**2 - pi2_2.m**2 + rho0_2_2.m) / (2 * a1_2.m**2)
+            # 4 ys from the y_rho0 due to ambiguities in the 2 rho0s
+            # 2 from the first rho0
+            y_5 = (pi_1.e - pi2_1.e) / (pi_1.e + pi2_1.e)
+            y_6 = (pi_1.e - pi3_1.e) / (pi_1.e + pi3_1.e)
+            # 2 from the second rho0
+            y_7 = (pi_2.e - pi2_2.e) / (pi_2.e + pi2_2.e)
+            y_8 = (pi_2.e - pi3_2.e) / (pi_2.e + pi3_2.e)
+            y.extend([y_1, y_2, y_3, y_4, y_5, y_6, y_7, y_8])
         else:
             raise ValueError('Channel not understood')
         return y
