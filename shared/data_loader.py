@@ -333,7 +333,10 @@ class DataLoader:
         """
         Returns all the aco angles for different channels
         """
+<<<<<<< HEAD
         aco_angles = []
+=======
+>>>>>>> 674dffd596cd7e201a16604084f58f73740e7fd7
         if self.channel == 'rho_rho':
             pi_1 = kwargs['pi_1']
             pi_2 = kwargs['pi_2']
@@ -409,8 +412,7 @@ class DataLoader:
             aco_angle_14 = self.getAcoAnglesForOneRF(pi_1+pi3_1, pi_2+pi2_2, pi2_1, pi3_2, zmf_9)
             aco_angle_15 = self.getAcoAnglesForOneRF(pi_1+pi2_1, pi_2+pi3_2, pi3_1, pi2_2, zmf_9)
             aco_angle_16 = self.getAcoAnglesForOneRF(pi_1+pi3_1, pi_2+pi3_2, pi2_1, pi2_2, zmf_9)
-            return aco_angle_1, aco_angle_2, aco_angle_3, aco_angle_4, aco_angle_5, aco_angle_6, aco_angle_7, aco_angle_8,
-            aco_angle_9, aco_angle_10, aco_angle_11, aco_angle_12, aco_angle_13, aco_angle_14, aco_angle_15, aco_angle_16
+            return aco_angle_1, aco_angle_2, aco_angle_3, aco_angle_4, aco_angle_5, aco_angle_6, aco_angle_7, aco_angle_8, aco_angle_9, aco_angle_10, aco_angle_11, aco_angle_12, aco_angle_13, aco_angle_14, aco_angle_15, aco_angle_16
         else:
             raise ValueError('Channel not understood')
 
@@ -480,7 +482,7 @@ class DataLoader:
             pi0_2 = kwargs['pi0_2']
             y_1 = (pi_1.e - pi0_1.e)/(pi_1.e + pi0_1.e)
             y_2 = (pi_2.e - pi0_2.e)/(pi_2.e + pi0_2.e)
-            y.extend([y_1, y_2])
+            return y_1, y_2
         elif self.channel == 'rho_a1':
             # 5 ys
             pi_1 = kwargs['pi_1']
@@ -499,13 +501,13 @@ class DataLoader:
             a1 = rho0 + pi3_2
             y_4 = (rho0.e - pi3_2.e) / (rho0.e + pi3_2.e) - (a1.m**2 - pi3_2.m**2 + rho0.m**2) / (2 * a1.m**2)
             rho0_2 = pi_2 + pi3_2
-            y_5 = (rho0_2.e - pi2_2.e) / (rho0_2.e + pi2_2.e) - (a1.m**2 - pi2_2.m**2 + rho0_2.m**2) / (2 * a1.m**2)            
+            y_5 = (rho0_2.e - pi2_2.e) / (rho0_2.e + pi2_2.e) - (a1.m**2 - pi2_2.m**2 + rho0_2.m**2) / (2 * a1.m**2)           
             rho0 = pi_2_boosted + pi2_2_boosted
             a1 = rho0 + pi3_2_boosted
             y_4 = (rho0.e - pi3_2_boosted.e) / (rho0.e + pi3_2_boosted.e) - (a1.m**2 - pi3_2_boosted.m**2 + rho0.m**2) / (2 * a1.m**2)
             rho0_2 = pi_2_boosted + pi3_2_boosted
             y_5 = (rho0_2.e - pi2_2_boosted.e) / (rho0_2.e + pi2_2_boosted.e) - (a1.m**2 - pi2_2_boosted.m**2 + rho0_2.m**2) / (2 * a1.m**2)
-            y.extend([y_1, y_2, y_3, y_4, y_5])
+            return y_1, y_2, y_3, y_4, y_5
         elif self.channel == 'a1_a1':
             # 8 ys
             pi_1 = kwargs['pi_1']
@@ -534,10 +536,9 @@ class DataLoader:
             # 2 from the second rho0
             y_7 = (pi_2.e - pi2_2.e) / (pi_2.e + pi2_2.e)
             y_8 = (pi_2.e - pi3_2.e) / (pi_2.e + pi3_2.e)
-            y.extend([y_1, y_2, y_3, y_4, y_5, y_6, y_7, y_8])
+            return y_1, y_2, y_3, y_4, y_5, y_6, y_7, y_8
         else:
             raise ValueError('Channel not understood')
-        return y
 
     def calculateRhoA1Data(self, df):
         pi_1 = Momentum4(df['pi_E_1'], df["pi_px_1"], df["pi_py_1"], df["pi_pz_1"])
