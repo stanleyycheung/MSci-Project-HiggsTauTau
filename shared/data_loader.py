@@ -90,7 +90,7 @@ class DataLoader:
     def readGenData(self, from_pickle=False):
         """
         Reads the gen root file, can save contents into .pkl for fast read/write abilities
-        Note: hardcoded variables for gen level 
+        Note: hardcoded variables for gen level
         """
         variables_gen = [
             "wt_cp_sm", "wt_cp_ps", "wt_cp_mm", "rand",
@@ -199,7 +199,7 @@ class DataLoader:
         rho_1 = pi_1 + pi0_1
         rho_2 = pi_2 + pi0_2
         # boost into rest frame of resonances
-        rest_frame = pi_1 + pi_2 + pi0_1 + pi0_2
+        rest_frame = rho_1 + rho_2
         boost = Momentum4(rest_frame[0], -rest_frame[1], -rest_frame[2], -rest_frame[3])
         pi_1_boosted = pi_1.boost_particle(boost)
         pi_2_boosted = pi_2.boost_particle(boost)
@@ -207,29 +207,9 @@ class DataLoader:
         pi0_2_boosted = pi0_2.boost_particle(boost)
         rho_1_boosted = pi_1_boosted + pi0_1_boosted
         rho_2_boosted = pi_2_boosted + pi0_2_boosted
-        # rotations
-        # pi_1_boosted_rot, pi_2_boosted_rot = [], []
-        # pi0_1_boosted_rot, pi0_2_boosted_rot = [], []
-        # rho_1_boosted_rot, rho_2_boosted_rot = [], []
-        # for i in range(pi_1_boosted[:].shape[1]):
-        #     rot_mat = self.rotation_matrix_from_vectors(rho_1_boosted[1:, i], [0, 0, 1])
-        #     pi_1_boosted_rot.append(rot_mat.dot(pi_1_boosted[1:, i]))
-        #     pi0_1_boosted_rot.append(rot_mat.dot(pi0_1_boosted[1:, i]))
-        #     pi_2_boosted_rot.append(rot_mat.dot(pi_2_boosted[1:, i]))
-        #     pi0_2_boosted_rot.append(rot_mat.dot(pi0_2_boosted[1:, i]))
-        #     rho_1_boosted_rot.append(rot_mat.dot(rho_1_boosted[1:, i]))
-        #     rho_2_boosted_rot.append(rot_mat.dot(rho_2_boosted[1:, i]))
-        #     if i % 100000 == 0:
-        #         print('finished getting rotated 4-vector', i)
-        # pi_1_boosted_rot = np.array(pi_1_boosted_rot)
-        # pi_2_boosted_rot = np.array(pi_2_boosted_rot)
-        # pi0_1_boosted_rot = np.array(pi0_1_boosted_rot)
-        # pi0_2_boosted_rot = np.array(pi0_2_boosted_rot)
-        # rho_1_boosted_rot = np.array(rho_1_boosted_rot)
-        # rho_2_boosted_rot = np.array(rho_2_boosted_rot)
-
         br_vectors = self.rotateVectors(pi_1=pi_1_boosted, pi_2=pi_2_boosted, pi0_1=pi0_1_boosted, pi0_2=pi0_2_boosted)
-        pi_1_boosted_rot, pi0_1_boosted_rot, pi_2_boosted_rot, pi0_2_boosted_rot, rho_1_boosted_rot, rho_2_boosted_rot = br_vectors
+        pi_1_boosted_rot, pi0_1_boosted_rot, pi_2_boosted_rot, pi0_2_boosted_rot = br_vectors
+        rho_1_boosted_rot, rho_2_boosted_rot = pi_1_boosted_rot+pi0_1_boosted_rot, pi_2_boosted_rot+pi0_2_boosted_rot
         # aco angle calculation
         aco_angle_1 = self.getAcoAngles(pi0_1=pi0_1, pi0_2=pi0_2, pi_1=pi_1, pi_2=pi_2)[0]
 
@@ -259,13 +239,13 @@ class DataLoader:
             'rho_py_2_br': rho_2_boosted_rot[:, 1],
             'rho_pz_2_br': rho_2_boosted_rot[:, 2],
             # 'aco_angle_1': df['aco_angle_1'],
-            'aco_angle_1': aco_angle_1,
+            'aco_angle_1_calc': aco_angle_1,
             'y_1_1': df['y_1_1'],
             'y_1_2': df['y_1_2'],
             'w_a': df.wt_cp_sm,
             'w_b': df.wt_cp_ps,
-            'm_1': rho_1.m,
-            'm_2': rho_2.m,
+            'm_rho_1': rho_1.m,
+            'm_rho_2': rho_2.m,
         }
         return df_inputs_data, boost
 
@@ -279,12 +259,43 @@ class DataLoader:
             pi_2_boosted = kwargs['pi_2']
             pi0_1_boosted = kwargs['pi0_1']
             pi0_2_boosted = kwargs['pi0_2']
-            rotationMatrices = self.rotationMatrixVectorised((pi_1_boosted + pi0_1_boosted)[1:].T, np.tile(np.array([0, 0, 1]), (pi_1_boosted.e.shape[0],1)))
-            pi_1_boosted_rot = np.einsum('ij,ikj->ik',pi_1_boosted[1:].T, rotationMatrices)
-            pi0_1_boosted_rot = np.einsum('ij,ikj->ik',pi0_1_boosted[1:].T, rotationMatrices)
-            pi_2_boosted_rot = np.einsum('ij,ikj->ik',pi_2_boosted[1:].T, rotationMatrices)
-            pi0_2_boosted_rot = np.einsum('ij,ikj->ik',pi0_2_boosted[1:].T, rotationMatrices)
-            return pi_1_boosted_rot, pi0_1_boosted_rot, pi_2_boosted_rot, pi0_2_boosted_rot, pi_1_boosted_rot+pi0_1_boosted_rot, pi_2_boosted_rot+pi0_2_boosted_rot
+            rotationMatrices = self.rotationMatrixVectorised((pi_1_boosted + pi0_1_boosted)[1:].T, np.tile(np.array([0, 0, 1]), (pi_1_boosted.e.shape[0], 1)))
+            pi_1_boosted_rot = np.einsum('ij,ikj->ik', pi_1_boosted[1:].T, rotationMatrices)
+            pi0_1_boosted_rot = np.einsum('ij,ikj->ik', pi0_1_boosted[1:].T, rotationMatrices)
+            pi_2_boosted_rot = np.einsum('ij,ikj->ik', pi_2_boosted[1:].T, rotationMatrices)
+            pi0_2_boosted_rot = np.einsum('ij,ikj->ik', pi0_2_boosted[1:].T, rotationMatrices)
+            return pi_1_boosted_rot, pi0_1_boosted_rot, pi_2_boosted_rot, pi0_2_boosted_rot
+        elif self.channel == 'rho_a1':
+            # rho is aligned to +ve z
+            pi_1_boosted = kwargs['pi_1']
+            pi0_1_boosted = kwargs['pi0_1']
+            pi_2_boosted = kwargs['pi_2']
+            pi2_2_boosted = kwargs['pi2_2']
+            pi3_2_boosted = kwargs['pi3_2']
+            rotationMatrices = self.rotationMatrixVectorised((pi_1_boosted + pi0_1_boosted)[1:].T, np.tile(np.array([0, 0, 1]), (pi_1_boosted.e.shape[0], 1)))
+            pi_1_boosted_rot = np.einsum('ij,ikj->ik', pi_1_boosted[1:].T, rotationMatrices)
+            pi0_1_boosted_rot = np.einsum('ij,ikj->ik', pi0_1_boosted[1:].T, rotationMatrices)
+            pi_2_boosted_rot = np.einsum('ij,ikj->ik', pi_2_boosted[1:].T, rotationMatrices)
+            pi2_2_boosted_rot = np.einsum('ij,ikj->ik', pi2_2_boosted[1:].T, rotationMatrices)
+            pi3_2_boosted_rot = np.einsum('ij,ikj->ik', pi3_2_boosted[1:].T, rotationMatrices)
+            return pi_1_boosted_rot, pi0_1_boosted_rot, pi_2_boosted_rot, pi2_2_boosted_rot, pi3_2_boosted_rot
+        elif self.channel == 'a1_a1':
+            pi_1_boosted = kwargs['pi_1']
+            pi2_1_boosted = kwargs['pi2_1']
+            pi3_1_boosted = kwargs['pi3_1']
+            pi_2_boosted = kwargs['pi_2']
+            pi2_2_boosted = kwargs['pi2_2']
+            pi3_2_boosted = kwargs['pi3_2']
+            rotationMatrices = self.rotationMatrixVectorised((pi_1_boosted+pi2_1_boosted+pi3_1_boosted)[1:].T, np.tile(np.array([0, 0, 1]), (pi_1_boosted.e.shape[0], 1)))
+            pi_1_boosted_rot = np.einsum('ij,ikj->ik', pi_1_boosted[1:].T, rotationMatrices)
+            pi2_1_boosted_rot = np.einsum('ij,ikj->ik', pi2_1_boosted[1:].T, rotationMatrices)
+            pi3_1_boosted_rot = np.einsum('ij,ikj->ik', pi3_1_boosted[1:].T, rotationMatrices)
+            pi_2_boosted_rot = np.einsum('ij,ikj->ik', pi_2_boosted[1:].T, rotationMatrices)
+            pi2_2_boosted_rot = np.einsum('ij,ikj->ik', pi2_2_boosted[1:].T, rotationMatrices)
+            pi3_2_boosted_rot = np.einsum('ij,ikj->ik', pi3_2_boosted[1:].T, rotationMatrices)
+            return pi_1_boosted_rot, pi2_1_boosted_rot, pi3_1_boosted_rot, pi_2_boosted_rot, pi2_2_boosted_rot, pi3_2_boosted_rot
+        else:
+            raise ValueError('Channel input not understood')
 
     def rotationMatrixVectorised(self, vec1, vec2):
         """
@@ -292,15 +303,14 @@ class DataLoader:
         Expects vec1, vec2 to be list of vectors
         Returns list of matrices
         """
-        a, b = vec1 / np.linalg.norm(vec1, axis=1)[:,None], vec2 / np.linalg.norm(vec2, axis=1)[:,None]
+        a, b = vec1 / np.linalg.norm(vec1, axis=1)[:, None], vec2 / np.linalg.norm(vec2, axis=1)[:, None]
         v = np.cross(a, b)
         c = np.einsum('ij, ij->i', a, b)
         s = np.linalg.norm(v, axis=1)
         kmat = np.array([[-np.zeros(len(vec1)), v.T[2], -v.T[1]], [-v.T[2], -np.zeros(len(vec1)), v.T[0]], [v.T[1], -v.T[0], -np.zeros(len(vec1))]]).T
-        rotation_matrix = np.tile(np.eye(3), (len(vec1),1,1)) + kmat + np.linalg.matrix_power(kmat, 2)*((1 - c) / (s ** 2))[:,None][:,np.newaxis]
+        rotation_matrix = np.tile(np.eye(3), (len(vec1), 1, 1)) + kmat + np.linalg.matrix_power(kmat, 2)*((1 - c) / (s ** 2))[:, None][:, np.newaxis]
         # return np.tile(np.eye(3), (len(vec1),1,1)), kmat, np.linalg.matrix_power(kmat, 2)*((1 - c) / (s ** 2))[:,None][:,np.newaxis]
         return rotation_matrix
-
 
     def rotation_matrix(self, axis, theta):
         """
@@ -324,25 +334,23 @@ class DataLoader:
         """
         Returns all the aco angles for different channels
         """
-        aco_angles = []
-        print('\nACO ANGLE CALCULATION\n')
         if self.channel == 'rho_rho':
             pi_1 = kwargs['pi_1']
             pi_2 = kwargs['pi_2']
             pi0_1 = kwargs['pi0_1']
             pi0_2 = kwargs['pi0_2']
             zmf = pi_1 + pi_2 + pi0_1 + pi0_2
-            # aco_angle_1 = self.getAcoAnglesForOneRF(pi0_1, pi0_2, pi_1, pi_2, zmf)
-            # print('number of nans using Stanleys calculation:', np.sum(np.isnan(aco_angle_1)))
-            # aco_angle_1[np.isnan(aco_angle_1)] = np.pi
-            # aco_angle_1 = self.getAcoAnglesPerpFormula(pi0_1, pi0_2, pi_1, pi_2, zmf)
+            aco_angle_1 = self.getAcoAnglesForOneRF(pi0_1, pi0_2, pi_1, pi_2, zmf)
+            print('number of nans using Stanleys calculation:', np.sum(np.isnan(aco_angle_1)))
+            aco_angle_1[np.isnan(aco_angle_1)] = np.pi
+            aco_angle_1 = self.getAcoAnglesPerpFormula(pi0_1, pi0_2, pi_1, pi_2, zmf)
             # aco_angle_1 = self.getAcoAnglesForOneRF(pi0_1, pi0_2, pi_1, pi_2, zmf)
             # print('number of nans using Stanleys calculation:', np.sum(np.isnan(aco_angle_1)))
             # aco_angle_1[np.isnan(aco_angle_1)] = np.pi
             aco_angle_1 = self.getAcoAnglesForOneRF(pi0_1, pi0_2, pi_1, pi_2, zmf)
             print('number of nans using perp calculation:', np.sum(np.isnan(aco_angle_1)))
             aco_angle_1[np.isnan(aco_angle_1)] = np.pi
-            aco_angles.append(aco_angle_1)
+            return aco_angle_1
         elif self.channel == 'rho_a1':
             # 4 aco angles
             pi_1 = kwargs['pi_1']
@@ -361,7 +369,7 @@ class DataLoader:
             zmf_3 = rho_1 + pi_2 + pi2_2 + pi3_2
             aco_angle_3 = self.getAcoAnglesForOneRF(pi_1, pi_2 + pi2_2, pi0_1, pi3_2, zmf_3)
             aco_angle_4 = self.getAcoAnglesForOneRF(pi_1, pi_2 + pi3_2, pi0_1, pi2_2, zmf_3)
-            aco_angles.extend([aco_angle_1, aco_angle_2, aco_angle_3, aco_angle_4])
+            return aco_angle_1, aco_angle_2, aco_angle_3, aco_angle_4
         elif self.channel == 'a1_a1':
             # 16 aco angles
             pi_1 = kwargs['pi_1']
@@ -401,11 +409,10 @@ class DataLoader:
             aco_angle_14 = self.getAcoAnglesForOneRF(pi_1+pi3_1, pi_2+pi2_2, pi2_1, pi3_2, zmf_9)
             aco_angle_15 = self.getAcoAnglesForOneRF(pi_1+pi2_1, pi_2+pi3_2, pi3_1, pi2_2, zmf_9)
             aco_angle_16 = self.getAcoAnglesForOneRF(pi_1+pi3_1, pi_2+pi3_2, pi2_1, pi2_2, zmf_9)
-            aco_angles.extend([aco_angle_1, aco_angle_2, aco_angle_3, aco_angle_4, aco_angle_5, aco_angle_6, aco_angle_7, aco_angle_8, aco_angle_9,
-                               aco_angle_10, aco_angle_11, aco_angle_12, aco_angle_13, aco_angle_14, aco_angle_15, aco_angle_16])
+            return aco_angle_1, aco_angle_2, aco_angle_3, aco_angle_4, aco_angle_5, aco_angle_6, aco_angle_7, aco_angle_8,
+            aco_angle_9, aco_angle_10, aco_angle_11, aco_angle_12, aco_angle_13, aco_angle_14, aco_angle_15, aco_angle_16
         else:
             raise ValueError('Channel not understood')
-        return aco_angles
 
     def getAcoAnglesForOneRF_old(self, p1, p2, p3, p4, rest_frame):
         """
@@ -444,6 +451,7 @@ class DataLoader:
         p3 = p3.boost_particle(boost)
         p4 = p4.boost_particle(boost)
         # Some geometrical functions
+
         def cross_product(vector3_1, vector3_2):
             return np.cross(vector3_1.T, vector3_2.T).T
 
@@ -493,7 +501,7 @@ class DataLoader:
             a1 = rho0 + pi3_2_boosted
             y_4 = (rho0.e - pi3_2_boosted.e) / (rho0.e + pi3_2_boosted.e) - (a1.m**2 - pi3_2_boosted.m**2 + rho0.m**2) / (2 * a1.m**2)
             rho0_2 = pi_2_boosted + pi3_2_boosted
-            y_5 = (rho0_2.e - pi2_2_boosted.e) / (rho0_2.e + pi2_2_boosted.e) - (a1.m**2 - pi2_2_boosted.m**2 + rho0_2.m**2) / (2 * a1.m**2)            
+            y_5 = (rho0_2.e - pi2_2_boosted.e) / (rho0_2.e + pi2_2_boosted.e) - (a1.m**2 - pi2_2_boosted.m**2 + rho0_2.m**2) / (2 * a1.m**2)
             y.extend([y_1, y_2, y_3, y_4, y_5])
         elif self.channel == 'a1_a1':
             pass
@@ -502,81 +510,33 @@ class DataLoader:
         return y
 
     def calculateRhoA1Data(self, df, len_df_ps=0):
-        # TODO: kristof implement:
-        # - under construction!
-        # - need to add other aco_angles calculation code
         pi_1 = Momentum4(df['pi_E_1'], df["pi_px_1"], df["pi_py_1"], df["pi_pz_1"])
         pi_2 = Momentum4(df['pi_E_2'], df["pi_px_2"], df["pi_py_2"], df["pi_pz_2"])
         pi0_1 = Momentum4(df['pi0_E_1'], df["pi0_px_1"], df["pi0_py_1"], df["pi0_pz_1"])
         pi2_2 = Momentum4(df['pi2_E_2'], df["pi2_px_2"], df["pi2_py_2"], df["pi2_pz_2"])
         pi3_2 = Momentum4(df['pi3_E_2'], df["pi3_px_2"], df["pi3_py_2"], df["pi3_pz_2"])
         rho_1 = pi_1 + pi0_1  # charged rho
-        rho_2 = pi_2 + pi3_2  # neutral rho, a part of the charged a1 particle
-        a1 = rho_2 + pi2_2
-        # boost into rest frame of resonances
-        # rest_frame = pi_1 + pi_2 + pi0_1 + pi2_2 + pi3_2
-        # rest_frame = pi0_1 + pi_1 + pi_2
-        rest_frame = pi_1 + pi_2
-        # boost = Momentum4(rest_frame[0], -rest_frame[1], -rest_frame[2], -rest_frame[3])
-        boost = - rest_frame
+        rho0_2 = pi_2 + pi2_2
+        rho02_2 = pi_2 + pi3_2
+        a1_2 = pi_2 + pi2_2 + pi3_2
+        rest_frame = rho_1 + a1_2
+        boost = Momentum4(rest_frame[0], -rest_frame[1], -rest_frame[2], -rest_frame[3])
         pi_1_boosted = pi_1.boost_particle(boost)
         pi_2_boosted = pi_2.boost_particle(boost)
         pi0_1_boosted = pi0_1.boost_particle(boost)
         pi2_2_boosted = pi2_2.boost_particle(boost)
         pi3_2_boosted = pi3_2.boost_particle(boost)
         rho_1_boosted = pi_1_boosted + pi0_1_boosted
-        rho_2_boosted = pi_2_boosted + pi3_2_boosted
-        a1_boosted = rho_2_boosted + pi2_2_boosted
-        rest_frame_boosted = pi_1_boosted + pi_2_boosted + pi0_1_boosted
-        # rest_frame_boosted = rest_frame.boost_particle(boost)
-
-        want_rotations = True  # !!! Maybe this should be an input parameter
-
-        # rotations
-        if want_rotations:
-            pi_1_boosted_rot, pi_2_boosted_rot = [], []
-            pi0_1_boosted_rot, pi2_2_boosted_rot, pi3_2_boosted_rot = [], [], []
-            rho_1_boosted_rot, rho_2_boosted_rot, a1_boosted_rot = [], [], []
-
-            # MY ROTATIONS:
-            # unit vectors along the momenta of the primary resonances
-            unit1 = (rho_1_boosted[1:, :] / np.linalg.norm(rho_1_boosted[1:, :], axis=0)).transpose()
-            unit2 = (pi_2_boosted[1:, :] / np.linalg.norm(pi_2_boosted[1:, :], axis=0)).transpose()
-            # probably there's a faster way of doing this
-            zaxis = np.array([np.array([0., 0., 1.]) for _ in range(len(unit1))])
-            axes1 = np.cross(unit1, zaxis)
-            axes2 = np.cross(unit2, zaxis)
-            dotproduct1 = (unit1*zaxis).sum(1)
-            angles1 = np.arccos(dotproduct1)
-            dotproduct2 = (unit2*zaxis).sum(1)
-            angles2 = np.arccos(dotproduct2)
-
-            for i in range(pi_1_boosted[:].shape[1]):
-                # MY ROTATIONS:
-                pi_1_boosted_rot.append(self.rotate(pi_1_boosted[1:, i], axes1[i], angles1[i]))
-                pi0_1_boosted_rot.append(self.rotate(pi0_1_boosted[1:, i], axes1[i], angles1[i]))
-                pi_2_boosted_rot.append(self.rotate(pi_2_boosted[1:, i], axes1[i], angles1[i]))
-                pi2_2_boosted_rot.append(self.rotate(pi2_2_boosted[1:, i], axes1[i], angles1[i]))
-                pi3_2_boosted_rot.append(self.rotate(pi3_2_boosted[1:, i], axes1[i], angles1[i]))
-                rho_1_boosted_rot.append(self.rotate(rho_1_boosted[1:, i], axes1[i], angles1[i]))
-                rho_2_boosted_rot.append(self.rotate(rho_2_boosted[1:, i], axes1[i], angles1[i]))
-                a1_boosted_rot.append(self.rotate(a1_boosted[1:, i], axes1[i], angles1[i]))
-
-                if i % 100000 == 0:
-                    print('finished getting rotated 4-vector', i)
-            pi_1_boosted_rot = np.array(pi_1_boosted_rot)
-            pi_2_boosted_rot = np.array(pi_2_boosted_rot)
-            pi0_1_boosted_rot = np.array(pi0_1_boosted_rot)
-            pi2_2_boosted_rot = np.array(pi2_2_boosted_rot)
-            pi3_2_boosted_rot = np.array(pi3_2_boosted_rot)
-            rho_1_boosted_rot = np.array(rho_1_boosted_rot)
-            rho_2_boosted_rot = np.array(rho_2_boosted_rot)
-            a1_boosted_rot = np.array(a1_boosted_rot)
-
-        # aco_angle calculation
-        aco_angles = self.getAcoAngles(pi0_1=pi0_1, pi2_2=pi2_2, pi3_2=pi3_2, pi_1=pi_1, pi_2=pi_2)
-        aco_angle_1 = aco_angles[0]
-
+        rho0_2_boosted = pi_2_boosted + pi2_2_boosted
+        rho02_2_boosted = pi_2_boosted + pi3_2_boosted
+        a1_2_boosted = pi_2_boosted + pi2_2_boosted + pi3_2_boosted
+        br_vectors = self.rotateVectors(pi_1=pi_1_boosted, pi0_1=pi0_1_boosted, pi_2=pi_2_boosted, pi2_2=pi2_2_boosted, pi3_2=pi3_2_boosted)
+        pi_1_boosted_rot, pi0_1_boosted_rot, pi_2_boosted_rot, pi2_2_boosted_rot, pi3_2_boosted_rot = br_vectors
+        rho_1_boosted_rot = pi_1_boosted_rot + pi0_1_boosted_rot
+        a1_2_boosted_rot = pi_2_boosted_rot + pi2_2_boosted_rot + pi3_2_boosted_rot
+        rho0_2_boosted_rot = pi_2_boosted + pi2_2_boosted
+        rho02_2_boosted_rot = pi_2_boosted + pi3_2_boosted
+        aco_angle_1, aco_angle_2, aco_angle_3, aco_angle_4 = self.getAcoAngles(pi0_1=pi0_1, pi2_2=pi2_2, pi3_2=pi3_2, pi_1=pi_1, pi_2=pi_2)
         df_inputs_data = {
             'pi_E_1_br': pi_1_boosted[0],
             'pi_px_1_br': pi_1_boosted_rot[:, 0],
@@ -602,71 +562,76 @@ class DataLoader:
             'rho_px_1_br': rho_1_boosted_rot[:, 0],
             'rho_py_1_br': rho_1_boosted_rot[:, 1],
             'rho_pz_1_br': rho_1_boosted_rot[:, 2],
-            'rho_E_2_br': rho_2_boosted[0],
-            'rho_px_2_br': rho_2_boosted_rot[:, 0],
-            'rho_py_2_br': rho_2_boosted_rot[:, 1],
-            'rho_pz_2_br': rho_2_boosted_rot[:, 2],
-            'a1_E_br': a1_boosted[0],
-            'a1_px_br': a1_boosted_rot[:, 0],
-            'a1_py_br': a1_boosted_rot[:, 1],
-            'a1_pz_br': a1_boosted_rot[:, 2],
-            'aco_angle_1': df['aco_angle_1'],
-            # 'aco_angle_1': aco_angle_danny,
-            # 'aco_angle_1': aco_angle_2,
-            # 'aco_angle_2': aco_angle_2,
+            'rho0_E_2_br': rho0_2_boosted[0],
+            'rho0_px_2_br': rho0_2_boosted_rot[:, 0],
+            'rho0_py_2_br': rho0_2_boosted_rot[:, 1],
+            'rho0_pz_2_br': rho0_2_boosted_rot[:, 2],
+            'rho02_E_2_br': rho02_2_boosted[0],
+            'rho02_px_2_br': rho02_2_boosted_rot[:, 0],
+            'rho02_py_2_br': rho02_2_boosted_rot[:, 1],
+            'rho02_pz_2_br': rho02_2_boosted_rot[:, 2],
+            'a1_2_E_br': a1_2_boosted[0],
+            'a1_2_px_br': a1_2_boosted_rot[:, 0],
+            'a1_2_py_br': a1_2_boosted_rot[:, 1],
+            'a1_2_pz_br': a1_2_boosted_rot[:, 2],
+            'aco_angle_1_calc': aco_angle_1,
+            'aco_angle_2_calc': aco_angle_2,
+            'aco_angle_3_calc': aco_angle_3,
+            'aco_angle_4_calc': aco_angle_4,
+            # TODO: change ys
             'y_1_1': df['y_1_1'],
             'y_1_2': df['y_1_2'],
             'w_a': df.wt_cp_sm,
             'w_b': df.wt_cp_ps,
-            'm_1': rho_1.m,
-            # 'm_2': rho_2.m,
-            'm_2': a1.m,
+            'm_rho_1': rho_1.m,
+            'm_rho0_2': rho0_2.m,
+            'm_rho02_2': rho02_2.m,
+            'm_a1_2': a1_2.m,
         }
         return df_inputs_data, boost
 
     def calculateA1A1Data(self, df, len_df_ps=0):
-        # TODO: include this channel
         pi_1 = Momentum4(df['pi_E_1'], df["pi_px_1"], df["pi_py_1"], df["pi_pz_1"])
-        pi_2 = Momentum4(df['pi_E_2'], df["pi_px_2"], df["pi_py_2"], df["pi_pz_2"])
         pi2_1 = Momentum4(df['pi2_E_1'], df["pi2_px_1"], df["pi2_py_1"], df["pi2_pz_1"])
         pi3_1 = Momentum4(df['pi3_E_1'], df["pi3_px_1"], df["pi3_py_1"], df["pi3_pz_1"])
+        pi_2 = Momentum4(df['pi_E_2'], df["pi_px_2"], df["pi_py_2"], df["pi_pz_2"])
         pi2_2 = Momentum4(df['pi2_E_2'], df["pi2_px_2"], df["pi2_py_2"], df["pi2_pz_2"])
         pi3_2 = Momentum4(df['pi3_E_2'], df["pi3_px_2"], df["pi3_py_2"], df["pi3_pz_2"])
-
-        rest_frame = pi_1 + pi_2
-        # boost = Momentum4(rest_frame[0], -rest_frame[1], -rest_frame[2], -rest_frame[3])
-        boost = - rest_frame
+        a1_1 = pi_1 + pi2_1 + pi3_1
+        a1_2 = pi_2 + pi2_2 + pi3_2
+        rho0_1 = pi_1 + pi2_1
+        rho02_1 = pi_1 + pi3_1
+        rho0_2 = pi_2 + pi2_2
+        rho02_2 = pi_2 + pi3_2
+        rest_frame = a1_1 + a1_2
+        boost = Momentum4(rest_frame[0], -rest_frame[1], -rest_frame[2], -rest_frame[3])
         pi_1_boosted = pi_1.boost_particle(boost)
-        pi_2_boosted = pi_2.boost_particle(boost)
         pi2_1_boosted = pi2_1.boost_particle(boost)
         pi3_1_boosted = pi3_1.boost_particle(boost)
+        pi_2_boosted = pi_2.boost_particle(boost)
         pi2_2_boosted = pi2_2.boost_particle(boost)
         pi3_2_boosted = pi3_2.boost_particle(boost)
-
-        rho_1 = pi_1_boosted + pi2_1_boosted
-        a1 = rho_1 + pi3_1_boosted
-        rho_2 = pi_2_boosted + pi2_2_boosted
-        a2 = rho_2 + pi3_2_boosted
-
-        # rotations
-        # not doing properly rotations, just reassign variables
-        pi_1_boosted_rot = pi_1_boosted[1:, :].T
-        pi_2_boosted_rot = pi_2_boosted[1:, :].T
-        pi2_1_boosted_rot = pi2_1_boosted[1:, :].T
-        pi2_2_boosted_rot = pi2_2_boosted[1:, :].T
-        pi3_1_boosted_rot = pi3_1_boosted[1:, :].T
-        pi3_2_boosted_rot = pi3_2_boosted[1:, :].T
-
+        rho0_1_boosted = pi_1_boosted + pi2_1_boosted
+        rho02_1_boosted = pi_1_boosted + pi3_1_boosted
+        rho0_2_boosted = pi_2_boosted + pi2_2_boosted
+        rho02_2_boosted = pi_2_boosted + pi3_2_boosted
+        a1_1_boosted = pi_1_boosted + pi2_1_boosted + pi3_1_boosted
+        a1_2_boosted = pi_2_boosted + pi2_2_boosted + pi3_2_boosted
+        br_vectors = self.rotateVectors(pi_1=pi_1_boosted, pi2_1=pi2_1_boosted, pi3_1=pi3_1_boosted, pi_2=pi_2_boosted, pi2_2=pi2_2_boosted, pi3_2=pi3_2_boosted)
+        pi_1_boosted_rot, pi2_1_boosted_rot, pi3_1_boosted_rot, pi_2_boosted_rot, pi2_2_boosted_rot, pi3_2_boosted_rot = br_vectors
+        rho0_1_boosted_rot = pi_1_boosted_rot + pi2_1_boosted_rot
+        rho02_1_boosted_rot = pi_1_boosted_rot + pi3_1_boosted_rot
+        rho0_2_boosted_rot = pi_2_boosted_rot + pi2_2_boosted_rot
+        rho02_2_boosted_rot = pi_2_boosted_rot + pi3_2_boosted_rot
+        a1_1_boosted_rot = pi_1_boosted_rot + pi2_1_boosted_rot + pi3_1_boosted_rot
+        a1_2_boosted_rot = pi_2_boosted_rot + pi2_2_boosted_rot + pi3_2_boosted_rot
+        aco_angles = self.getAcoAngles(pi_1=pi_1, pi2_1=pi2_1, pi3_1=pi3_1, pi_2=pi_2, pi2_2=pi2_2, pi3_2=pi3_2)
+        aco_angle_1, aco_angle_2, aco_angle_3, aco_angle_4, aco_angle_5, aco_angle_6, aco_angle_7, aco_angle_8, aco_angle_9, aco_angle_10, aco_angle_11, aco_angle_12, aco_angle_13, aco_angle_14, aco_angle_15, aco_angle_16 = aco_angles
         df_inputs_data = {
             'pi_E_1_br': pi_1_boosted[0],
             'pi_px_1_br': pi_1_boosted_rot[:, 0],
             'pi_py_1_br': pi_1_boosted_rot[:, 1],
             'pi_pz_1_br': pi_1_boosted_rot[:, 2],
-            'pi_E_2_br': pi_2_boosted[0],
-            'pi_px_2_br': pi_2_boosted_rot[:, 0],
-            'pi_py_2_br': pi_2_boosted_rot[:, 1],
-            'pi_pz_2_br': pi_2_boosted_rot[:, 2],
-
             'pi2_E_1_br': pi2_1_boosted[0],
             'pi2_px_1_br': pi2_1_boosted_rot[:, 0],
             'pi2_py_1_br': pi2_1_boosted_rot[:, 1],
@@ -675,7 +640,10 @@ class DataLoader:
             'pi3_px_1_br': pi3_1_boosted_rot[:, 0],
             'pi3_py_1_br': pi3_1_boosted_rot[:, 1],
             'pi3_pz_1_br': pi3_1_boosted_rot[:, 2],
-
+            'pi_E_2_br': pi_2_boosted[0],
+            'pi_px_2_br': pi_2_boosted_rot[:, 0],
+            'pi_py_2_br': pi_2_boosted_rot[:, 1],
+            'pi_pz_2_br': pi_2_boosted_rot[:, 2],
             'pi2_E_2_br': pi2_2_boosted[0],
             'pi2_px_2_br': pi2_2_boosted_rot[:, 0],
             'pi2_py_2_br': pi2_2_boosted_rot[:, 1],
@@ -684,20 +652,57 @@ class DataLoader:
             'pi3_px_2_br': pi3_2_boosted_rot[:, 0],
             'pi3_py_2_br': pi3_2_boosted_rot[:, 1],
             'pi3_pz_2_br': pi3_2_boosted_rot[:, 2],
-            'aco_angle_1': df['aco_angle_1'],
-            # 'aco_angle_1': aco_angle_danny,
-            # 'aco_angle_1': aco_angle_2,
-            # 'aco_angle_2': aco_angle_3,
-            # 'aco_angle_3': aco_angle_4,
-            # 'aco_angle_6': aco_angle_6,
-            # 'aco_angle_7': aco_angle_7,
-            # 'aco_angle_8': aco_angle_8,
+            'rho0_E_1_br': rho0_1_boosted[0],
+            'rho0_px_1_br': rho0_1_boosted_rot[:, 0],
+            'rho0_py_1_br': rho0_1_boosted_rot[:, 1],
+            'rho0_pz_1_br': rho0_1_boosted_rot[:, 2],
+            'rho02_E_1_br': rho02_1_boosted[0],
+            'rho02_px_1_br': rho02_1_boosted_rot[:, 0],
+            'rho02_py_1_br': rho02_1_boosted_rot[:, 1],
+            'rho02_pz_1_br': rho02_1_boosted_rot[:, 2],
+            'rho0_E_2_br': rho0_2_boosted[0],
+            'rho0_px_2_br': rho0_2_boosted_rot[:, 0],
+            'rho0_py_2_br': rho0_2_boosted_rot[:, 1],
+            'rho0_pz_2_br': rho0_2_boosted_rot[:, 2],
+            'rho02_E_2_br': rho02_2_boosted[0],
+            'rho02_px_2_br': rho02_2_boosted_rot[:, 0],
+            'rho02_py_2_br': rho02_2_boosted_rot[:, 1],
+            'rho02_pz_2_br': rho02_2_boosted_rot[:, 2],
+            'a1_1_E_br': a1_1_boosted[0],
+            'a1_1_px_br': a1_1_boosted_rot[:, 0],
+            'a1_1_py_br': a1_1_boosted_rot[:, 1],
+            'a1_1_pz_br': a1_1_boosted_rot[:, 2],
+            'a1_2_E_br': a1_2_boosted[0],
+            'a1_2_px_br': a1_2_boosted_rot[:, 0],
+            'a1_2_py_br': a1_2_boosted_rot[:, 1],
+            'a1_2_pz_br': a1_2_boosted_rot[:, 2],
+            'aco_angle_1_calc': aco_angle_1,
+            'aco_angle_2_calc': aco_angle_2,
+            'aco_angle_3_calc': aco_angle_3,
+            'aco_angle_4_calc': aco_angle_4,
+            'aco_angle_5_calc': aco_angle_5,
+            'aco_angle_6_calc': aco_angle_6,
+            'aco_angle_7_calc': aco_angle_7,
+            'aco_angle_8_calc': aco_angle_8,
+            'aco_angle_9_calc': aco_angle_9,
+            'aco_angle_10_calc': aco_angle_10,
+            'aco_angle_11_calc': aco_angle_11,
+            'aco_angle_12_calc': aco_angle_12,
+            'aco_angle_13_calc': aco_angle_13,
+            'aco_angle_14_calc': aco_angle_14,
+            'aco_angle_15_calc': aco_angle_15,
+            'aco_angle_16_calc': aco_angle_16,
+            # TODO: y
             'y_1_1': df['y_1_1'],
             'y_1_2': df['y_1_2'],
             'w_a': df.wt_cp_sm,
             'w_b': df.wt_cp_ps,
-            'm_1': a1.m,
-            'm_2': a2.m,
+            'm_rho0_2': rho0_1.m,
+            'm_rho02_2': rho02_1.m,
+            'm_rho0_2': rho0_2.m,
+            'm_rho02_2': rho02_2.m,
+            'm_a1_1': a1_1.m,
+            'm_a1_1': a1_2.m,
         }
         return df_inputs_data, boost
 
