@@ -509,7 +509,7 @@ class DataLoader:
             raise ValueError('Channel not understood')
         return y
 
-    def calculateRhoA1Data(self, df, len_df_ps=0):
+    def calculateRhoA1Data(self, df):
         pi_1 = Momentum4(df['pi_E_1'], df["pi_px_1"], df["pi_py_1"], df["pi_pz_1"])
         pi_2 = Momentum4(df['pi_E_2'], df["pi_px_2"], df["pi_py_2"], df["pi_pz_2"])
         pi0_1 = Momentum4(df['pi0_E_1'], df["pi0_px_1"], df["pi0_py_1"], df["pi0_pz_1"])
@@ -590,7 +590,7 @@ class DataLoader:
         }
         return df_inputs_data, boost
 
-    def calculateA1A1Data(self, df, len_df_ps=0):
+    def calculateA1A1Data(self, df):
         pi_1 = Momentum4(df['pi_E_1'], df["pi_px_1"], df["pi_py_1"], df["pi_pz_1"])
         pi2_1 = Momentum4(df['pi2_E_1'], df["pi2_px_1"], df["pi2_py_1"], df["pi2_pz_1"])
         pi3_1 = Momentum4(df['pi3_E_1'], df["pi3_px_1"], df["pi3_py_1"], df["pi3_pz_1"])
