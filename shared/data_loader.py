@@ -321,87 +321,85 @@ class DataLoader:
         return np.dot(self.rotation_matrix(axis, theta), vect)
 
     def getAcoAngles(self, **kwargs):
-        # WARNING! Naming convention is wrong: these are not boosted,
-        # so should be called eg. pi_1 instead of pi_1_boosted
         """
         Returns all the aco angles for different channels
         """
         aco_angles = []
         if self.channel == 'rho_rho':
-            pi_1_boosted = kwargs['pi_1']
-            pi_2_boosted = kwargs['pi_2']
-            pi0_1_boosted = kwargs['pi0_1']
-            pi0_2_boosted = kwargs['pi0_2']
-            zmf = pi_1_boosted + pi_2_boosted + pi0_1_boosted + pi0_2_boosted
-            aco_angle_1 = self.getAcoAnglesForOneRF(pi0_1_boosted, pi0_2_boosted, pi_1_boosted, pi_2_boosted, zmf)
+            pi_1 = kwargs['pi_1']
+            pi_2 = kwargs['pi_2']
+            pi0_1 = kwargs['pi0_1']
+            pi0_2 = kwargs['pi0_2']
+            zmf = pi_1 + pi_2 + pi0_1 + pi0_2
+            aco_angle_1 = self.getAcoAnglesForOneRF(pi0_1, pi0_2, pi_1, pi_2, zmf)
             print('number of nans using Stanleys calculation:', np.sum(np.isnan(aco_angle_1)))
             aco_angle_1[np.isnan(aco_angle_1)] = np.pi
-            aco_angle_1 = self.getAcoAnglesPerpFormula(pi0_1_boosted, pi0_2_boosted, pi_1_boosted, pi_2_boosted, zmf)
-            # aco_angle_1 = self.getAcoAnglesForOneRF(pi0_1_boosted, pi0_2_boosted, pi_1_boosted, pi_2_boosted, zmf)
+            aco_angle_1 = self.getAcoAnglesPerpFormula(pi0_1, pi0_2, pi_1, pi_2, zmf)
+            # aco_angle_1 = self.getAcoAnglesForOneRF(pi0_1, pi0_2, pi_1, pi_2, zmf)
             # print('number of nans using Stanleys calculation:', np.sum(np.isnan(aco_angle_1)))
             # aco_angle_1[np.isnan(aco_angle_1)] = np.pi
-            aco_angle_1 = self.getAcoAnglesForOneRF(pi0_1_boosted, pi0_2_boosted, pi_1_boosted, pi_2_boosted, zmf)
+            aco_angle_1 = self.getAcoAnglesForOneRF(pi0_1, pi0_2, pi_1, pi_2, zmf)
             print('number of nans using perp calculation:', np.sum(np.isnan(aco_angle_1)))
             aco_angle_1[np.isnan(aco_angle_1)] = np.pi
             aco_angles.append(aco_angle_1)
         elif self.channel == 'rho_a1':
             # 4 aco angles
-            pi_1_boosted = kwargs['pi_1']
-            pi0_1_boosted = kwargs['pi0_1']
-            rho_1 = pi_1_boosted + pi0_1_boosted
-            pi_2_boosted = kwargs['pi_2']
-            pi2_2_boosted = kwargs['pi2_2']
-            pi3_2_boosted = kwargs['pi3_2']
+            pi_1 = kwargs['pi_1']
+            pi0_1 = kwargs['pi0_1']
+            rho_1 = pi_1 + pi0_1
+            pi_2 = kwargs['pi_2']
+            pi2_2 = kwargs['pi2_2']
+            pi3_2 = kwargs['pi3_2']
             # rho +/- , rho 0 frame
-            zmf_1 = rho_1 + pi_2_boosted + pi2_2_boosted
-            zmf_2 = rho_1 + pi_2_boosted + pi3_2_boosted
-            aco_angle_1 = self.getAcoAnglesForOneRF(pi_1_boosted, pi_2_boosted, pi0_1_boosted, pi2_2_boosted, zmf_1)
-            aco_angle_2 = self.getAcoAnglesForOneRF(pi_1_boosted, pi_2_boosted, pi0_1_boosted, pi3_2_boosted, zmf_2)
+            zmf_1 = rho_1 + pi_2 + pi2_2
+            zmf_2 = rho_1 + pi_2 + pi3_2
+            aco_angle_1 = self.getAcoAnglesForOneRF(pi_1, pi_2, pi0_1, pi2_2, zmf_1)
+            aco_angle_2 = self.getAcoAnglesForOneRF(pi_1, pi_2, pi0_1, pi3_2, zmf_2)
             # rho +/-, a1 frame
             # a1 -> rho0, pi +/-
-            zmf_3 = rho_1 + pi_2_boosted + pi2_2_boosted + pi3_2_boosted
-            aco_angle_3 = self.getAcoAnglesForOneRF(pi_1_boosted, pi_2_boosted + pi2_2_boosted, pi0_1_boosted, pi3_2_boosted, zmf_3)
-            aco_angle_4 = self.getAcoAnglesForOneRF(pi_1_boosted, pi_2_boosted + pi3_2_boosted, pi0_1_boosted, pi2_2_boosted, zmf_3)
+            zmf_3 = rho_1 + pi_2 + pi2_2 + pi3_2
+            aco_angle_3 = self.getAcoAnglesForOneRF(pi_1, pi_2 + pi2_2, pi0_1, pi3_2, zmf_3)
+            aco_angle_4 = self.getAcoAnglesForOneRF(pi_1, pi_2 + pi3_2, pi0_1, pi2_2, zmf_3)
             aco_angles.extend([aco_angle_1, aco_angle_2, aco_angle_3, aco_angle_4])
         elif self.channel == 'a1_a1':
             # 16 aco angles
-            pi_1_boosted = kwargs['pi_1']
-            pi2_1_boosted = kwargs['pi2_1']
-            pi3_1_boosted = kwargs['pi3_1']
-            pi_2_boosted = kwargs['pi_2']
-            pi2_2_boosted = kwargs['pi2_2']
-            pi3_2_boosted = kwargs['pi3_2']
-            a1_1 = pi_1_boosted + pi2_1_boosted + pi3_1_boosted
-            a1_2 = pi_2_boosted + pi2_2_boosted + pi3_2_boosted
+            pi_1 = kwargs['pi_1']
+            pi2_1 = kwargs['pi2_1']
+            pi3_1 = kwargs['pi3_1']
+            pi_2 = kwargs['pi_2']
+            pi2_2 = kwargs['pi2_2']
+            pi3_2 = kwargs['pi3_2']
+            a1_1 = pi_1 + pi2_1 + pi3_1
+            a1_2 = pi_2 + pi2_2 + pi3_2
             # rho0, rho0 frame
-            zmf_1 = pi_1_boosted + pi2_1_boosted + pi_2_boosted + pi2_2_boosted
-            zmf_2 = pi_1_boosted + pi3_1_boosted + pi_2_boosted + pi2_2_boosted
-            zmf_3 = pi_1_boosted + pi2_1_boosted + pi_2_boosted + pi3_2_boosted
-            zmf_4 = pi_1_boosted + pi3_1_boosted + pi_2_boosted + pi3_2_boosted
-            aco_angle_1 = self.getAcoAnglesForOneRF(pi_1_boosted, pi_2_boosted, pi2_1_boosted, pi2_2_boosted, zmf_1)
-            aco_angle_2 = self.getAcoAnglesForOneRF(pi_1_boosted, pi_2_boosted, pi3_1_boosted, pi2_2_boosted, zmf_2)
-            aco_angle_3 = self.getAcoAnglesForOneRF(pi_1_boosted, pi_2_boosted, pi2_1_boosted, pi3_2_boosted, zmf_3)
-            aco_angle_4 = self.getAcoAnglesForOneRF(pi_1_boosted, pi_2_boosted, pi3_1_boosted, pi3_2_boosted, zmf_4)
+            zmf_1 = pi_1 + pi2_1 + pi_2 + pi2_2
+            zmf_2 = pi_1 + pi3_1 + pi_2 + pi2_2
+            zmf_3 = pi_1 + pi2_1 + pi_2 + pi3_2
+            zmf_4 = pi_1 + pi3_1 + pi_2 + pi3_2
+            aco_angle_1 = self.getAcoAnglesForOneRF(pi_1, pi_2, pi2_1, pi2_2, zmf_1)
+            aco_angle_2 = self.getAcoAnglesForOneRF(pi_1, pi_2, pi3_1, pi2_2, zmf_2)
+            aco_angle_3 = self.getAcoAnglesForOneRF(pi_1, pi_2, pi2_1, pi3_2, zmf_3)
+            aco_angle_4 = self.getAcoAnglesForOneRF(pi_1, pi_2, pi3_1, pi3_2, zmf_4)
             # rho0, a1 frame
-            zmf_5 = pi_1_boosted + pi2_1_boosted + a1_2
-            zmf_6 = pi_1_boosted + pi3_1_boosted + a1_2
-            aco_angle_5 = self.getAcoAnglesForOneRF(pi_1_boosted, pi_2_boosted+pi3_2_boosted, pi2_1_boosted, pi2_2_boosted, zmf_5)
-            aco_angle_6 = self.getAcoAnglesForOneRF(pi_1_boosted, pi_2_boosted+pi2_2_boosted, pi2_1_boosted, pi3_2_boosted, zmf_5)
-            aco_angle_7 = self.getAcoAnglesForOneRF(pi_1_boosted, pi_2_boosted+pi3_2_boosted, pi3_1_boosted, pi2_2_boosted, zmf_6)
-            aco_angle_8 = self.getAcoAnglesForOneRF(pi_1_boosted, pi_2_boosted+pi2_2_boosted, pi3_1_boosted, pi3_2_boosted, zmf_6)
+            zmf_5 = pi_1 + pi2_1 + a1_2
+            zmf_6 = pi_1 + pi3_1 + a1_2
+            aco_angle_5 = self.getAcoAnglesForOneRF(pi_1, pi_2+pi3_2, pi2_1, pi2_2, zmf_5)
+            aco_angle_6 = self.getAcoAnglesForOneRF(pi_1, pi_2+pi2_2, pi2_1, pi3_2, zmf_5)
+            aco_angle_7 = self.getAcoAnglesForOneRF(pi_1, pi_2+pi3_2, pi3_1, pi2_2, zmf_6)
+            aco_angle_8 = self.getAcoAnglesForOneRF(pi_1, pi_2+pi2_2, pi3_1, pi3_2, zmf_6)
             # a1, rho0 frame
-            zmf_7 = a1_1 + pi_2_boosted + pi2_2_boosted
-            zmf_8 = a1_1 + pi_2_boosted + pi3_2_boosted
-            aco_angle_9 = self.getAcoAnglesForOneRF(pi_1_boosted+pi2_1_boosted, pi_2_boosted, pi3_1_boosted, pi2_2_boosted, zmf_7)
-            aco_angle_10 = self.getAcoAnglesForOneRF(pi_1_boosted+pi3_1_boosted, pi_2_boosted, pi2_1_boosted, pi2_2_boosted, zmf_7)
-            aco_angle_11 = self.getAcoAnglesForOneRF(pi_1_boosted+pi2_1_boosted, pi_2_boosted, pi3_1_boosted, pi3_2_boosted, zmf_8)
-            aco_angle_12 = self.getAcoAnglesForOneRF(pi_1_boosted+pi3_1_boosted, pi_2_boosted, pi2_1_boosted, pi3_2_boosted, zmf_8)
+            zmf_7 = a1_1 + pi_2 + pi2_2
+            zmf_8 = a1_1 + pi_2 + pi3_2
+            aco_angle_9 = self.getAcoAnglesForOneRF(pi_1+pi2_1, pi_2, pi3_1, pi2_2, zmf_7)
+            aco_angle_10 = self.getAcoAnglesForOneRF(pi_1+pi3_1, pi_2, pi2_1, pi2_2, zmf_7)
+            aco_angle_11 = self.getAcoAnglesForOneRF(pi_1+pi2_1, pi_2, pi3_1, pi3_2, zmf_8)
+            aco_angle_12 = self.getAcoAnglesForOneRF(pi_1+pi3_1, pi_2, pi2_1, pi3_2, zmf_8)
             # a1, a1 frame
             zmf_9 = a1_1 + a1_2
-            aco_angle_13 = self.getAcoAnglesForOneRF(pi_1_boosted+pi2_1_boosted, pi_2_boosted+pi2_2_boosted, pi3_1_boosted, pi3_2_boosted, zmf_9)
-            aco_angle_14 = self.getAcoAnglesForOneRF(pi_1_boosted+pi3_1_boosted, pi_2_boosted+pi2_2_boosted, pi2_1_boosted, pi3_2_boosted, zmf_9)
-            aco_angle_15 = self.getAcoAnglesForOneRF(pi_1_boosted+pi2_1_boosted, pi_2_boosted+pi3_2_boosted, pi3_1_boosted, pi2_2_boosted, zmf_9)
-            aco_angle_16 = self.getAcoAnglesForOneRF(pi_1_boosted+pi3_1_boosted, pi_2_boosted+pi3_2_boosted, pi2_1_boosted, pi2_2_boosted, zmf_9)
+            aco_angle_13 = self.getAcoAnglesForOneRF(pi_1+pi2_1, pi_2+pi2_2, pi3_1, pi3_2, zmf_9)
+            aco_angle_14 = self.getAcoAnglesForOneRF(pi_1+pi3_1, pi_2+pi2_2, pi2_1, pi3_2, zmf_9)
+            aco_angle_15 = self.getAcoAnglesForOneRF(pi_1+pi2_1, pi_2+pi3_2, pi3_1, pi2_2, zmf_9)
+            aco_angle_16 = self.getAcoAnglesForOneRF(pi_1+pi3_1, pi_2+pi3_2, pi2_1, pi2_2, zmf_9)
             aco_angles.extend([aco_angle_1, aco_angle_2, aco_angle_3, aco_angle_4, aco_angle_5, aco_angle_6, aco_angle_7, aco_angle_8, aco_angle_9,
                                aco_angle_10, aco_angle_11, aco_angle_12, aco_angle_13, aco_angle_14, aco_angle_15, aco_angle_16])
         else:
