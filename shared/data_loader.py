@@ -333,10 +333,7 @@ class DataLoader:
         """
         Returns all the aco angles for different channels
         """
-<<<<<<< HEAD
         aco_angles = []
-=======
->>>>>>> 674dffd596cd7e201a16604084f58f73740e7fd7
         if self.channel == 'rho_rho':
             pi_1 = kwargs['pi_1']
             pi_2 = kwargs['pi_2']
@@ -502,11 +499,11 @@ class DataLoader:
             y_4 = (rho0.e - pi3_2.e) / (rho0.e + pi3_2.e) - (a1.m**2 - pi3_2.m**2 + rho0.m**2) / (2 * a1.m**2)
             rho0_2 = pi_2 + pi3_2
             y_5 = (rho0_2.e - pi2_2.e) / (rho0_2.e + pi2_2.e) - (a1.m**2 - pi2_2.m**2 + rho0_2.m**2) / (2 * a1.m**2)           
-            rho0 = pi_2_boosted + pi2_2_boosted
-            a1 = rho0 + pi3_2_boosted
-            y_4 = (rho0.e - pi3_2_boosted.e) / (rho0.e + pi3_2_boosted.e) - (a1.m**2 - pi3_2_boosted.m**2 + rho0.m**2) / (2 * a1.m**2)
-            rho0_2 = pi_2_boosted + pi3_2_boosted
-            y_5 = (rho0_2.e - pi2_2_boosted.e) / (rho0_2.e + pi2_2_boosted.e) - (a1.m**2 - pi2_2_boosted.m**2 + rho0_2.m**2) / (2 * a1.m**2)
+            rho0 = pi_2 + pi2_2
+            a1 = rho0 + pi3_2
+            y_4 = (rho0.e - pi3_2.e) / (rho0.e + pi3_2.e) - (a1.m**2 - pi3_2.m**2 + rho0.m**2) / (2 * a1.m**2)
+            rho0_2 = pi_2 + pi3_2
+            y_5 = (rho0_2.e - pi2_2.e) / (rho0_2.e + pi2_2.e) - (a1.m**2 - pi2_2.m**2 + rho0_2.m**2) / (2 * a1.m**2)
             return y_1, y_2, y_3, y_4, y_5
         elif self.channel == 'a1_a1':
             # 8 ys
