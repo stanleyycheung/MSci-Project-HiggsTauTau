@@ -174,8 +174,6 @@ class DataLoader:
         else:
             # no need to check here as checked in cleanRecoData
             df_inputs_data, boost = self.calculateA1A1Data(df, len(df_ps))
-        # df.to_pickle('misc/debugging_2.pkl')
-        # return
         df_inputs = pd.DataFrame(df_inputs_data)
         if binary:
             df_inputs['y'] = y
@@ -211,7 +209,8 @@ class DataLoader:
         pi_1_boosted_rot, pi0_1_boosted_rot, pi_2_boosted_rot, pi0_2_boosted_rot = br_vectors
         rho_1_boosted_rot, rho_2_boosted_rot = pi_1_boosted_rot+pi0_1_boosted_rot, pi_2_boosted_rot+pi0_2_boosted_rot
         # aco angle calculation
-        aco_angle_1 = self.getAcoAngles(pi0_1=pi0_1, pi0_2=pi0_2, pi_1=pi_1, pi_2=pi_2)[0]
+        aco_angle_1 = self.getAcoAngles(pi_1=pi_1, pi0_1=pi0_1, pi_2=pi_2, pi0_2=pi0_2)
+        y_rho_1, y_rho_2 = self.getY(pi_1=pi_1, pi0_1=pi0_1, pi_2=pi_2, pi0_2=pi0_2)
         df_inputs_data = {
             'pi_E_1_br': pi_1_boosted[0],
             'pi_px_1_br': pi_1_boosted_rot[:, 0],
@@ -239,8 +238,10 @@ class DataLoader:
             'rho_pz_2_br': rho_2_boosted_rot[:, 2],
             # 'aco_angle_1': df['aco_angle_1'],
             'aco_angle_1_calc': aco_angle_1,
-            'y_1_1': df['y_1_1'],
-            'y_1_2': df['y_1_2'],
+            # 'y_1_1': df['y_1_1'],
+            # 'y_1_2': df['y_1_2'],
+            'y_rho_1': y_rho_1,
+            'y_rho_2': y_rho_2,
             'w_a': df.wt_cp_sm,
             'w_b': df.wt_cp_ps,
             'm_rho_1': rho_1.m,
@@ -333,7 +334,6 @@ class DataLoader:
         """
         Returns all the aco angles for different channels
         """
-        aco_angles = []
         if self.channel == 'rho_rho':
             pi_1 = kwargs['pi_1']
             pi_2 = kwargs['pi_2']
@@ -444,13 +444,17 @@ class DataLoader:
         return np.arccos(np.einsum('ij, ij->i', n1, n2))
 
     def getAcoAnglesForOneRF(self, p1, p2, p3, p4, rest_frame):
+        """
+        Calculates aco angles for a rest frame (rest_frame)
+        p1, p3 are pairs from same decay
+        p2, p4 are pairs from same decay
+        """
         boost = Momentum4(rest_frame[0], -rest_frame[1], -rest_frame[2], -rest_frame[3])
         p1 = p1.boost_particle(boost)
         p2 = p2.boost_particle(boost)
         p3 = p3.boost_particle(boost)
         p4 = p4.boost_particle(boost)
         # Some geometrical functions
-
         def cross_product(vector3_1, vector3_2):
             return np.cross(vector3_1.T, vector3_2.T).T
 
@@ -459,7 +463,6 @@ class DataLoader:
 
         def norm(vector):
             return np.sqrt((vector.T ** 2).sum(-1))[..., np.newaxis].T
-
         # calculating the perpependicular component
         pi0_1_3Mom_star_perp = cross_product(p1[1:], p3[1:])
         pi0_2_3Mom_star_perp = cross_product(p2[1:], p4[1:])
@@ -471,15 +474,18 @@ class DataLoader:
         return phi_CP
 
     def getY(self, **kwargs):
-        y = []
+        """
+        Calculates y for given decay
+        4 vectors are NOT boosted - calculating in lab frame
+        """
         if self.channel == 'rho_rho':
             pi_1 = kwargs['pi_1']
             pi_2 = kwargs['pi_2']
             pi0_1 = kwargs['pi0_1']
             pi0_2 = kwargs['pi0_2']
-            y_1 = (pi_1.e - pi0_1.e)/(pi_1.e + pi0_1.e)
-            y_2 = (pi_2.e - pi0_2.e)/(pi_2.e + pi0_2.e)
-            return y_1, y_2
+            y_rho_1 = (pi_1.e - pi0_1.e)/(pi_1.e + pi0_1.e)
+            y_rho_2 = (pi_2.e - pi0_2.e)/(pi_2.e + pi0_2.e)
+            return y_rho_1, y_rho_2
         elif self.channel == 'rho_a1':
             # 5 ys
             pi_1 = kwargs['pi_1']
@@ -489,17 +495,17 @@ class DataLoader:
             pi2_2 = kwargs['pi2_2']
             pi3_2 = kwargs['pi3_2']
             # 1 y from equation 1
-            y_1 = (pi_1.e - pi0_1.e)/(pi_1.e + pi0_1.e)
+            y_rho_1 = (pi_1.e - pi0_1.e)/(pi_1.e + pi0_1.e)
             # from the y_rho0 part, 2 values due to ambiguity: rho0 can either be pi_2+pi2_2 or pi_2+pi3_2
-            y_2 = (pi_2.e - pi2_2.e)/(pi_2.e + pi2_2.e)
-            y_3 = (pi_2.e - pi3_2.e)/(pi_2.e + pi3_2.e)
+            y_rho0_2 = (pi_2.e - pi2_2.e)/(pi_2.e + pi2_2.e)
+            y_rho02_2 = (pi_2.e - pi3_2.e)/(pi_2.e + pi3_2.e)
             # from y_a1 part, 2 values due to ambiguity
-            rho0 = pi_2 + pi2_2
-            a1 = rho0 + pi3_2
-            y_4 = (rho0.e - pi3_2.e) / (rho0.e + pi3_2.e) - (a1.m**2 - pi3_2.m**2 + rho0.m**2) / (2 * a1.m**2)
-            rho0_2 = pi_2 + pi3_2
-            y_5 = (rho0_2.e - pi2_2.e) / (rho0_2.e + pi2_2.e) - (a1.m**2 - pi2_2.m**2 + rho0_2.m**2) / (2 * a1.m**2)           
-            return y_1, y_2, y_3, y_4, y_5
+            rho0_2 = pi_2 + pi2_2
+            a1 = rho0_2 + pi3_2
+            y_a1_2 = (rho0_2.e - pi3_2.e) / (rho0_2.e + pi3_2.e) - (a1.m**2 - pi3_2.m**2 + rho0_2.m**2) / (2 * a1.m**2)
+            rho02_2 = pi_2 + pi3_2
+            y_a12_2 = (rho02_2.e - pi2_2.e) / (rho02_2.e + pi2_2.e) - (a1.m**2 - pi2_2.m**2 + rho02_2.m**2) / (2 * a1.m**2)           
+            return y_rho_1, y_rho0_2, y_rho02_2, y_a1_2, y_a12_2
         elif self.channel == 'a1_a1':
             # 8 ys
             pi_1 = kwargs['pi_1']
@@ -508,27 +514,27 @@ class DataLoader:
             pi_2 = kwargs['pi_2']
             pi2_2 = kwargs['pi2_2']
             pi3_2 = kwargs['pi3_2']
-            rho0_1_1 = pi_1 + pi2_1
-            rho0_1_2 = pi_1 + pi3_1
-            rho0_2_1 = pi_2 + pi2_2
-            rho0_2_2 = pi_2 + pi3_2
-            a1_1 = rho0_1_1 + pi3_1
-            a1_2 = rho0_2_1 + pi3_2
+            rho0_1 = pi_1 + pi2_1
+            rho02_1 = pi_1 + pi3_1
+            rho0_2 = pi_2 + pi2_2
+            rho02_2 = pi_2 + pi3_2
+            a1_1 = rho0_1 + pi3_1
+            a1_2 = rho0_2 + pi3_2
             # 4 ys from the y_a1 formula due to ambiguities in the 2 a1s
             # 2 from the first a1
-            y_1 = (rho0_1_1.e - pi3_1.e) / (a1_1.m**2 - pi3_1.m**2 + rho0_1_1.m) / (2 * a1_1.m**2)
-            y_2 = (rho0_1_2.e - pi2_1.e) / (a1_1.m**2 - pi2_1.m**2 + rho0_1_2.m) / (2 * a1_1.m**2)
+            y_a1_1 = (rho0_1.e - pi3_1.e) / (a1_1.m**2 - pi3_1.m**2 + rho0_1.m) / (2 * a1_1.m**2)
+            y_a12_1 = (rho02_1.e - pi2_1.e) / (a1_1.m**2 - pi2_1.m**2 + rho02_1.m) / (2 * a1_1.m**2)
             # 2 from the second a1
-            y_3 = (rho0_2_1.e - pi3_2.e) / (a1_2.m**2 - pi3_2.m**2 + rho0_2_1.m) / (2 * a1_2.m**2)
-            y_4 = (rho0_2_2.e - pi2_2.e) / (a1_2.m**2 - pi2_2.m**2 + rho0_2_2.m) / (2 * a1_2.m**2)
+            y_a1_2 = (rho0_2.e - pi3_2.e) / (a1_2.m**2 - pi3_2.m**2 + rho0_2.m) / (2 * a1_2.m**2)
+            y_a12_2 = (rho02_2.e - pi2_2.e) / (a1_2.m**2 - pi2_2.m**2 + rho02_2.m) / (2 * a1_2.m**2)
             # 4 ys from the y_rho0 due to ambiguities in the 2 rho0s
             # 2 from the first rho0
-            y_5 = (pi_1.e - pi2_1.e) / (pi_1.e + pi2_1.e)
-            y_6 = (pi_1.e - pi3_1.e) / (pi_1.e + pi3_1.e)
+            y_rho0_1 = (pi_1.e - pi2_1.e) / (pi_1.e + pi2_1.e)
+            y_rho02_1 = (pi_1.e - pi3_1.e) / (pi_1.e + pi3_1.e)
             # 2 from the second rho0
-            y_7 = (pi_2.e - pi2_2.e) / (pi_2.e + pi2_2.e)
-            y_8 = (pi_2.e - pi3_2.e) / (pi_2.e + pi3_2.e)
-            return y_1, y_2, y_3, y_4, y_5, y_6, y_7, y_8
+            y_rho_2 = (pi_2.e - pi2_2.e) / (pi_2.e + pi2_2.e)
+            y_rho0_2 = (pi_2.e - pi3_2.e) / (pi_2.e + pi3_2.e)
+            return y_rho0_1, y_rho02_1, y_rho_2, y_rho0_2, y_a1_1, y_a12_1, y_a1_2, y_a12_2
         else:
             raise ValueError('Channel not understood')
 
@@ -559,7 +565,8 @@ class DataLoader:
         a1_2_boosted_rot = pi_2_boosted_rot + pi2_2_boosted_rot + pi3_2_boosted_rot
         rho0_2_boosted_rot = pi_2_boosted + pi2_2_boosted
         rho02_2_boosted_rot = pi_2_boosted + pi3_2_boosted
-        aco_angle_1, aco_angle_2, aco_angle_3, aco_angle_4 = self.getAcoAngles(pi0_1=pi0_1, pi2_2=pi2_2, pi3_2=pi3_2, pi_1=pi_1, pi_2=pi_2)
+        aco_angle_1, aco_angle_2, aco_angle_3, aco_angle_4 = self.getAcoAngles(pi_1=pi_1, pi0_1=pi0_1, pi_2=pi_2, pi2_2=pi2_2, pi3_2=pi3_2)
+        y_rho_1, y_rho0_2, y_rho02_2, y_a1_2, y_a12_2 = self.getY(pi_1=pi_1, pi0_1=pi0_1, pi_2=pi_2, pi2_2=pi2_2, pi3_2=pi3_2)
         df_inputs_data = {
             'pi_E_1_br': pi_1_boosted[0],
             'pi_px_1_br': pi_1_boosted_rot[:, 0],
@@ -601,9 +608,13 @@ class DataLoader:
             'aco_angle_2_calc': aco_angle_2,
             'aco_angle_3_calc': aco_angle_3,
             'aco_angle_4_calc': aco_angle_4,
-            # TODO: change ys
-            'y_1_1': df['y_1_1'],
-            'y_1_2': df['y_1_2'],
+            # 'y_1_1': df['y_1_1'],
+            # 'y_1_2': df['y_1_2'],
+            "y_rho_1": y_rho_1,
+            "y_rho0_2": y_rho0_2,
+            "y_rho02_2": y_rho02_2,
+            "y_a1_2": y_a1_2,
+            "y_a12_2": y_a12_2,
             'w_a': df.wt_cp_sm,
             'w_b': df.wt_cp_ps,
             'm_rho_1': rho_1.m,
@@ -650,6 +661,7 @@ class DataLoader:
         a1_2_boosted_rot = pi_2_boosted_rot + pi2_2_boosted_rot + pi3_2_boosted_rot
         aco_angles = self.getAcoAngles(pi_1=pi_1, pi2_1=pi2_1, pi3_1=pi3_1, pi_2=pi_2, pi2_2=pi2_2, pi3_2=pi3_2)
         aco_angle_1, aco_angle_2, aco_angle_3, aco_angle_4, aco_angle_5, aco_angle_6, aco_angle_7, aco_angle_8, aco_angle_9, aco_angle_10, aco_angle_11, aco_angle_12, aco_angle_13, aco_angle_14, aco_angle_15, aco_angle_16 = aco_angles
+        y_rho0_1, y_rho02_1, y_rho_2, y_rho0_2, y_a1_1, y_a12_1, y_a1_2, y_a12_2 = self.getY(pi_1=pi_1, pi2_1=pi2_1, pi3_1=pi3_1, pi_2=pi_2, pi2_2=pi2_2, pi3_2=pi3_2)
         df_inputs_data = {
             'pi_E_1_br': pi_1_boosted[0],
             'pi_px_1_br': pi_1_boosted_rot[:, 0],
@@ -715,9 +727,16 @@ class DataLoader:
             'aco_angle_14_calc': aco_angle_14,
             'aco_angle_15_calc': aco_angle_15,
             'aco_angle_16_calc': aco_angle_16,
-            # TODO: y
-            'y_1_1': df['y_1_1'],
-            'y_1_2': df['y_1_2'],
+            # 'y_1_1': df['y_1_1'],
+            # 'y_1_2': df['y_1_2'],
+            "y_rho0_1": y_rho0_1,
+            "y_rho02_1": y_rho02_1,
+            "y_rho_2": y_rho_2,
+            "y_rho0_2": y_rho0_2,
+            "y_a1_1": y_a1_1,
+            "y_a12_1": y_a12_1,
+            "y_a1_2": y_a1_2,
+            "y_a12_2": y_a12_2,
             'w_a': df.wt_cp_sm,
             'w_b': df.wt_cp_ps,
             'm_rho0_2': rho0_1.m,
