@@ -329,15 +329,9 @@ class DataLoader:
             pi_2 = kwargs['pi_2']
             pi0_1 = kwargs['pi0_1']
             pi0_2 = kwargs['pi0_2']
+            y_1_1, y_1_2 = self.getY(pi_1=pi_1, pi_2=pi_2, pi0_1=pi0_1, pi0_2=pi0_2)
             zmf = pi_1 + pi_2 + pi0_1 + pi0_2
-            aco_angle_1 = self.getAcoAnglesForOneRF(pi0_1, pi0_2, pi_1, pi_2, zmf)
-            print('number of nans using Stanleys calculation:', np.sum(np.isnan(aco_angle_1)))
-            aco_angle_1[np.isnan(aco_angle_1)] = np.pi
-            aco_angle_1 = self.getAcoAnglesPerpFormula(pi0_1, pi0_2, pi_1, pi_2, zmf)
-            # aco_angle_1 = self.getAcoAnglesForOneRF(pi0_1, pi0_2, pi_1, pi_2, zmf)
-            # print('number of nans using Stanleys calculation:', np.sum(np.isnan(aco_angle_1)))
-            # aco_angle_1[np.isnan(aco_angle_1)] = np.pi
-            aco_angle_1 = self.getAcoAnglesForOneRF(pi0_1, pi0_2, pi_1, pi_2, zmf)
+            aco_angle_1 = self.getAcoAnglesForOneRF(pi0_1, pi0_2, pi_1, pi_2, zmf, y_1_1, y_1_2)
             print('number of nans using perp calculation:', np.sum(np.isnan(aco_angle_1)))
             aco_angle_1[np.isnan(aco_angle_1)] = np.pi
             return aco_angle_1
@@ -433,7 +427,7 @@ class DataLoader:
         # n2 = p2.Vect() - p2.Vect().Dot(p4.Vect().Unit())*p4.Vect().Unit();
         return np.arccos(np.einsum('ij, ij->i', n1, n2))
 
-    def getAcoAnglesForOneRF(self, p1, p2, p3, p4, rest_frame):
+    def getAcoAnglesForOneRF(self, p1, p2, p3, p4, rest_frame, y_1_1=None, y_1_2=None):
         """
         Calculates aco angles for a rest frame (rest_frame)
         p1, p3 are pairs from same decay
@@ -461,6 +455,17 @@ class DataLoader:
         pi0_2_3Mom_star_perp = pi0_2_3Mom_star_perp/norm(pi0_2_3Mom_star_perp)
         # Calculating phi_star
         phi_CP = np.arccos(dot_product(pi0_1_3Mom_star_perp, pi0_2_3Mom_star_perp))
+        if y_1_1 is not None:
+            #The O variable
+            cross=np.cross(pi0_1_3Mom_star_perp.transpose(),pi0_2_3Mom_star_perp.transpose()).transpose()
+            bigO=dot_product(p4[1:],cross)
+            #The energy ratios
+            y_T = np.array(y_1_1 * y_1_2)
+            #perform the shift w.r.t. O* sign
+            phi_CP=np.where(bigO>=0, 2*np.pi-phi_CP, phi_CP)
+            #additionnal shift that needs to be done do see differences between odd and even scenarios, with y=Energy ratios
+            phi_CP=np.where(y_T>=0, np.where(phi_CP<np.pi, phi_CP+np.pi, phi_CP-np.pi), phi_CP)
+
         return phi_CP
 
     def getY(self, **kwargs):

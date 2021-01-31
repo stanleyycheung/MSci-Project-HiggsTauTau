@@ -35,13 +35,13 @@ class ConfigLoader:
             pi0_2_transformed = np.c_[self.df.pi0_E_2_br, self.df.pi0_px_2_br, self.df.pi0_py_2_br, self.df.pi0_pz_2_br, ]
             if mode == 0:
                 config_map_norho = {
-                    1: np.c_[self.df.aco_angle_1],
-                    2: np.c_[self.df.aco_angle_1, self.df.y_1_1, self.df.y_1_2],
+                    1: np.c_[self.df.aco_angle_1_calc],
+                    2: np.c_[self.df.aco_angle_1_calc, self.df.y_rho_1, self.df.y_rho_2],
                     # 3: np.c_[pi_1_transformed, pi_2_transformed, pi0_1_transformed, pi0_2_transformed],
                     3: np.c_[pi0_1_transformed, pi0_2_transformed, pi_1_transformed, pi_2_transformed],
-                    4: np.c_[pi_1_transformed, pi_2_transformed, pi0_1_transformed, pi0_2_transformed, self.df.aco_angle_1],
-                    5: np.c_[self.df.aco_angle_1, self.df.y_1_1, self.df.y_1_2, self.df.m_1**2, self.df.m_2**2],
-                    6: np.c_[pi_1_transformed, pi_2_transformed, pi0_1_transformed, pi0_2_transformed, self.df.aco_angle_1, self.df.y_1_1, self.df.y_1_2, self.df.m_1**2, self.df.m_2**2],
+                    4: np.c_[pi_1_transformed, pi_2_transformed, pi0_1_transformed, pi0_2_transformed, self.df.aco_angle_1_calc],
+                    5: np.c_[self.df.aco_angle_1_calc, self.df.y_rho_1, self.df.y_rho_2, self.df.m_rho_1**2, self.df.m_rho_2**2],
+                    6: np.c_[pi_1_transformed, pi_2_transformed, pi0_1_transformed, pi0_2_transformed, self.df.aco_angle_1_calc, self.df.y_rho_1, self.df.y_rho_2, self.df.m_rho_1**2, self.df.m_rho_2**2],
                     # adding extra aco angles
                     # 7: np.c_[pi_1_transformed, pi_2_transformed, pi0_1_transformed, pi0_2_transformed, self.df.aco_angle_1, self.df.y_1_1, self.df.y_1_2, self.df.m_1**2, self.df.m_2**2, self.df.aco_angle_5, self.df.aco_angle_6, self.df.aco_angle_7],
                     # 8: np.c_[self.df.aco_angle_5, self.df.aco_angle_6, self.df.aco_angle_7],
