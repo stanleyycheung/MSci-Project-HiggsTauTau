@@ -3,13 +3,14 @@ from numpy.core.defchararray import upper
 import pandas as pd
 import matplotlib.pyplot as plt
 from utils import profileplot, sps, profileplot_plain
+import config
 
 class AlphaCalculator:
     # changed file paths to class variables
     pickle_dir = './df_tt_rho_rho.pkl'
     alpha_save_dir = './alpha_analysis'
 
-    def __init__(self, df_reco, df_br, binary, m_higgs, m_tau, default_value, load=False, seed=1):
+    def __init__(self, df_reco, df_br, binary, m_higgs, m_tau, default_value, load=False, seed=config.seed_value):
         np.random.seed(seed)
         self.m_higgs = m_higgs
         self.m_tau = m_tau

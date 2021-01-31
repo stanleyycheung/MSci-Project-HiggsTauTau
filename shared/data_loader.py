@@ -90,20 +90,10 @@ class DataLoader:
     def readGenData(self, from_pickle=False):
         """
         Reads the gen root file, can save contents into .pkl for fast read/write abilities
-        Note: hardcoded variables for gen level
         """
-        variables_gen = [
-            "wt_cp_sm", "wt_cp_ps", "wt_cp_mm", "rand",
-            "dm_1", "dm_2",
-            "pi_E_1", "pi_px_1", "pi_py_1", "pi_pz_1",  # charged pion 1
-            "pi_E_2", "pi_px_2", "pi_py_2", "pi_pz_2",  # charged pion 2
-            "pi0_E_1", "pi0_px_1", "pi0_py_1", "pi0_pz_1",  # neutral pion 1
-            "pi0_E_2", "pi0_px_2", "pi0_py_2", "pi0_pz_2",  # neutral pion 2,
-            'metx', 'mety',
-            'sv_x_1', 'sv_y_1', 'sv_z_1', 'sv_x_2', 'sv_y_2', 'sv_z_2', ]
         if not from_pickle:
             tree_tt = uproot.open(DataLoader.gen_root_path)["ntuple"]
-            df = tree_tt.pandas.df(variables_gen)
+            df = tree_tt.pandas.df(self.variables)
             df.to_pickle(f"{DataLoader.gen_df_path}_{self.channel}.pkl")
         else:
             df = pd.read_pickle(f"{DataLoader.gen_df_path}_{self.channel}.pkl")
@@ -251,6 +241,7 @@ class DataLoader:
 
     def rotateVectors(self, **kwargs):
         """
+        Rotates the four vectors in boosted frame
         All kwarg 4 vectors must be boosted!
         """
         print(f'Rotating in {self.channel} channel')
@@ -309,7 +300,6 @@ class DataLoader:
         s = np.linalg.norm(v, axis=1)
         kmat = np.array([[-np.zeros(len(vec1)), v.T[2], -v.T[1]], [-v.T[2], -np.zeros(len(vec1)), v.T[0]], [v.T[1], -v.T[0], -np.zeros(len(vec1))]]).T
         rotation_matrix = np.tile(np.eye(3), (len(vec1), 1, 1)) + kmat + np.linalg.matrix_power(kmat, 2)*((1 - c) / (s ** 2))[:, None][:, np.newaxis]
-        # return np.tile(np.eye(3), (len(vec1),1,1)), kmat, np.linalg.matrix_power(kmat, 2)*((1 - c) / (s ** 2))[:,None][:,np.newaxis]
         return rotation_matrix
 
     def rotation_matrix(self, axis, theta):

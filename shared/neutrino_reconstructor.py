@@ -1,5 +1,4 @@
 # import uproot
-from multiprocessing import Value
 import numpy as np
 import pandas as pd
 # import tensorflow as tf
@@ -8,6 +7,7 @@ from pylorentz import Momentum4, Position4
 from alpha_calculator import AlphaCalculator
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import SimpleImputer, IterativeImputer, KNNImputer
+import config
 
 
 class NeutrinoReconstructor:
@@ -21,7 +21,7 @@ class NeutrinoReconstructor:
     saved_df_dir = '../stanley/df_saved'
     DEFAULT_VALUE = 0
 
-    def __init__(self, binary, seed=1,):
+    def __init__(self, binary, seed=config.seed_value):
         np.random.seed(seed)
         self.seed = seed
         self.binary = binary
@@ -63,28 +63,24 @@ class NeutrinoReconstructor:
         nu_1_boosted = nu_1.boost_particle(boost)
         nu_2_boosted = nu_2.boost_particle(boost)
         rho_1_boosted = pi_1.boost_particle(boost) + pi0_1.boost_particle(boost)
-        rho_2_boosted = pi_2.boost_particle(boost) + pi0_2.boost_particle(boost)
         nu_1_boosted_rot, nu_2_boosted_rot = []
-        for i in range(rho_1_boosted[:].shape[1]):
-            rot_mat = self.rotation_matrix_from_vectors(rho_1_boosted[1:, i], [0, 0, 1])
-            nu_1_boosted_rot.append(rot_mat.dot(nu_1_boosted[1:, i]))
-            nu_2_boosted_rot.append(rot_mat.dot(nu_2_boosted[1:, i]))
-            if i % 100000 == 0:
-                print('finished getting rotated 4-vector', i)
+        rotationMatrices = self.rotationMatrixVectorised(rho_1_boosted[1:].T, np.tile(np.array([0, 0, 1]), (rho_1_boosted.e.shape[0], 1)))
+        nu_1_boosted_rot = np.einsum('ij,ikj->ik', nu_1_boosted[1:].T, rotationMatrices)
+        nu_2_boosted_rot = np.einsum('ij,ikj->ik', nu_2_boosted[1:].T, rotationMatrices)
         return nu_1_boosted_rot, nu_2_boosted_rot
 
-    def rotation_matrix_from_vectors(self, vec1, vec2):
-        """ Find the rotation matrix that aligns vec1 to vec2
-        :param vec1: A 3d "source" vector
-        :param vec2: A 3d "destination" vector
-        :return mat: A transform matrix (3x3) which when applied to vec1, aligns it with vec2.
+    def rotationMatrixVectorised(self, vec1, vec2):
         """
-        a, b = (vec1 / np.linalg.norm(vec1)).reshape(3), (vec2 / np.linalg.norm(vec2)).reshape(3)
+        Find the rotation matrix that aligns vec1 to vec2
+        Expects vec1, vec2 to be list of vectors
+        Returns list of matrices
+        """
+        a, b = vec1 / np.linalg.norm(vec1, axis=1)[:, None], vec2 / np.linalg.norm(vec2, axis=1)[:, None]
         v = np.cross(a, b)
-        c = np.dot(a, b)
-        s = np.linalg.norm(v)
-        kmat = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
-        rotation_matrix = np.eye(3) + kmat + kmat.dot(kmat) * ((1 - c) / (s ** 2))
+        c = np.einsum('ij, ij->i', a, b)
+        s = np.linalg.norm(v, axis=1)
+        kmat = np.array([[-np.zeros(len(vec1)), v.T[2], -v.T[1]], [-v.T[2], -np.zeros(len(vec1)), v.T[0]], [v.T[1], -v.T[0], -np.zeros(len(vec1))]]).T
+        rotation_matrix = np.tile(np.eye(3), (len(vec1), 1, 1)) + kmat + np.linalg.matrix_power(kmat, 2)*((1 - c) / (s ** 2))[:, None][:, np.newaxis]
         return rotation_matrix
 
     def dealWithMissingData(self, df_br, mode):
@@ -94,6 +90,7 @@ class NeutrinoReconstructor:
         0 - Simple flag
         1 - Linear interpolation - BayesianRidge algorithm
         2 - KNN algorithm
+        3 - Replace with mean
         """
         print('Imputing missing data')
         # change to return df_br and modify in place
@@ -119,6 +116,10 @@ class NeutrinoReconstructor:
             df_br_imputed = pd.DataFrame(KNNImp.fit_transform(df_br), columns=df_br.columns)
             return df_br_imputed
             # return self.calculateFromAlpha(df_br_imputed, df_br_imputed['alpha_1'], df_br_imputed['alpha_2'])
+        elif mode == 3:
+            simpImp = SimpleImputer(missing_values=NeutrinoReconstructor.DEFAULT_VALUE, strategy='mean')
+            df_br_imputed = pd.DataFrame(simpImp.fit_transform(df_br), columns=df_br.columns)
+            return df_br_imputed
         else:
             raise ValueError('Missing data mode not understood')
 
@@ -138,8 +139,7 @@ class NeutrinoReconstructor:
         df_br['p_z_nu_1'] = p_z_nu_1
         df_br['p_z_nu_2'] = p_z_nu_2
         return df_br
-        
-
+    
     def runAlphaReconstructor(self, df_reco_gen, df_br, load_alpha, termination=1000):
         """
         Calculates the alphas and reconstructs neutrino momenta
