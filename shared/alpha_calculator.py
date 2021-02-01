@@ -3,13 +3,14 @@ from numpy.core.defchararray import upper
 import pandas as pd
 import matplotlib.pyplot as plt
 from utils import profileplot, sps, profileplot_plain
+import config
 
 class AlphaCalculator:
     # changed file paths to class variables
     pickle_dir = './df_tt_rho_rho.pkl'
     alpha_save_dir = './alpha_analysis'
 
-    def __init__(self, df_reco, df_br, binary, m_higgs, m_tau, default_value, load=False, seed=1):
+    def __init__(self, df_reco, df_br, binary, m_higgs, m_tau, default_value, load=False, seed=config.seed_value):
         np.random.seed(seed)
         self.m_higgs = m_higgs
         self.m_tau = m_tau
@@ -70,14 +71,19 @@ class AlphaCalculator:
                 binary_str += "_b"
             self.alpha_1 = np.load(f'{AlphaCalculator.alpha_save_dir}/alpha_1_{termination}'+binary_str+".npy", allow_pickle=True)
             self.alpha_2 = np.load(f'{AlphaCalculator.alpha_save_dir}/alpha_2_{termination}'+binary_str+".npy", allow_pickle=True)
-            # p_z_nu_1 = self.alpha_1*(self.df_br.pi_pz_1_br + self.df_br.pi0_pz_1_br)
-            # p_z_nu_2 = self.alpha_2*(self.df_br.pi_pz_2_br + self.df_br.pi0_pz_2_br)
-            # E_nu_1 = (self.m_tau**2 - (self.df_br.pi_E_1_br+self.df_br.pi0_E_1_br)**2 + (self.df_br.pi_pz_1_br + self.df_br.pi0_pz_1_br)
-            #           ** 2 + 2*p_z_nu_1*(self.df_br.pi_pz_1_br + self.df_br.pi0_pz_1_br))/(2*(self.df_br.pi_E_1_br+self.df_br.pi0_E_1_br))
-            # E_nu_2 = (self.m_tau**2 - (self.df_br.pi_E_2_br+self.df_br.pi0_E_2_br)**2 + (self.df_br.pi_pz_2_br + self.df_br.pi0_pz_2_br)
-            #           ** 2 + 2*p_z_nu_2*(self.df_br.pi_pz_2_br + self.df_br.pi0_pz_2_br))/(2*(self.df_br.pi_E_2_br+self.df_br.pi0_E_2_br))
-            # return self.alpha_1, self.alpha_2, p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2
-            return self.alpha_1, self.alpha_2
+            idx = self.alpha_1==self.DEFAULT_VALUE
+            p_z_nu_1 = self.alpha_1*(self.df_br.pi_pz_1_br + self.df_br.pi0_pz_1_br)
+            p_z_nu_2 = self.alpha_2*(self.df_br.pi_pz_2_br + self.df_br.pi0_pz_2_br)
+            E_nu_1 = (self.m_tau**2 - (self.df_br.pi_E_1_br+self.df_br.pi0_E_1_br)**2 + (self.df_br.pi_pz_1_br + self.df_br.pi0_pz_1_br)
+                      ** 2 + 2*p_z_nu_1*(self.df_br.pi_pz_1_br + self.df_br.pi0_pz_1_br))/(2*(self.df_br.pi_E_1_br+self.df_br.pi0_E_1_br))
+            E_nu_2 = (self.m_tau**2 - (self.df_br.pi_E_2_br+self.df_br.pi0_E_2_br)**2 + (self.df_br.pi_pz_2_br + self.df_br.pi0_pz_2_br)
+                      ** 2 + 2*p_z_nu_2*(self.df_br.pi_pz_2_br + self.df_br.pi0_pz_2_br))/(2*(self.df_br.pi_E_2_br+self.df_br.pi0_E_2_br))
+            p_z_nu_1[idx] = self.DEFAULT_VALUE
+            p_z_nu_2[idx] = self.DEFAULT_VALUE
+            E_nu_1[idx] = self.DEFAULT_VALUE
+            E_nu_2[idx] = self.DEFAULT_VALUE
+            return self.alpha_1, self.alpha_2, p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2
+            # return self.alpha_1, self.alpha_2
         self.alpha_1, self.alpha_2 = [], []
         p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2 = [], [], [], []
         rejection = 0
@@ -134,7 +140,6 @@ class AlphaCalculator:
             if alpha_1 > 0 and alpha_2 > 0:
                 return alpha_1, alpha_2
         return self.DEFAULT_VALUE, self.DEFAULT_VALUE
-
 
     def getAlpha(self, idx, E_miss_x, E_miss_y, rho_1, rho_2, cov, mode=1, termination=1000):
         """
