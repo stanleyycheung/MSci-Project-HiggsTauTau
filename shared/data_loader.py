@@ -306,24 +306,6 @@ class DataLoader:
         rotation_matrix = np.tile(np.eye(3), (len(vec1), 1, 1)) + kmat + np.linalg.matrix_power(kmat, 2)*((1 - c) / (s ** 2))[:, None][:, np.newaxis]
         return rotation_matrix
 
-    def rotation_matrix(self, axis, theta):
-        """
-        Return the rotation matrix associated with counterclockwise rotation about
-        the given axis by theta radians.
-        """
-        axis = np.asarray(axis)
-        axis = axis / np.dot(axis, axis)**0.5
-        a = math.cos(theta / 2.0)
-        b, c, d = -axis * math.sin(theta / 2.0)
-        aa, bb, cc, dd = a * a, b * b, c * c, d * d
-        bc, ad, ac, ab, bd, cd = b * c, a * d, a * c, a * b, b * d, c * d
-        return np.array([[aa + bb - cc - dd, 2 * (bc + ad), 2 * (bd - ac)],
-                         [2 * (bc - ad), aa + cc - bb - dd, 2 * (cd + ab)],
-                         [2 * (bd + ac), 2 * (cd - ab), aa + dd - bb - cc]])
-
-    def rotate(self, vect, axis, theta):
-        return np.dot(self.rotation_matrix(axis, theta), vect)
-
     def getAcoAngles(self, **kwargs):
         """
         Returns all the aco angles for different channels
@@ -333,9 +315,10 @@ class DataLoader:
             pi_2 = kwargs['pi_2']
             pi0_1 = kwargs['pi0_1']
             pi0_2 = kwargs['pi0_2']
-            y1, y2 = self.getY(pi_1=pi_1, pi_2=pi_2, pi0_1=pi0_1, pi0_2=pi0_2)
+            y_rho_1, y_rho_2 = self.getY(pi_1=pi_1, pi_2=pi_2, pi0_1=pi0_1, pi0_2=pi0_2)
             zmf = pi_1 + pi_2 + pi0_1 + pi0_2
-            aco_angle_1 = self.getAcoAnglesForOneRF(pi0_1, pi0_2, pi_1, pi_2, zmf, y1, y2)
+            aco_angle_1 = self.getAcoAnglesForOneRF(pi0_1, pi0_2, pi_1, pi_2, zmf, y_rho_1, y_rho_2)
+            # should be no nans so can delete next 2 lines?
             print('number of nans using perp calculation:', np.sum(np.isnan(aco_angle_1)))
             aco_angle_1[np.isnan(aco_angle_1)] = np.pi
             return aco_angle_1
@@ -350,16 +333,14 @@ class DataLoader:
             # rho +/- , rho 0 frame
             zmf_1 = rho_1 + pi_2 + pi2_2
             zmf_2 = rho_1 + pi_2 + pi3_2
-            ys = self.getY(pi_1=pi_1, pi0_1=pi0_1, pi_2=pi_2, pi2_2=pi2_2, pi3_2=pi3_2)
-            y1, y2 = ys[1], ys[2] # choose the 2 y variables from the rho0 formula
-            aco_angle_1 = self.getAcoAnglesForOneRF(pi_1, pi_2, pi0_1, pi2_2, zmf_1, y1, y2)
-            aco_angle_2 = self.getAcoAnglesForOneRF(pi_1, pi_2, pi0_1, pi3_2, zmf_2, y1, y2)
+            y_rho_1, y_rho0_2, y_rho02_2, y_a1_2, y_a12_2 = self.getY(pi_1=pi_1, pi0_1=pi0_1, pi_2=pi_2, pi2_2=pi2_2, pi3_2=pi3_2)
+            aco_angle_1 = self.getAcoAnglesForOneRF(pi_1, pi_2, pi0_1, pi2_2, zmf_1, y_rho_1, y_rho0_2)
+            aco_angle_2 = self.getAcoAnglesForOneRF(pi_1, pi_2, pi0_1, pi3_2, zmf_2, y_rho_1, y_rho02_2)
             # rho +/-, a1 frame
             # a1 -> rho0, pi +/-
             zmf_3 = rho_1 + pi_2 + pi2_2 + pi3_2
-            y1, y2 = ys[3], ys[4] # choose the 2 y variables from the y1 formula
-            aco_angle_3 = self.getAcoAnglesForOneRF(pi_1, pi_2 + pi2_2, pi0_1, pi3_2, zmf_3, y1, y2)
-            aco_angle_4 = self.getAcoAnglesForOneRF(pi_1, pi_2 + pi3_2, pi0_1, pi2_2, zmf_3, y1, y2)
+            aco_angle_3 = self.getAcoAnglesForOneRF(pi_1, pi_2 + pi2_2, pi0_1, pi3_2, zmf_3, y_rho_1, y_a1_2)
+            aco_angle_4 = self.getAcoAnglesForOneRF(pi_1, pi_2 + pi3_2, pi0_1, pi2_2, zmf_3, y_rho_1, y_a12_2)
             return aco_angle_1, aco_angle_2, aco_angle_3, aco_angle_4
         elif self.channel == 'a1_a1':
             # 16 aco angles
@@ -371,73 +352,39 @@ class DataLoader:
             pi3_2 = kwargs['pi3_2']
             a1_1 = pi_1 + pi2_1 + pi3_1
             a1_2 = pi_2 + pi2_2 + pi3_2
-            ys = self.getY(pi_1=pi_1, pi2_1=pi2_1, pi3_1=pi3_1, pi_2=pi_2, pi2_2=pi2_2, pi3_2=pi3_2)
-            y1, y2 = ys[4], ys[6]
+            y_rho0_1, y_rho02_1, y_rho0_2, y_rho02_2, y_a1_1, y_a12_1, y_a1_2, y_a12_2 = self.getY(pi_1=pi_1, pi2_1=pi2_1, pi3_1=pi3_1, pi_2=pi_2, pi2_2=pi2_2, pi3_2=pi3_2)
             # rho0, rho0 frame
             zmf_1 = pi_1 + pi2_1 + pi_2 + pi2_2
             zmf_2 = pi_1 + pi3_1 + pi_2 + pi2_2
             zmf_3 = pi_1 + pi2_1 + pi_2 + pi3_2
             zmf_4 = pi_1 + pi3_1 + pi_2 + pi3_2
-            aco_angle_1 = self.getAcoAnglesForOneRF(pi_1, pi_2, pi2_1, pi2_2, zmf_1, y1, y2)
-            aco_angle_2 = self.getAcoAnglesForOneRF(pi_1, pi_2, pi3_1, pi2_2, zmf_2, y1, y2)
-            aco_angle_3 = self.getAcoAnglesForOneRF(pi_1, pi_2, pi2_1, pi3_2, zmf_3, y1, y2)
-            aco_angle_4 = self.getAcoAnglesForOneRF(pi_1, pi_2, pi3_1, pi3_2, zmf_4, y1, y2)
-            y1, y2 = ys[5], ys[7]
+            aco_angle_1 = self.getAcoAnglesForOneRF(pi_1, pi_2, pi2_1, pi2_2, zmf_1, y_rho0_1, y_rho0_2)
+            aco_angle_2 = self.getAcoAnglesForOneRF(pi_1, pi_2, pi3_1, pi2_2, zmf_2, y_rho02_1, y_rho0_2)
+            aco_angle_3 = self.getAcoAnglesForOneRF(pi_1, pi_2, pi2_1, pi3_2, zmf_3, y_rho0_1, y_rho02_2)
+            aco_angle_4 = self.getAcoAnglesForOneRF(pi_1, pi_2, pi3_1, pi3_2, zmf_4, y_rho02_1, y_rho02_2)
             # rho0, a1 frame
             zmf_5 = pi_1 + pi2_1 + a1_2
             zmf_6 = pi_1 + pi3_1 + a1_2
-            aco_angle_5 = self.getAcoAnglesForOneRF(pi_1, pi_2+pi3_2, pi2_1, pi2_2, zmf_5, y1, y2)
-            aco_angle_6 = self.getAcoAnglesForOneRF(pi_1, pi_2+pi2_2, pi2_1, pi3_2, zmf_5, y1, y2)
-            aco_angle_7 = self.getAcoAnglesForOneRF(pi_1, pi_2+pi3_2, pi3_1, pi2_2, zmf_6, y1, y2)
-            aco_angle_8 = self.getAcoAnglesForOneRF(pi_1, pi_2+pi2_2, pi3_1, pi3_2, zmf_6, y1, y2)
-            y1, y2 = ys[0], ys[2]
+            aco_angle_5 = self.getAcoAnglesForOneRF(pi_1, pi_2+pi2_2, pi2_1, pi3_2, zmf_5, y_rho0_1, y_a1_2)
+            aco_angle_6 = self.getAcoAnglesForOneRF(pi_1, pi_2+pi3_2, pi2_1, pi2_2, zmf_5, y_rho0_1, y_a12_2)
+            aco_angle_7 = self.getAcoAnglesForOneRF(pi_1, pi_2+pi2_2, pi3_1, pi3_2, zmf_6, y_rho02_1, y_a1_2)
+            aco_angle_8 = self.getAcoAnglesForOneRF(pi_1, pi_2+pi3_2, pi3_1, pi2_2, zmf_6, y_rho02_1, y_a12_2)
             # a1, rho0 frame
             zmf_7 = a1_1 + pi_2 + pi2_2
             zmf_8 = a1_1 + pi_2 + pi3_2
-            aco_angle_9 = self.getAcoAnglesForOneRF(pi_1+pi2_1, pi_2, pi3_1, pi2_2, zmf_7, y1, y2)
-            aco_angle_10 = self.getAcoAnglesForOneRF(pi_1+pi3_1, pi_2, pi2_1, pi2_2, zmf_7, y1, y2)
-            aco_angle_11 = self.getAcoAnglesForOneRF(pi_1+pi2_1, pi_2, pi3_1, pi3_2, zmf_8, y1, y2)
-            aco_angle_12 = self.getAcoAnglesForOneRF(pi_1+pi3_1, pi_2, pi2_1, pi3_2, zmf_8, y1, y2)
-            y1, y2 = ys[1], ys[3]
+            aco_angle_9 = self.getAcoAnglesForOneRF(pi_1+pi2_1, pi_2, pi3_1, pi2_2, zmf_7, y_a1_1, y_rho0_2)
+            aco_angle_10 = self.getAcoAnglesForOneRF(pi_1+pi3_1, pi_2, pi2_1, pi2_2, zmf_7, y_a12_1, y_rho0_2)
+            aco_angle_11 = self.getAcoAnglesForOneRF(pi_1+pi2_1, pi_2, pi3_1, pi3_2, zmf_8, y_a1_1, y_rho02_2)
+            aco_angle_12 = self.getAcoAnglesForOneRF(pi_1+pi3_1, pi_2, pi2_1, pi3_2, zmf_8, y_a12_1, y_rho02_2)
             # a1, a1 frame
             zmf_9 = a1_1 + a1_2
-            aco_angle_13 = self.getAcoAnglesForOneRF(pi_1+pi2_1, pi_2+pi2_2, pi3_1, pi3_2, zmf_9, y1, y2)
-            aco_angle_14 = self.getAcoAnglesForOneRF(pi_1+pi3_1, pi_2+pi2_2, pi2_1, pi3_2, zmf_9, y1, y2)
-            aco_angle_15 = self.getAcoAnglesForOneRF(pi_1+pi2_1, pi_2+pi3_2, pi3_1, pi2_2, zmf_9, y1, y2)
-            aco_angle_16 = self.getAcoAnglesForOneRF(pi_1+pi3_1, pi_2+pi3_2, pi2_1, pi2_2, zmf_9, y1, y2)
+            aco_angle_13 = self.getAcoAnglesForOneRF(pi_1+pi2_1, pi_2+pi2_2, pi3_1, pi3_2, zmf_9, y_a1_1, y_a1_2)
+            aco_angle_14 = self.getAcoAnglesForOneRF(pi_1+pi3_1, pi_2+pi2_2, pi2_1, pi3_2, zmf_9, y_a12_1, y_a1_2)
+            aco_angle_15 = self.getAcoAnglesForOneRF(pi_1+pi2_1, pi_2+pi3_2, pi3_1, pi2_2, zmf_9, y_a1_1, y_a12_2)
+            aco_angle_16 = self.getAcoAnglesForOneRF(pi_1+pi3_1, pi_2+pi3_2, pi2_1, pi2_2, zmf_9, y_a12_1, y_a12_2)
             return aco_angle_1, aco_angle_2, aco_angle_3, aco_angle_4, aco_angle_5, aco_angle_6, aco_angle_7, aco_angle_8, aco_angle_9, aco_angle_10, aco_angle_11, aco_angle_12, aco_angle_13, aco_angle_14, aco_angle_15, aco_angle_16
         else:
             raise ValueError('Channel not understood')
-
-    def getAcoAnglesForOneRF_old(self, p1, p2, p3, p4, rest_frame):
-        """
-        NOT WORKING
-        all inputs are Momentum4
-        p1, p3 from same decay
-        p2, p4 from same decay
-        calculates the angle that spans between p1, p3 plane and p2, p4 plane
-        """
-        boost = Momentum4(rest_frame[0], -rest_frame[1], -rest_frame[2], -rest_frame[3])
-        p1_boosted = p1.boost_particle(boost)
-        p2_boosted = p2.boost_particle(boost)
-        p3_boosted = p3.boost_particle(boost)
-        p4_boosted = p4.boost_particle(boost)
-        p1_b_p = np.c_[p1_boosted.p_x, p1_boosted.p_y, p1_boosted.p_z]
-        p2_b_p = np.c_[p2_boosted.p_x, p2_boosted.p_y, p2_boosted.p_z]
-        p3_b_p = np.c_[p3_boosted.p_x, p3_boosted.p_y, p3_boosted.p_z]
-        p4_b_p = np.c_[p4_boosted.p_x, p4_boosted.p_y, p4_boosted.p_z]
-        print('number of nans in p1_b_p', np.sum(np.isnan(p1_b_p)))
-        print('number of nans in p2_b_p', np.sum(np.isnan(p2_b_p)))
-        print('number of nans in p3_b_p', np.sum(np.isnan(p3_b_p)))
-        print('number of nans in p4_b_p', np.sum(np.isnan(p4_b_p)))
-        n1 = p1_b_p - np.multiply(np.einsum('ij, ij->i', p1_b_p, self.normaliseVector(p3_b_p))[:, None], self.normaliseVector(p3_b_p))
-        n2 = p2_b_p - np.multiply(np.einsum('ij, ij->i', p2_b_p, self.normaliseVector(p4_b_p))[:, None], self.normaliseVector(p4_b_p))
-        print('number of nans in n1', np.sum(np.isnan(n1)))
-        print('number of nans in n2', np.sum(np.isnan(n2)))
-        # vectorised form of
-        # n1 = p1.Vect() - p1.Vect().Dot(p3.Vect().Unit())*p3.Vect().Unit();
-        # n2 = p2.Vect() - p2.Vect().Dot(p4.Vect().Unit())*p4.Vect().Unit();
-        return np.arccos(np.einsum('ij, ij->i', n1, n2))
 
     def getAcoAnglesForOneRF(self, p1, p2, p3, p4, rest_frame, y_1_1=None, y_1_2=None):
         """
@@ -539,9 +486,9 @@ class DataLoader:
             y_rho0_1 = (pi_1.e - pi2_1.e) / (pi_1.e + pi2_1.e)
             y_rho02_1 = (pi_1.e - pi3_1.e) / (pi_1.e + pi3_1.e)
             # 2 from the second rho0
-            y_rho_2 = (pi_2.e - pi2_2.e) / (pi_2.e + pi2_2.e)
-            y_rho0_2 = (pi_2.e - pi3_2.e) / (pi_2.e + pi3_2.e)
-            return y_rho0_1, y_rho02_1, y_rho_2, y_rho0_2, y_a1_1, y_a12_1, y_a1_2, y_a12_2
+            y_rho0_2 = (pi_2.e - pi2_2.e) / (pi_2.e + pi2_2.e)
+            y_rho02_2 = (pi_2.e - pi3_2.e) / (pi_2.e + pi3_2.e)
+            return y_rho0_1, y_rho02_1, y_rho0_2, y_rho02_2, y_a1_1, y_a12_1, y_a1_2, y_a12_2
         else:
             raise ValueError('Channel not understood')
 
