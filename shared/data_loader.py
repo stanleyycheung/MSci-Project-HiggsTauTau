@@ -185,10 +185,10 @@ class DataLoader:
         if self.channel == 'rho_rho':
             df_inputs_data, boost = self.calculateRhoRhoData(df)
         elif self.channel == 'rho_a1':
-            df_inputs_data, boost = self.calculateRhoA1Data(df, len(df_ps))
+            df_inputs_data, boost = self.calculateRhoA1Data(df)
         else:
             # no need to check here as checked in cleanRecoData
-            df_inputs_data, boost = self.calculateA1A1Data(df, len(df_ps))
+            df_inputs_data, boost = self.calculateA1A1Data(df)
         df_inputs = pd.DataFrame(df_inputs_data)
         if binary:
             df_inputs['y'] = y
