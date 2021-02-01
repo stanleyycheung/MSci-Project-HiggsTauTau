@@ -116,6 +116,7 @@ class DataLoader:
     def cleanRecoData(self, df):
         """
         Selects correct channel for reco data, whilst seperating sm/ps distributions as well
+        TODO: remove 0s in events
         """
         if self.channel == 'rho_rho':
             # select only rho-rho events
@@ -131,10 +132,13 @@ class DataLoader:
             df_rho_sm = df_clean[(df_clean["rand"] < df_clean["wt_cp_sm"]/2)]
         elif self.channel == 'a1_a1':
             df_clean = df[(df['mva_dm_1'] == 10) & (df['mva_dm_2'] == 10)]
+            # removing events with 0s in them
+            df_clean = df_clean.loc[~(df_clean['pi_px_1'] == 0)]
             df_rho_ps = df_clean[(df_clean["rand"] < df_clean["wt_cp_ps"]/2)]
             df_rho_sm = df_clean[(df_clean["rand"] < df_clean["wt_cp_sm"]/2)]
         else:
             raise ValueError('Incorrect channel inputted')
+        
         return df_clean, df_rho_ps, df_rho_sm
 
     def augmentDfToBinary(self, df_ps, df_sm):

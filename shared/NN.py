@@ -282,11 +282,6 @@ class NeuralNetwork:
         model.compile(loss='binary_crossentropy', optimizer=opt, metrics=metrics)
         return model
 
-def runGridSearchOverConfigs(search_mode, start=1, end=6):
-    print(f'Grid searching with search_mode={search_mode}')
-    for i in range(start, end+1):
-        print(f'Grid searching over config {i}')
-        NN.runGridSearch(6, read=True, from_pickle=True, search_mode=search_mode)
 
 
 if __name__ == '__main__':
@@ -300,9 +295,6 @@ if __name__ == '__main__':
         # NN.runMultiple(configs, epochs=1, batch_size=10000)
         # NN.runWithNeutrino(1, load_alpha=False, termination=100, read=False, from_pickle=True, epochs=50, batch_size=1024)
         NN.runTuning(3, tuning_mode='random_kt')
-        # NN.runHPTuning(3, read=True, from_pickle=True, epochs=200, tuner_epochs=200, batch_size=8192, tuner_batch_size=8192, tuner_mode=1)
-        # NN.runGridSearch(6, read=True, from_pickle=True, search_mode=1)
-        # runGridSearchOverConfigs(1)
 
     else:  # if we are on Kristof's computer
         NN = NeuralNetwork(channel='rho_rho', binary=True, write_filename='NN_output', show_graph=False)
