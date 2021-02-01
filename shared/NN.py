@@ -12,6 +12,7 @@ import kerastuner as kt
 import config
 from tensorflow.keras.wrappers.scikit_learn import KerasClassifier
 from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
+import argparse
 seed_value = config.seed_value
 # 1. Set the `PYTHONHASHSEED` environment variable at a fixed value
 os.environ['PYTHONHASHSEED'] = str(seed_value)
@@ -305,19 +306,52 @@ class NeuralNetwork:
         model.compile(loss='binary_crossentropy', optimizer=opt, metrics=metrics)
         return model
 
+def parser():
+    # TODO: epochs, batch_size, write_filename
+    parser = argparse.ArgumentParser()
+    parser.add_argument('channel', default='rho_rho', choices=['rho_rho', 'rho_a1', 'a1_a1'], help='which channel to load to')
+    parser.add_argument('config_num', type=int, help='config num to run on')
+    parser.add_argument('-g', '--gen', action='store_true', default=False, help='if load gen data')
+    parser.add_argument('-b', '--binary', action='store_false', default=True, help='if learn binary labels')
+    parser.add_argument('-t', '--tuning', action='store_true', default=False, help='if tuning is run')
+    parser.add_argument('-r', '--read', action='store_false', default=True, help='if read NN input')
+    parser.add_argument('-p', '--from_pickle', action='store_false', default=True, help='if read .root file from pickle')
+    parser.add_argument('-a', '--addons', nargs='*', default=None, help='load addons')
+    parser.add_argument('-s', '--show_graph', action='store_true', default=False, help='if show graphs')
+    args = parser.parse_args()
+    return args
 
 if __name__ == '__main__':
     if not os.path.exists('C:\\Kristof'):  # then we are on Stanley's computer
-        NN = NeuralNetwork(channel='rho_rho', gen=True, binary=True, write_filename='NN_output', show_graph=False)
-        # NN.initialize(addons_config={'neutrino': {'load_alpha':False, 'termination':1000}}, read=False, from_pickle=True)
-        # NN.initialize(addons_config={}, read=False, from_pickle=True)
-        # NN.model = NN.seq_model(units=(300, 300, 300), batch_norm=True, dropout=0.2)
-        # NN.run(1, read=True, from_pickle=True, epochs=100, batch_size=8192) # 16384, 131072
-        NN.run(3, read=True, from_pickle=True, epochs=50, batch_size=10000)
-        # configs = [1,2,3,4,5,6]
-        # NN.runMultiple(configs, epochs=1, batch_size=10000)
-        # NN.runWithNeutrino(1, load_alpha=False, termination=100, read=False, from_pickle=True, epochs=50, batch_size=1024)
-        # NN.runTuning(3, tuning_mode='random_kt')
+        # use command line parser - comment out if not needed
+        use_parser = True
+        if use_parser:
+            args = parser()
+            channel = args.channel
+            config_num = args.config_num 
+            gen = args.gen
+            binary = args.binary
+            tuning = args.tuning
+            read = args.read
+            from_pickle = args.from_pickle
+            addons = args.addons
+            show_graph = args.show_graph
+            NN = NeuralNetwork(channel=channel, gen=gen, binary=binary, write_filename='NN_output', show_graph=show_graph)
+            if not tuning:
+                NN.run(config_num, read=read, from_pickle=from_pickle, epochs=50, batch_size=10000)
+            else:
+                NN.runTuning(config_num, tuning_mode='random_sk')
+        else:
+            NN = NeuralNetwork(channel='rho_rho', gen=True, binary=True, write_filename='NN_output', show_graph=False)
+            # NN.initialize(addons_config={'neutrino': {'load_alpha':False, 'termination':1000}}, read=False, from_pickle=True)
+            # NN.initialize(addons_config={}, read=False, from_pickle=True)
+            # NN.model = NN.seq_model(units=(300, 300, 300), batch_norm=True, dropout=0.2)
+            # NN.run(1, read=True, from_pickle=True, epochs=100, batch_size=8192) # 16384, 131072
+            NN.run(3, read=True, from_pickle=True, epochs=50, batch_size=10000)
+            # configs = [1,2,3,4,5,6]
+            # NN.runMultiple(configs, epochs=1, batch_size=10000)
+            # NN.runWithNeutrino(1, load_alpha=False, termination=100, read=False, from_pickle=True, epochs=50, batch_size=1024)
+            # NN.runTuning(3, tuning_mode='random_kt')
 
     else:  # if we are on Kristof's computer
         # NN = NeuralNetwork(channel='rho_rho', binary=True, write_filename='NN_output', show_graph=False)
