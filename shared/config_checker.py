@@ -46,6 +46,25 @@ class ConfigChecker:
                         a2 = f'{AlphaCalculator.alpha_save_dir}/alpha_2_{termination}'+binary_str+".npy"
                         result[a1] = os.path.isfile(a1)
                         result[a2] = os.path.isfile(a2)
+        self.checkResult(result)
+
+    def checkInitializeGen(self, DL, read, from_pickle):
+        result = {}
+        if read:
+            pickle_file_name = f'{DataLoader.input_df_save_dir_gen}/input_gen_{DL.channel}'
+            if self.binary:
+                pickle_file_name += '_b'
+            pickle_file_name += '.pkl'
+            result[pickle_file_name] = os.path.isfile(pickle_file_name)
+        else:
+            # check createRecoData
+            if from_pickle:
+                result[f"{DL.gen_df_path}_{DL.channel}.pkl"] = os.path.isfile(f"{DL.gen_df_path}_{DL.channel}.pkl")
+            else:
+                result[DL.gen_root_path] = os.path.isfile(DL.gen_root_path)
+        self.checkResult(result)
+
+    def checkResult(self, result):
         print('Initialize config checked')
         files_not_exist = []
         for file, loaded in result.items() :

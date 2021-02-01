@@ -37,7 +37,8 @@ class DataLoader:
         reco_root_path = "C:\\Users\\krist\\Downloads\\MVAFILE_ALLHiggs_tt_new.root"
     reco_df_path = './df_tt'
     gen_df_path = './df_tt_gen'
-    input_df_save_dir = './input_df_reco'
+    input_df_save_dir_reco = './input_df_reco'
+    input_df_save_dir_gen = './input_df_gen'
 
     def __init__(self, variables, channel):
         """
@@ -55,7 +56,18 @@ class DataLoader:
         addons_loaded = ""
         if addons:
             addons_loaded = '_'+'_'.join(addons)
-        pickle_file_name = f'{DataLoader.input_df_save_dir}/input_{self.channel}{addons_loaded}'
+        pickle_file_name = f'{DataLoader.input_df_save_dir_reco}/input_{self.channel}{addons_loaded}'
+        if binary:
+            pickle_file_name += '_b'
+        df_inputs = pd.read_pickle(pickle_file_name+'.pkl')
+        return df_inputs
+
+    def loadGenData(self, binary):
+        """
+        Loads the BR df (gen) directly from pickle - no need to read from .root, boost and rotate events
+        """
+        print('Reading gen df pkl file')
+        pickle_file_name = f'{DataLoader.input_df_save_dir_gen}/input_gen_{self.channel}'
         if binary:
             pickle_file_name += '_b'
         df_inputs = pd.read_pickle(pickle_file_name+'.pkl')
@@ -70,8 +82,18 @@ class DataLoader:
         print('Cleaning data')
         df_clean, df_ps_clean, df_sm_clean = self.cleanRecoData(df)
         print('Creating input data')
-        df_inputs = self.createTrainTestData(df_clean, df_ps_clean, df_sm_clean, binary, addons, addons_config, save=True)
+        df_inputs = self.createTrainTestData(df_clean, df_ps_clean, df_sm_clean, binary, False, addons, addons_config, save=True)
         return df_inputs
+
+    def createGenData(self, binary, from_pickle=False):
+        print(f'Loading .root info with using pickle as {from_pickle}')
+        df = self.readGenData(from_pickle=from_pickle)
+        print('Cleaning data')
+        df_clean, df_ps_clean, df_sm_clean = self.cleanGenData(df)
+        print('Creating input data')
+        df_inputs = self.createTrainTestData(df_clean, df_ps_clean, df_sm_clean, binary, True, addons=None, addons_config=None, save=True)
+        return df_inputs
+
 
     def readRecoData(self, from_pickle=False):
         """
@@ -111,7 +133,9 @@ class DataLoader:
             df_clean = df[(df['dm_1'] == 10) & (df['dm_2'] == 10)]
         else:
             raise ValueError('Incorrect channel inputted')
-        return df_clean
+        df_rho_ps = df_clean[(df_clean["rand"] < df_clean["wt_cp_ps"]/2)]
+        df_rho_sm = df_clean[(df_clean["rand"] < df_clean["wt_cp_sm"]/2)]
+        return df_clean, df_rho_ps, df_rho_sm
 
     def cleanRecoData(self, df):
         """
@@ -121,24 +145,21 @@ class DataLoader:
         if self.channel == 'rho_rho':
             # select only rho-rho events
             df_clean = df[(df['mva_dm_1'] == 1) & (df['mva_dm_2'] == 1) & (df["tau_decay_mode_1"] == 1) & (df["tau_decay_mode_2"] == 1)]
-            # select ps and sm data
-            df_rho_ps = df_clean[(df_clean["rand"] < df_clean["wt_cp_ps"]/2)]
-            df_rho_sm = df_clean[(df_clean["rand"] < df_clean["wt_cp_sm"]/2)]
             # drop unnecessary labels
             # df_clean = df_rho.drop(["mva_dm_1", "mva_dm_2", "tau_decay_mode_1", "tau_decay_mode_2", "wt_cp_sm", "wt_cp_ps", "wt_cp_mm", "rand"], axis=1).reset_index(drop=True)
         elif self.channel == 'rho_a1':
             df_clean = df[(df['mva_dm_1'] == 1) & (df['mva_dm_2'] == 10) & (df["tau_decay_mode_1"] == 1)]
-            df_rho_ps = df_clean[(df_clean["rand"] < df_clean["wt_cp_ps"]/2)]
-            df_rho_sm = df_clean[(df_clean["rand"] < df_clean["wt_cp_sm"]/2)]
         elif self.channel == 'a1_a1':
             df_clean = df[(df['mva_dm_1'] == 10) & (df['mva_dm_2'] == 10)]
             # removing events with 0s in them
-            df_clean = df_clean.loc[~(df_clean['pi_px_1'] == 0)]
-            df_rho_ps = df_clean[(df_clean["rand"] < df_clean["wt_cp_ps"]/2)]
-            df_rho_sm = df_clean[(df_clean["rand"] < df_clean["wt_cp_sm"]/2)]
+            df_clean = df_clean.loc[~(df_clean['pi_px_1'] == 0)] 
         else:
             raise ValueError('Incorrect channel inputted')
-        
+        # removing all 0s in df
+        # df.loc[(df!=0).any(1)]
+        # select ps and sm data
+        df_rho_ps = df_clean[(df_clean["rand"] < df_clean["wt_cp_ps"]/2)]
+        df_rho_sm = df_clean[(df_clean["rand"] < df_clean["wt_cp_sm"]/2)]
         return df_clean, df_rho_ps, df_rho_sm
 
     def augmentDfToBinary(self, df_ps, df_sm):
@@ -148,7 +169,7 @@ class DataLoader:
         df = pd.concat([df_sm, df_ps]).reset_index(drop=True)
         return df, y
 
-    def createTrainTestData(self, df, df_ps, df_sm, binary, addons, addons_config, save=True):
+    def createTrainTestData(self, df, df_ps, df_sm, binary, gen, addons, addons_config, save=True):
         """
         Runs to create df with all NN input data, both test and train
         """
@@ -177,7 +198,10 @@ class DataLoader:
             addons_loaded = '_'+'_'.join(addons)
         if save:
             print('Saving df to pickle')
-            pickle_file_name = f'{DataLoader.input_df_save_dir}/input_{self.channel}{addons_loaded}'
+            if not gen:
+                pickle_file_name = f'{DataLoader.input_df_save_dir_reco}/input_{self.channel}{addons_loaded}'
+            else:
+                pickle_file_name = f'{DataLoader.input_df_save_dir_gen}/input_gen_{self.channel}'
             if binary:
                 pickle_file_name += '_b'
             df_inputs.to_pickle(pickle_file_name+'.pkl')
@@ -398,6 +422,7 @@ class DataLoader:
         p3 = p3.boost_particle(boost)
         p4 = p4.boost_particle(boost)
         # Some geometrical functions
+
         def cross_product(vector3_1, vector3_2):
             return np.cross(vector3_1.T, vector3_2.T).T
 
@@ -415,16 +440,15 @@ class DataLoader:
         # Calculating phi_star
         phi_CP = np.arccos(dot_product(pi0_1_3Mom_star_perp, pi0_2_3Mom_star_perp))
         if y_1_1 is not None:
-            #The O variable
-            cross=np.cross(pi0_1_3Mom_star_perp.transpose(),pi0_2_3Mom_star_perp.transpose()).transpose()
-            bigO=dot_product(p4[1:],cross)
-            #The energy ratios
+            # The O variable
+            cross = np.cross(pi0_1_3Mom_star_perp.transpose(), pi0_2_3Mom_star_perp.transpose()).transpose()
+            bigO = dot_product(p4[1:], cross)
+            # The energy ratios
             y_T = np.array(y_1_1 * y_1_2)
-            #perform the shift w.r.t. O* sign
-            phi_CP=np.where(bigO>=0, 2*np.pi-phi_CP, phi_CP)
-            #additionnal shift that needs to be done do see differences between odd and even scenarios, with y=Energy ratios
-            phi_CP=np.where(y_T>=0, np.where(phi_CP<np.pi, phi_CP+np.pi, phi_CP-np.pi), phi_CP)
-
+            # perform the shift w.r.t. O* sign
+            phi_CP = np.where(bigO >= 0, 2*np.pi-phi_CP, phi_CP)
+            # additionnal shift that needs to be done do see differences between odd and even scenarios, with y=Energy ratios
+            phi_CP = np.where(y_T >= 0, np.where(phi_CP < np.pi, phi_CP+np.pi, phi_CP-np.pi), phi_CP)
         return phi_CP
 
     def getY(self, **kwargs):
@@ -458,7 +482,7 @@ class DataLoader:
             a1 = rho0_2 + pi3_2
             y_a1_2 = (rho0_2.e - pi3_2.e) / (rho0_2.e + pi3_2.e) - (a1.m**2 - pi3_2.m**2 + rho0_2.m**2) / (2 * a1.m**2)
             rho02_2 = pi_2 + pi3_2
-            y_a12_2 = (rho02_2.e - pi2_2.e) / (rho02_2.e + pi2_2.e) - (a1.m**2 - pi2_2.m**2 + rho02_2.m**2) / (2 * a1.m**2)           
+            y_a12_2 = (rho02_2.e - pi2_2.e) / (rho02_2.e + pi2_2.e) - (a1.m**2 - pi2_2.m**2 + rho02_2.m**2) / (2 * a1.m**2)
             return y_rho_1, y_rho0_2, y_rho02_2, y_a1_2, y_a12_2
         elif self.channel == 'a1_a1':
             # 8 ys

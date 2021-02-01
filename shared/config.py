@@ -22,8 +22,8 @@ variables_rho_a1 = [
     "mva_dm_1", "mva_dm_2",
     "tau_decay_mode_1", "tau_decay_mode_2",
     "pi_E_1", "pi_px_1", "pi_py_1", "pi_pz_1",
-    "pi_E_2", "pi_px_2", "pi_py_2", "pi_pz_2",
     "pi0_E_1", "pi0_px_1", "pi0_py_1", "pi0_pz_1",
+    "pi_E_2", "pi_px_2", "pi_py_2", "pi_pz_2",
     "pi2_px_2", "pi2_py_2", "pi2_pz_2", "pi2_E_2",
     "pi3_px_2", "pi3_py_2", "pi3_pz_2", "pi3_E_2",
     "ip_x_1", "ip_y_1", "ip_z_1",
@@ -59,6 +59,16 @@ variables_gen_rho_rho = [
     'sv_x_1', 'sv_y_1', 'sv_z_1', 'sv_x_2', 'sv_y_2', 'sv_z_2', 
     ]
 
+variables_gen_rho_rho = [
+    "wt_cp_sm", "wt_cp_ps", "wt_cp_mm", "rand",
+    "dm_1", "dm_2",
+    "pi_E_1", "pi_px_1", "pi_py_1", "pi_pz_1",
+    "pi0_E_1", "pi0_px_1", "pi0_py_1", "pi0_pz_1",
+    "pi_E_2", "pi_px_2", "pi_py_2", "pi_pz_2",
+    "pi2_px_2", "pi2_py_2", "pi2_pz_2", "pi2_E_2",
+    "pi3_px_2", "pi3_py_2", "pi3_pz_2", "pi3_E_2",
+    "sv_x_2", "sv_y_2", "sv_z_2",
+]
 
 variables_gen_a1_a1 = [
     "wt_cp_sm", "wt_cp_ps", "wt_cp_mm", "rand",
