@@ -485,6 +485,11 @@ class DataLoader:
             y_a1_2 = (rho0_2.e - pi3_2.e) / (rho0_2.e + pi3_2.e) - (a1.m**2 - pi3_2.m**2 + rho0_2.m**2) / (2 * a1.m**2)
             rho02_2 = pi_2 + pi3_2
             y_a12_2 = (rho02_2.e - pi2_2.e) / (rho02_2.e + pi2_2.e) - (a1.m**2 - pi2_2.m**2 + rho02_2.m**2) / (2 * a1.m**2)
+            print('pi_1:', (pi_1[0]**2-(pi_1[1]**2+pi_1[2]**2+pi_1[3]**2) < 0).sum())
+            print('pi0_1:', (pi0_1[0]**2-(pi0_1[1]**2+pi0_1[2]**2+pi0_1[3]**2) < 0).sum())
+            print('pi_2:', (pi_2[0]**2-(pi_2[1]**2+pi_2[2]**2+pi_2[3]**2) < 0).sum())
+            print('pi3_2:', (pi3_2[0]**2-(pi3_2[1]**2+pi3_2[2]**2+pi3_2[3]**2) < 0).sum())
+            print('pi2_2:', (pi2_2[0]**2-(pi2_2[1]**2+pi2_2[2]**2+pi2_2[3]**2) < 0).sum())
             return y_rho_1, y_rho0_2, y_rho02_2, y_a1_2, y_a12_2
         elif self.channel == 'a1_a1':
             # 8 ys
@@ -502,11 +507,11 @@ class DataLoader:
             a1_2 = rho0_2 + pi3_2
             # 4 ys from the y_a1 formula due to ambiguities in the 2 a1s
             # 2 from the first a1
-            y_a1_1 = (rho0_1.e - pi3_1.e) / (a1_1.m**2 - pi3_1.m**2 + rho0_1.m) / (2 * a1_1.m**2)
-            y_a12_1 = (rho02_1.e - pi2_1.e) / (a1_1.m**2 - pi2_1.m**2 + rho02_1.m) / (2 * a1_1.m**2)
+            y_a1_1 = (rho0_1.e - pi3_1.e) - (a1_1.m**2 - pi3_1.m**2 + rho0_1.m) / (2 * a1_1.m**2)
+            y_a12_1 = (rho02_1.e - pi2_1.e) - (a1_1.m**2 - pi2_1.m**2 + rho02_1.m) / (2 * a1_1.m**2)
             # 2 from the second a1
-            y_a1_2 = (rho0_2.e - pi3_2.e) / (a1_2.m**2 - pi3_2.m**2 + rho0_2.m) / (2 * a1_2.m**2)
-            y_a12_2 = (rho02_2.e - pi2_2.e) / (a1_2.m**2 - pi2_2.m**2 + rho02_2.m) / (2 * a1_2.m**2)
+            y_a1_2 = (rho0_2.e - pi3_2.e) - (a1_2.m**2 - pi3_2.m**2 + rho0_2.m) / (2 * a1_2.m**2)
+            y_a12_2 = (rho02_2.e - pi2_2.e) - (a1_2.m**2 - pi2_2.m**2 + rho02_2.m) / (2 * a1_2.m**2)
             # 4 ys from the y_rho0 due to ambiguities in the 2 rho0s
             # 2 from the first rho0
             y_rho0_1 = (pi_1.e - pi2_1.e) / (pi_1.e + pi2_1.e)
@@ -593,8 +598,8 @@ class DataLoader:
             "y_rho_1": y_rho_1,
             "y_rho0_2": y_rho0_2,
             "y_rho02_2": y_rho02_2,
-            "y_a1_2": y_a1_2,
-            "y_a12_2": y_a12_2,
+            "y_a1_2": np.array([x.real for x in y_a1_2]),
+            "y_a12_2": np.array([x.real for x in y_a12_2]),
             'w_a': df.wt_cp_sm,
             'w_b': df.wt_cp_ps,
             'm_rho_1': rho_1.m,
@@ -602,6 +607,24 @@ class DataLoader:
             'm_rho02_2': rho02_2.m,
             'm_a1_2': a1_2.m,
         }
+        # print('y variables')
+        # print(y_rho_1[4])
+        # print(y_rho0_2[4])
+        # print(y_rho02_2[4])
+        # print(y_a1_2[4])
+        # print(y_a12_2[4])
+        # print('shapes')
+        # print(y_rho_1.shape)
+        # print(y_rho0_2.shape)
+        # print(y_rho02_2.shape)
+        # print(y_a1_2.shape)
+        # print(y_a12_2.shape)
+        # print('num of nans x:', np.sum(np.isnan(df_inputs_data['rho0_px_2_br'])))
+        # print('num of nans y:', np.sum(np.isnan(df_inputs_data['rho0_py_2_br'])))
+        # print('num of nans z:', np.sum(np.isnan(df_inputs_data['rho0_pz_2_br'])))
+        # print('num of nans 2 x:', np.sum(np.isnan(df_inputs_data['rho02_px_2_br'])))
+        # print('num of nans 2 y:', np.sum(np.isnan(df_inputs_data['rho02_py_2_br'])))
+        # print('num of nans 2 z:', np.sum(np.isnan(df_inputs_data['rho02_pz_2_br'])))
         return df_inputs_data, boost
 
     def calculateA1A1Data(self, df):
