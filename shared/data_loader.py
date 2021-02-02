@@ -485,11 +485,11 @@ class DataLoader:
             y_a1_2 = (rho0_2.e - pi3_2.e) / (rho0_2.e + pi3_2.e) - (self.getMSquared(a1) - self.getMSquared(pi3_2) + self.getMSquared(rho0_2)) / (2 * self.getMSquared(a1))
             rho02_2 = pi_2 + pi3_2
             y_a12_2 = (rho02_2.e - pi2_2.e) / (rho02_2.e + pi2_2.e) - (self.getMSquared(a1) - self.getMSquared(pi2_2) + self.getMSquared(rho02_2)) / (2 * self.getMSquared(a1))
-            print('pi_1:', (pi_1[0]**2-(pi_1[1]**2+pi_1[2]**2+pi_1[3]**2) < 0).sum())
-            print('pi0_1:', (pi0_1[0]**2-(pi0_1[1]**2+pi0_1[2]**2+pi0_1[3]**2) < 0).sum())
-            print('pi_2:', (pi_2[0]**2-(pi_2[1]**2+pi_2[2]**2+pi_2[3]**2) < 0).sum())
-            print('pi3_2:', (pi3_2[0]**2-(pi3_2[1]**2+pi3_2[2]**2+pi3_2[3]**2) < 0).sum())
-            print('pi2_2:', (pi2_2[0]**2-(pi2_2[1]**2+pi2_2[2]**2+pi2_2[3]**2) < 0).sum())
+            # print('pi_1:', (pi_1[0]**2-(pi_1[1]**2+pi_1[2]**2+pi_1[3]**2) < 0).sum())
+            # print('pi0_1:', (pi0_1[0]**2-(pi0_1[1]**2+pi0_1[2]**2+pi0_1[3]**2) < 0).sum())
+            # print('pi_2:', (pi_2[0]**2-(pi_2[1]**2+pi_2[2]**2+pi_2[3]**2) < 0).sum())
+            # print('pi3_2:', (pi3_2[0]**2-(pi3_2[1]**2+pi3_2[2]**2+pi3_2[3]**2) < 0).sum())
+            # print('pi2_2:', (pi2_2[0]**2-(pi2_2[1]**2+pi2_2[2]**2+pi2_2[3]**2) < 0).sum())
             return y_rho_1, y_rho0_2, y_rho02_2, y_a1_2, y_a12_2
         elif self.channel == 'a1_a1':
             # 8 ys
@@ -556,8 +556,12 @@ class DataLoader:
         pi_1_boosted_rot, pi0_1_boosted_rot, pi_2_boosted_rot, pi2_2_boosted_rot, pi3_2_boosted_rot = br_vectors
         rho_1_boosted_rot = pi_1_boosted_rot + pi0_1_boosted_rot
         a1_2_boosted_rot = pi_2_boosted_rot + pi2_2_boosted_rot + pi3_2_boosted_rot
-        rho0_2_boosted_rot = pi_2_boosted + pi2_2_boosted
-        rho02_2_boosted_rot = pi_2_boosted + pi3_2_boosted
+        rho0_2_boosted_rot = pi_2_boosted_rot + pi2_2_boosted_rot
+
+
+        print(len(rho0_2_boosted_rot), len(rho0_2_boosted_rot[0]))
+        print(len(rho_1_boosted_rot),  len(rho_1_boosted_rot[0]))
+        rho02_2_boosted_rot = pi_2_boosted_rot + pi3_2_boosted_rot
         aco_angle_1, aco_angle_2, aco_angle_3, aco_angle_4 = self.getAcoAngles(pi_1=pi_1, pi0_1=pi0_1, pi_2=pi_2, pi2_2=pi2_2, pi3_2=pi3_2)
         y_rho_1, y_rho0_2, y_rho02_2, y_a1_2, y_a12_2 = self.getY(pi_1=pi_1, pi0_1=pi0_1, pi_2=pi_2, pi2_2=pi2_2, pi3_2=pi3_2)
         df_inputs_data = {
@@ -586,13 +590,13 @@ class DataLoader:
             'rho_py_1_br': rho_1_boosted_rot[:, 1],
             'rho_pz_1_br': rho_1_boosted_rot[:, 2],
             'rho0_E_2_br': rho0_2_boosted[0],
-            'rho0_px_2_br': rho0_2_boosted_rot[0, :],
-            'rho0_py_2_br': rho0_2_boosted_rot[1, :],
-            'rho0_pz_2_br': rho0_2_boosted_rot[2, :],
+            'rho0_px_2_br': rho0_2_boosted_rot[:, 0],
+            'rho0_py_2_br': rho0_2_boosted_rot[:, 1],
+            'rho0_pz_2_br': rho0_2_boosted_rot[:, 2],
             'rho02_E_2_br': rho02_2_boosted[0],
-            'rho02_px_2_br': rho02_2_boosted_rot[0, :],
-            'rho02_py_2_br': rho02_2_boosted_rot[1, :],
-            'rho02_pz_2_br': rho02_2_boosted_rot[2, :],
+            'rho02_px_2_br': rho02_2_boosted_rot[:, 0],
+            'rho02_py_2_br': rho02_2_boosted_rot[:, 1],
+            'rho02_pz_2_br': rho02_2_boosted_rot[:, 2],
             'a1_2_E_br': a1_2_boosted[0],
             'a1_2_px_br': a1_2_boosted_rot[:, 0],
             'a1_2_py_br': a1_2_boosted_rot[:, 1],
@@ -606,8 +610,8 @@ class DataLoader:
             "y_rho_1": y_rho_1,
             "y_rho0_2": y_rho0_2,
             "y_rho02_2": y_rho02_2,
-            "y_a1_2": np.array([x.real for x in y_a1_2]),
-            "y_a12_2": np.array([x.real for x in y_a12_2]),
+            "y_a1_2": y_a1_2,
+            "y_a12_2": y_a12_2,
             'w_a': df.wt_cp_sm,
             'w_b': df.wt_cp_ps,
             'm_rho_1': rho_1.m,
@@ -615,24 +619,6 @@ class DataLoader:
             'm_rho02_2': rho02_2.m,
             'm_a1_2': a1_2.m,
         }
-        # print('y variables')
-        # print(y_rho_1[4])
-        # print(y_rho0_2[4])
-        # print(y_rho02_2[4])
-        # print(y_a1_2[4])
-        # print(y_a12_2[4])
-        # print('shapes')
-        # print(y_rho_1.shape)
-        # print(y_rho0_2.shape)
-        # print(y_rho02_2.shape)
-        # print(y_a1_2.shape)
-        # print(y_a12_2.shape)
-        # print('num of nans x:', np.sum(np.isnan(df_inputs_data['rho0_px_2_br'])))
-        # print('num of nans y:', np.sum(np.isnan(df_inputs_data['rho0_py_2_br'])))
-        # print('num of nans z:', np.sum(np.isnan(df_inputs_data['rho0_pz_2_br'])))
-        # print('num of nans 2 x:', np.sum(np.isnan(df_inputs_data['rho02_px_2_br'])))
-        # print('num of nans 2 y:', np.sum(np.isnan(df_inputs_data['rho02_py_2_br'])))
-        # print('num of nans 2 z:', np.sum(np.isnan(df_inputs_data['rho02_pz_2_br'])))
         return df_inputs_data, boost
 
     def calculateA1A1Data(self, df):
