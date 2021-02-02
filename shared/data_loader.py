@@ -500,7 +500,7 @@ class DataLoader:
             a1_2 = rho0_2 + pi3_2
             # 4 ys from the y_a1 formula due to ambiguities in the 2 a1s
             # 2 from the first a1
-            y_a1_1 = (rho0_1.e - pi3_1.e) / (a1_1.m**2 - pi3_1.m**2 + rho0_1.m) / (2 * a1_1.m**2)
+            y_a1_1 = (rho0_1.e - pi3_1.e) / (rho0_1.e + pi3_1.e) - (a1_1.m**2 - pi3_1.m**2 + rho0_1.m**2) / (2 * a1_1.m**2)
             y_a12_1 = (rho02_1.e - pi2_1.e) / (a1_1.m**2 - pi2_1.m**2 + rho02_1.m) / (2 * a1_1.m**2)
             # 2 from the second a1
             y_a1_2 = (rho0_2.e - pi3_2.e) / (a1_2.m**2 - pi3_2.m**2 + rho0_2.m) / (2 * a1_2.m**2)
@@ -515,6 +515,9 @@ class DataLoader:
             return y_rho0_1, y_rho02_1, y_rho0_2, y_rho02_2, y_a1_1, y_a12_1, y_a1_2, y_a12_2
         else:
             raise ValueError('Channel not understood')
+
+    def getMSquared(self, four_vector: Momentum4):
+        return four_vector[0]**2-(four_vector[1]**2+four_vector[2]**2+four_vector[3]**2)
 
     def calculateRhoA1Data(self, df):
         pi_1 = Momentum4(df['pi_E_1'], df["pi_px_1"], df["pi_py_1"], df["pi_pz_1"])
