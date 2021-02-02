@@ -159,7 +159,7 @@ class DataLoader:
         # removing all 0s in df
         # df.loc[(df!=0).any(1)]
         # select ps and sm data
-        df_clean = df_clean.loc[~(df_clean==0).all(axis=1)]
+        df_clean = df_clean[(df_clean != 0).all(1)]
         df_rho_ps = df_clean[(df_clean["rand"] < df_clean["wt_cp_ps"]/2)]
         df_rho_sm = df_clean[(df_clean["rand"] < df_clean["wt_cp_sm"]/2)]
         return df_clean, df_rho_ps, df_rho_sm
@@ -199,13 +199,13 @@ class DataLoader:
             df_inputs = self.createAddons(addons, df, df_inputs, binary, addons_config, boost=boost)
             addons_loaded = '_'+'_'.join(addons)
         if save:
-            print('Saving df to pickle')
             if not gen:
                 pickle_file_name = f'{DataLoader.input_df_save_dir_reco}/input_{self.channel}{addons_loaded}'
             else:
                 pickle_file_name = f'{DataLoader.input_df_save_dir_gen}/input_gen_{self.channel}'
             if binary:
                 pickle_file_name += '_b'
+            print(f'Saving df to {pickle_file_name}')
             df_inputs.to_pickle(pickle_file_name+'.pkl')
         return df_inputs
 
@@ -502,11 +502,11 @@ class DataLoader:
             a1_2 = rho0_2 + pi3_2
             # 4 ys from the y_a1 formula due to ambiguities in the 2 a1s
             # 2 from the first a1
-            y_a1_1 = (rho0_1.e - pi3_1.e) / (rho0_1.e + pi3_1.e) - (a1_1.m**2 - pi3_1.m**2 + rho0_1.m**2) / (2 * a1_1.m**2)
-            y_a12_1 = (rho02_1.e - pi2_1.e) / (a1_1.m**2 - pi2_1.m**2 + rho02_1.m) / (2 * a1_1.m**2)
+            y_a1_1 = (rho0_1.e - pi3_1.e) / (rho0_1.e + pi3_1.e) - (self.getMSquared(a1_1) - self.getMSquared(pi3_1) + self.getMSquared(rho0_1)) / (2 * self.getMSquared(a1_1))
+            y_a12_1 = (rho02_1.e - pi2_1.e) / (rho02_1.e + pi2_1.e) - (self.getMSquared(a1_1) - self.getMSquared(pi2_1) + self.getMSquared(rho02_1)) / (2 * self.getMSquared(a1_1))
             # 2 from the second a1
-            y_a1_2 = (rho0_2.e - pi3_2.e) / (a1_2.m**2 - pi3_2.m**2 + rho0_2.m) / (2 * a1_2.m**2)
-            y_a12_2 = (rho02_2.e - pi2_2.e) / (a1_2.m**2 - pi2_2.m**2 + rho02_2.m) / (2 * a1_2.m**2)
+            y_a1_2 = (rho0_2.e - pi3_2.e) / (rho0_2.e + pi3_2.e) - (self.getMSquared(a1_2) - self.getMSquared(pi3_2) + self.getMSquared(rho0_2)) / (2 * self.getMSquared(a1_2))
+            y_a12_2 = (rho02_2.e - pi2_2.e) / (rho02_2.e + pi2_2.e) - (self.getMSquared(a1_2) - self.getMSquared(pi2_2) + self.getMSquared(rho02_2)) / (2 * self.getMSquared(a1_2))
             # 4 ys from the y_rho0 due to ambiguities in the 2 rho0s
             # 2 from the first rho0
             y_rho0_1 = (pi_1.e - pi2_1.e) / (pi_1.e + pi2_1.e)
