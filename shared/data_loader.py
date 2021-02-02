@@ -133,6 +133,7 @@ class DataLoader:
             df_clean = df[(df['dm_1'] == 10) & (df['dm_2'] == 10)]
         else:
             raise ValueError('Incorrect channel inputted')
+        df_clean = df_clean.loc[~(df_clean==0).all(axis=1)]
         df_rho_ps = df_clean[(df_clean["rand"] < df_clean["wt_cp_ps"]/2)]
         df_rho_sm = df_clean[(df_clean["rand"] < df_clean["wt_cp_sm"]/2)]
         return df_clean, df_rho_ps, df_rho_sm
@@ -158,6 +159,7 @@ class DataLoader:
         # removing all 0s in df
         # df.loc[(df!=0).any(1)]
         # select ps and sm data
+        df_clean = df_clean.loc[~(df_clean==0).all(axis=1)]
         df_rho_ps = df_clean[(df_clean["rand"] < df_clean["wt_cp_ps"]/2)]
         df_rho_sm = df_clean[(df_clean["rand"] < df_clean["wt_cp_sm"]/2)]
         return df_clean, df_rho_ps, df_rho_sm
