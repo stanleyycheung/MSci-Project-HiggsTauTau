@@ -133,6 +133,7 @@ class DataLoader:
             df_clean = df[(df['dm_1'] == 10) & (df['dm_2'] == 10)]
         else:
             raise ValueError('Incorrect channel inputted')
+        df_clean = df_clean.loc[~(df_clean==0).all(axis=1)]
         df_rho_ps = df_clean[(df_clean["rand"] < df_clean["wt_cp_ps"]/2)]
         df_rho_sm = df_clean[(df_clean["rand"] < df_clean["wt_cp_sm"]/2)]
         return df_clean, df_rho_ps, df_rho_sm
@@ -158,6 +159,7 @@ class DataLoader:
         # removing all 0s in df
         # df.loc[(df!=0).any(1)]
         # select ps and sm data
+        df_clean = df_clean.loc[~(df_clean==0).all(axis=1)]
         df_rho_ps = df_clean[(df_clean["rand"] < df_clean["wt_cp_ps"]/2)]
         df_rho_sm = df_clean[(df_clean["rand"] < df_clean["wt_cp_sm"]/2)]
         return df_clean, df_rho_ps, df_rho_sm
@@ -574,13 +576,13 @@ class DataLoader:
             'rho_py_1_br': rho_1_boosted_rot[:, 1],
             'rho_pz_1_br': rho_1_boosted_rot[:, 2],
             'rho0_E_2_br': rho0_2_boosted[0],
-            'rho0_px_2_br': rho0_2_boosted_rot[:, 0],
-            'rho0_py_2_br': rho0_2_boosted_rot[:, 1],
-            'rho0_pz_2_br': rho0_2_boosted_rot[:, 2],
+            'rho0_px_2_br': rho0_2_boosted_rot[0, :],
+            'rho0_py_2_br': rho0_2_boosted_rot[1, :],
+            'rho0_pz_2_br': rho0_2_boosted_rot[2, :],
             'rho02_E_2_br': rho02_2_boosted[0],
-            'rho02_px_2_br': rho02_2_boosted_rot[:, 0],
-            'rho02_py_2_br': rho02_2_boosted_rot[:, 1],
-            'rho02_pz_2_br': rho02_2_boosted_rot[:, 2],
+            'rho02_px_2_br': rho02_2_boosted_rot[0, :],
+            'rho02_py_2_br': rho02_2_boosted_rot[1, :],
+            'rho02_pz_2_br': rho02_2_boosted_rot[2, :],
             'a1_2_E_br': a1_2_boosted[0],
             'a1_2_px_br': a1_2_boosted_rot[:, 0],
             'a1_2_py_br': a1_2_boosted_rot[:, 1],

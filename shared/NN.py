@@ -355,7 +355,7 @@ if __name__ == '__main__':
 
     else:  # if we are on Kristof's computer
         # NN = NeuralNetwork(channel='rho_rho', binary=True, write_filename='NN_output', show_graph=False)
-        NN = NeuralNetwork(channel='rho_a1', binary=True, write_filename='NN_output', show_graph=False)
+        NN = NeuralNetwork(channel='rho_a1', gen=False, binary=True, write_filename='NN_output', show_graph=False)
         # NN = NeuralNetwork(channel='a1_a1', binary=True, write_filename='NN_output', show_graph=False)
         # NN.run(2, read=True, from_pickle=True, epochs=10, batch_size=10000)
         NN.run(1, read=False, from_pickle=False, epochs=10, batch_size=10000)

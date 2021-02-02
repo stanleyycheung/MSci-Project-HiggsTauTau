@@ -82,6 +82,4 @@ variables_gen_a1_a1 = [
     "pi3_px_2", "pi3_py_2", "pi3_pz_2", "pi3_E_2",
     "sv_x_1", "sv_y_1", "sv_z_1",
     "sv_x_2", "sv_y_2", "sv_z_2",
-    "nu_E_1", "nu_px_1", "nu_py_1", "nu_pz_1", 
-    "nu_E_2", "nu_px_2", "nu_py_2", "nu_pz_2",
     ]
