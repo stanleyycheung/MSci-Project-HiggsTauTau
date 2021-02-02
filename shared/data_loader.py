@@ -485,11 +485,6 @@ class DataLoader:
             y_a1_2 = (rho0_2.e - pi3_2.e) / (rho0_2.e + pi3_2.e) - (self.getMSquared(a1) - self.getMSquared(pi3_2) + self.getMSquared(rho0_2)) / (2 * self.getMSquared(a1))
             rho02_2 = pi_2 + pi3_2
             y_a12_2 = (rho02_2.e - pi2_2.e) / (rho02_2.e + pi2_2.e) - (self.getMSquared(a1) - self.getMSquared(pi2_2) + self.getMSquared(rho02_2)) / (2 * self.getMSquared(a1))
-            # print('pi_1:', (pi_1[0]**2-(pi_1[1]**2+pi_1[2]**2+pi_1[3]**2) < 0).sum())
-            # print('pi0_1:', (pi0_1[0]**2-(pi0_1[1]**2+pi0_1[2]**2+pi0_1[3]**2) < 0).sum())
-            # print('pi_2:', (pi_2[0]**2-(pi_2[1]**2+pi_2[2]**2+pi_2[3]**2) < 0).sum())
-            # print('pi3_2:', (pi3_2[0]**2-(pi3_2[1]**2+pi3_2[2]**2+pi3_2[3]**2) < 0).sum())
-            # print('pi2_2:', (pi2_2[0]**2-(pi2_2[1]**2+pi2_2[2]**2+pi2_2[3]**2) < 0).sum())
             return y_rho_1, y_rho0_2, y_rho02_2, y_a1_2, y_a12_2
         elif self.channel == 'a1_a1':
             # 8 ys
