@@ -552,10 +552,6 @@ class DataLoader:
         rho_1_boosted_rot = pi_1_boosted_rot + pi0_1_boosted_rot
         a1_2_boosted_rot = pi_2_boosted_rot + pi2_2_boosted_rot + pi3_2_boosted_rot
         rho0_2_boosted_rot = pi_2_boosted_rot + pi2_2_boosted_rot
-
-
-        print(len(rho0_2_boosted_rot), len(rho0_2_boosted_rot[0]))
-        print(len(rho_1_boosted_rot),  len(rho_1_boosted_rot[0]))
         rho02_2_boosted_rot = pi_2_boosted_rot + pi3_2_boosted_rot
         aco_angle_1, aco_angle_2, aco_angle_3, aco_angle_4 = self.getAcoAngles(pi_1=pi_1, pi0_1=pi0_1, pi_2=pi_2, pi2_2=pi2_2, pi3_2=pi3_2)
         y_rho_1, y_rho0_2, y_rho02_2, y_a1_2, y_a12_2 = self.getY(pi_1=pi_1, pi0_1=pi0_1, pi_2=pi_2, pi2_2=pi2_2, pi3_2=pi3_2)
