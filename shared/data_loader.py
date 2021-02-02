@@ -482,9 +482,9 @@ class DataLoader:
             # from y_a1 part, 2 values due to ambiguity
             rho0_2 = pi_2 + pi2_2
             a1 = rho0_2 + pi3_2
-            y_a1_2 = (rho0_2.e - pi3_2.e) / (rho0_2.e + pi3_2.e) - (a1.m**2 - pi3_2.m**2 + rho0_2.m**2) / (2 * a1.m**2)
+            y_a1_2 = (rho0_2.e - pi3_2.e) / (rho0_2.e + pi3_2.e) - (self.getMSquared(a1) - self.getMSquared(pi3_2) + self.getMSquared(rho0_2)) / (2 * self.getMSquared(a1))
             rho02_2 = pi_2 + pi3_2
-            y_a12_2 = (rho02_2.e - pi2_2.e) / (rho02_2.e + pi2_2.e) - (a1.m**2 - pi2_2.m**2 + rho02_2.m**2) / (2 * a1.m**2)
+            y_a12_2 = (rho02_2.e - pi2_2.e) / (rho02_2.e + pi2_2.e) - (self.getMSquared(a1) - self.getMSquared(pi2_2) + self.getMSquared(rho02_2)) / (2 * self.getMSquared(a1))
             print('pi_1:', (pi_1[0]**2-(pi_1[1]**2+pi_1[2]**2+pi_1[3]**2) < 0).sum())
             print('pi0_1:', (pi0_1[0]**2-(pi0_1[1]**2+pi0_1[2]**2+pi0_1[3]**2) < 0).sum())
             print('pi_2:', (pi_2[0]**2-(pi_2[1]**2+pi_2[2]**2+pi_2[3]**2) < 0).sum())
@@ -507,19 +507,16 @@ class DataLoader:
             a1_2 = rho0_2 + pi3_2
             # 4 ys from the y_a1 formula due to ambiguities in the 2 a1s
             # 2 from the first a1
-<<<<<<< HEAD
             y_a1_1 = (rho0_1.e - pi3_1.e) - (a1_1.m**2 - pi3_1.m**2 + rho0_1.m) / (2 * a1_1.m**2)
             y_a12_1 = (rho02_1.e - pi2_1.e) - (a1_1.m**2 - pi2_1.m**2 + rho02_1.m) / (2 * a1_1.m**2)
             # 2 from the second a1
             y_a1_2 = (rho0_2.e - pi3_2.e) - (a1_2.m**2 - pi3_2.m**2 + rho0_2.m) / (2 * a1_2.m**2)
             y_a12_2 = (rho02_2.e - pi2_2.e) - (a1_2.m**2 - pi2_2.m**2 + rho02_2.m) / (2 * a1_2.m**2)
-=======
             y_a1_1 = (rho0_1.e - pi3_1.e) / (rho0_1.e + pi3_1.e) - (self.getMSquared(a1_1) - self.getMSquared(pi3_1) + self.getMSquared(rho0_1)) / (2 * self.getMSquared(a1_1))
             y_a12_1 = (rho02_1.e - pi2_1.e) / (rho02_1.e + pi2_1.e) - (self.getMSquared(a1_1) - self.getMSquared(pi2_1) + self.getMSquared(rho02_1)) / (2 * self.getMSquared(a1_1))
             # 2 from the second a1
             y_a1_2 = (rho0_2.e - pi3_2.e) / (rho0_2.e + pi3_2.e) - (self.getMSquared(a1_2) - self.getMSquared(pi3_2) + self.getMSquared(rho0_2)) / (2 * self.getMSquared(a1_2))
             y_a12_2 = (rho02_2.e - pi2_2.e) / (rho02_2.e + pi2_2.e) - (self.getMSquared(a1_2) - self.getMSquared(pi2_2) + self.getMSquared(rho02_2)) / (2 * self.getMSquared(a1_2))
->>>>>>> cedf0395f521e05d26acdf5d8695ed75a4c3d8c5
             # 4 ys from the y_rho0 due to ambiguities in the 2 rho0s
             # 2 from the first rho0
             y_rho0_1 = (pi_1.e - pi2_1.e) / (pi_1.e + pi2_1.e)
