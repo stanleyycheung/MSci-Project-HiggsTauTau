@@ -245,7 +245,7 @@ class NeuralNetwork:
         addons_loaded = "None"
         if addons:
             addons_loaded = '_'+'_'.join(addons)
-        file = f'{self.write_dir}/{self.write_filename}.txt'
+        file = f'{self.write_dir}/{self.write_filename}_reco_{self.channel}.txt'    
         with open(file, 'a+') as f:
             print(f'Writing to {file}')
             time_str = datetime.datetime.now().strftime('%Y/%m/%d|%H:%M:%S')
@@ -255,7 +255,7 @@ class NeuralNetwork:
         f.close()
 
     def writeGen(self, auc, history):
-        file = f'{self.write_dir}/{self.write_filename}_gen.txt'
+        file = f'{self.write_dir}/{self.write_filename}_gen_{self.channel}.txt'
         with open(file, 'a+') as f:
             print(f'Writing to {file}')
             time_str = datetime.datetime.now().strftime('%Y/%m/%d|%H:%M:%S')
@@ -323,6 +323,8 @@ def parser():
 
 if __name__ == '__main__':
     if not os.path.exists('C:\\Kristof'):  # then we are on Stanley's computer
+        print(tf.test.is_built_with_cuda(), tf.config.list_physical_devices('GPU'))
+        exit()
         # use command line parser - comment out if not needed
         use_parser = True
         if use_parser:

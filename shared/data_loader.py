@@ -32,11 +32,17 @@ class DataLoader:
 
     reco_root_path = "./MVAFILE_AllHiggs_tt.root"
     gen_root_path = "./MVAFILE_GEN_AllHiggs_tt.root"
+    reco_df_path = './df_tt'
+    gen_df_path = './df_tt_gen'
     if os.path.exists("C:\\Users\\krist\\Downloads\\MVAFILE_ALLHiggs_tt_new.root"):
         print('Using Kristof\'s .root file')
         reco_root_path = "C:\\Users\\krist\\Downloads\\MVAFILE_ALLHiggs_tt_new.root"
-    reco_df_path = './df_tt'
-    gen_df_path = './df_tt_gen'
+    if os.path.exists('/home/hep/shc3117/'):
+        print('Running on Imperial HEP LX machines')
+        reco_root_path = "/vols/cms/shc3117/MVAFILE_AllHiggs_tt.root"
+        gen_root_path = "/vols/cms/shc3117/MVAFILE_GEN_AllHiggs_tt.root"
+        reco_df_path = '/vols/cms/shc3117/df_tt'
+        gen_df_path = '/vols/cms/shc3117/df_tt_gen'
     input_df_save_dir_reco = './input_df_reco'
     input_df_save_dir_gen = './input_df_gen'
 
