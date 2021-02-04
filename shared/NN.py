@@ -8,10 +8,7 @@ import tensorflow as tf
 import random
 import numpy as np
 import datetime
-import kerastuner as kt
 import config
-from tensorflow.keras.wrappers.scikit_learn import KerasClassifier
-from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
 import argparse
 seed_value = config.seed_value
 # 1. Set the `PYTHONHASHSEED` environment variable at a fixed value

@@ -7,6 +7,7 @@ from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
 import kerastuner as kt
 import config
 import random
+from hyperopt import fmin, tpe, hp, Trials, STATUS_OK
 seed_value = config.seed_value
 # 1. Set the `PYTHONHASHSEED` environment variable at a fixed value
 os.environ['PYTHONHASHSEED'] = str(seed_value)
@@ -60,7 +61,7 @@ class Tuner:
             grid_result = grid.fit(X_train, y_train)
             model_grid = self.gridModel(layers=grid_result.best_params_['layers'], batch_norm=grid_result.best_params_['batch_norm'], dropout=grid_result.best_params_['dropout'])
             return model_grid, grid_result, param_grid
-        else:
+        elif self.mode in {'hyperband', 'bayesian', 'random_kt'}:
             if self.mode == 'hyperband':
                 tuner = kt.Hyperband(self.hyperModel,
                                     objective=kt.Objective("auc", direction="max"),  # ['loss', 'auc', 'accuracy', 'val_loss', 'val_auc', 'val_accuracy']
@@ -96,6 +97,15 @@ class Tuner:
             print(tuner.results_summary())
             model = tuner.hypermodel.build(best_hps)
             return model, best_hps, None
+        else:
+            # in hyperopt territory
+            space_grid = {
+                'num_layers': hp.choice('num_layers', np.arange(1, 11)),
+                'batch_norm': hp.choice('batch_norm', [True, False]),
+                'dropout': hp.choice('dropout', [0, 0.1, 0.2, 0.3, 0.4, 0.5]),
+                'epochs': hp.choice('epochs', [50, 100, 200, 500]),
+                'batch_size': hp.choice('batch_size', [2**i for i in range(8, 19)]),
+            }
 
 
     def hyperModel(self, hp):
@@ -129,6 +139,10 @@ class Tuner:
         self.model.compile(loss='binary_crossentropy', optimizer='adam', metrics=metrics)
         self.model_str = "grid_model"
         return self.model
+
+    def hyperOptModel(self, params):
+        model = tf.keras.models.Sequential()
+        
 
 
 
