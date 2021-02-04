@@ -50,14 +50,22 @@ class Tuner:
         )
 
     def tune(self, X_train, y_train, X_test, y_test):
+        print(f'Tuning using {self.mode}')
         if self.mode in {'random_sk', 'grid_search_cv'}:
             model = KerasClassifier(self.gridModel, verbose=0)
             if self.mode == 'grid_search_cv':
                 param_grid = self.param_grid_1
                 grid = GridSearchCV(estimator=model, param_grid=param_grid, cv=2, verbose=2, scoring='roc_auc')
             else:
-                param_grid = self.param_grid_2
-                grid = RandomizedSearchCV(estimator=model, param_distributions=param_grid, verbose=2, scoring='roc_auc', random_state=seed_value)
+                # param_grid = self.param_grid_2
+                param_grid = dict(
+                    layers=[2, 3],
+                    batch_norm=[True, False],
+                    dropout=[None, 0.2],
+                    epochs=[100, 200, 500],
+                    batch_size= [16384, 65536, 131072]
+                )
+                grid = RandomizedSearchCV(estimator=model, param_distributions=param_grid, verbose=2, scoring='roc_auc', random_state=seed_value, n_iter=5, cv=2)
             grid_result = grid.fit(X_train, y_train)
             model_grid = self.gridModel(layers=grid_result.best_params_['layers'], batch_norm=grid_result.best_params_['batch_norm'], dropout=grid_result.best_params_['dropout'])
             return model_grid, grid_result, param_grid
