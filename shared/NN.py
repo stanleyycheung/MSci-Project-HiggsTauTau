@@ -145,9 +145,9 @@ class NeuralNetwork:
             w_b = df.w_b
             auc = self.evaluate(model, X_test, y_test, self.history, w_a, w_b)
         if not self.gen:
-            file = f'{self.write_dir}/grid_search_{self.channel}.txt'
+            file = f'{self.write_dir}/tuning_reco_{self.channel}.txt'
         else:
-            file = f'{self.write_dir}/grid_search_{self.channel}_gen.txt'
+            file = f'{self.write_dir}/tuning_gen_{self.channel}.txt'
         with open(file, 'a+') as f:
             print(f'Writing HPs to {file}')
             time_str = datetime.datetime.now().strftime('%Y/%m/%d|%H:%M:%S')
@@ -323,8 +323,8 @@ def parser():
 
 if __name__ == '__main__':
     if not os.path.exists('C:\\Kristof'):  # then we are on Stanley's computer
-        print(tf.test.is_built_with_cuda(), tf.config.list_physical_devices('GPU'))
-        exit()
+        # print(tf.test.is_built_with_cuda(), tf.config.list_physical_devices('GPU'))
+        # exit()
         # use command line parser - comment out if not needed
         use_parser = True
         if use_parser:
