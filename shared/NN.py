@@ -322,7 +322,7 @@ def parser():
     return args
 
 if __name__ == '__main__':
-    if not os.path.exists('C:\\Kristof'):  # then we are on Stanley's computer
+    if not os.path.exists('C:\\Kristof') and not os.path.exists('./testing_ssh.txt'):  # then we are on Stanley's computer
         print(tf.test.is_built_with_cuda(), tf.config.list_physical_devices('GPU'))
         exit()
         # use command line parser - comment out if not needed
