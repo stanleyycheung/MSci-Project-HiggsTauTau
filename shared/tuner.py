@@ -64,8 +64,8 @@ class Tuner:
                     batch_norm=[True, False],
                     dropout=[None, 0.1, 0.2, 0.3],
                     epochs=[50, 100, 200],
-                    batch_size=[2**i for i in range(8, 19)]
-                    # batch_size= [2**i for i in range(10, 18, 2)]
+                    # batch_size=[2**i for i in range(8, 19)],
+                    batch_size= [2**i for i in range(10, 18, 2)]
                 )
                 # layers = np.array([2,3]).tolist()
                 # batch_norms = [True, False]

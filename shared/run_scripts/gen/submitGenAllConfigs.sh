@@ -1,0 +1,1 @@
+qsub -q gpu.q -cwd -t 3 runGenA1A1Single.sh
