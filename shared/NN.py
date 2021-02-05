@@ -112,13 +112,14 @@ class NeuralNetwork:
         tuner = Tuner(mode=tuning_mode)
         if tuning_mode in {'random_sk', 'grid_search_cv'}:
             model_grid, grid_result, param_grid = tuner.tune(X_train, y_train, X_test, y_test)
-            best_num_layers = grid_result.best_params_['layers']
-            best_batch_norm = grid_result.best_params_['batch_norm']
-            best_dropout = grid_result.best_params_['dropout']
-            best_epochs = grid_result.best_params_['epochs']
-            best_batchsize = grid_result.best_params_['batch_size']
+            self.layers = grid_result.best_params_['layers']
+            self.batch_norm = grid_result.best_params_['batch_norm']
+            self.dropout = grid_result.best_params_['dropout']
+            self.epochs = grid_result.best_params_['epochs']
+            self.batchsize = grid_result.best_params_['batch_size']
+            self.model_str = 'grid_model'
             grid_best_score = grid_result.best_score_
-            self.model = self.gridModel(layers=best_num_layers, batch_norm=best_batch_norm, dropout=best_dropout)
+            self.model = tuner.gridModel(layers=self.layers, batch_norm=self.batch_norm, dropout=self.dropout)
             print("Best: %f using %s" % (grid_result.best_score_, grid_result.best_params_))
             means = grid_result.cv_results_['mean_test_score']
             stds = grid_result.cv_results_['std_test_score']
@@ -128,13 +129,14 @@ class NeuralNetwork:
         else:
             self.model, best_hps, param_grid = tuner.tune(X_train, y_train, X_test, y_test)
             # hard coded epochs, batchsize - KerasTuner doesn't search over this parameter space
-            best_epochs = 50
-            best_batchsize = 10000
-            best_num_layers = best_hps.get('num_layers')
-            best_batch_norm = best_hps.get('batch_norm')
-            best_dropout = best_hps.get('dropout')
+            self.epochs = 50
+            self.batchsize = 10000
+            self.layers = best_hps.get('num_layers')
+            self.batch_norm = best_hps.get('batch_norm')
+            self.dropout = best_hps.get('dropout')
+            self.model_str = 'hyper_model'
             grid_best_score = None
-        model = self.train(X_train, X_test, y_train, y_test, epochs=best_epochs, batch_size=best_batchsize, verbose=0)
+        model = self.train(X_train, X_test, y_train, y_test, epochs=self.epochs, batch_size=self.batchsize, verbose=0)
         if self.binary:
             auc = self.evaluateBinary(model, X_test, y_test, self.history)
         else:
@@ -148,7 +150,7 @@ class NeuralNetwork:
         with open(file, 'a+') as f:
             print(f'Writing HPs to {file}')
             time_str = datetime.datetime.now().strftime('%Y/%m/%d|%H:%M:%S')
-            message = f'{time_str},{auc},{self.config_num},{best_num_layers},{best_batch_norm},{best_dropout},{best_epochs},{best_batchsize},{tuning_mode},{grid_best_score},{param_grid}\n'
+            message = f'{time_str},{auc},{self.config_num},{self.layers},{self.batch_norm},{self.dropout},{self.epochs},{self.batchsize},{tuning_mode},{grid_best_score},{param_grid}\n'
             print(f"Message: {message}")
             f.write(message)
         # model.save(f'./saved_models/grid_search_model_{config_num}_{self.channel}_{search_mode}/')
@@ -221,7 +223,7 @@ class NeuralNetwork:
         self.model.fit(X_train, y_train,
                        batch_size=batch_size,
                        epochs=epochs,
-                       callbacks=[self.history, tensorboard_callback], #, early_stop],
+                       callbacks=[self.history, tensorboard_callback, early_stop],
                        validation_data=(X_test, y_test),
                        verbose=verbose)
         if save:
@@ -311,6 +313,7 @@ def parser():
     parser.add_argument('-g', '--gen', action='store_true', default=False, help='if load gen data')
     parser.add_argument('-b', '--binary', action='store_false', default=True, help='if learn binary labels')
     parser.add_argument('-t', '--tuning', action='store_true', default=False, help='if tuning is run')
+    parser.add_argument('-tm', '--tuning_mode', help='choose tuning mode to tune on', default='random_sk')
     parser.add_argument('-r', '--read', action='store_false', default=True, help='if read NN input')
     parser.add_argument('-p', '--from_pickle', action='store_false', default=True, help='if read .root file from pickle')
     parser.add_argument('-a', '--addons', nargs='*', default=None, help='load addons')
@@ -331,6 +334,7 @@ if __name__ == '__main__':
             gen = args.gen
             binary = args.binary
             tuning = args.tuning
+            tuning_mode = args.tuning_mode
             read = args.read
             from_pickle = args.from_pickle
             addons = args.addons
@@ -339,7 +343,7 @@ if __name__ == '__main__':
             if not tuning:
                 NN.run(config_num, read=read, from_pickle=from_pickle, epochs=50, batch_size=10000)
             else:
-                NN.runTuning(config_num, tuning_mode='random_sk')
+                NN.runTuning(config_num, tuning_mode=tuning_mode)
         else:
             NN = NeuralNetwork(channel='rho_rho', gen=True, binary=True, write_filename='NN_output', show_graph=False)
             # NN.initialize(addons_config={'neutrino': {'load_alpha':False, 'termination':1000}}, read=False, from_pickle=True)
