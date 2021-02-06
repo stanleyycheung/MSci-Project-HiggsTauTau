@@ -20,6 +20,19 @@ np.random.seed(seed_value)
 # 4. Set the `tensorflow` pseudo-random generator at a fixed value
 tf.compat.v1.set_random_seed(seed_value)
 
+config_tf = tf.compat.v1.ConfigProto()
+config_tf.gpu_options.allow_growth = True
+sess = tf.compat.v1.Session(config=config_tf)
+
+gpus = tf.config.experimental.list_physical_devices('GPU')
+if gpus:
+  try:
+    for gpu in gpus:
+      tf.config.experimental.set_memory_growth(gpu, True)
+  except RuntimeError as e:
+    print(e)
+
+print("GPU list: ", tf.config.list_physical_devices('GPU'))
 
 class NeuralNetwork:
     """
@@ -126,7 +139,7 @@ class NeuralNetwork:
             params = grid_result.cv_results_['params']
             for mean, stdev, param in zip(means, stds, params):
                 print("%f (%f) with: %r" % (mean, stdev, param))
-        else:
+        elif tuning_mode in {'hyperband', 'bayesian', 'random_kt'}:
             self.model, best_hps, param_grid = tuner.tune(X_train, y_train, X_test, y_test)
             # hard coded epochs, batchsize - KerasTuner doesn't search over this parameter space
             self.epochs = 50
@@ -136,6 +149,17 @@ class NeuralNetwork:
             self.dropout = best_hps.get('dropout')
             self.model_str = 'hyper_model'
             grid_best_score = None
+        elif tuning_mode in {'hyperopt'}:
+            self.model, best_params, param_grid = tuner.tune(X_train, y_train, X_test, y_test)
+            self.layers = int(best_params['num_layers'])
+            self.batch_norm = best_params['batch_norm']
+            self.dropout = best_params['dropout']
+            self.epochs = int(best_params['epochs'])
+            self.batchsize = int(best_params['batch_size'])
+            self.model_str = 'grid_model'
+            grid_best_score = None
+        else:
+            raise ValueError('Tuning mode not understood')
         model = self.train(X_train, X_test, y_train, y_test, epochs=self.epochs, batch_size=self.batchsize, verbose=0)
         if self.binary:
             auc = self.evaluateBinary(model, X_test, y_test, self.history)
