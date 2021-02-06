@@ -1,4 +1,5 @@
 import os
+import hyperopt
 import tensorflow as tf
 import datetime
 import numpy as np
@@ -17,6 +18,7 @@ random.seed(seed_value)
 np.random.seed(seed_value)
 # 4. Set the `tensorflow` pseudo-random generator at a fixed value
 tf.compat.v1.set_random_seed(seed_value)
+from sklearn.metrics import roc_curve, roc_auc_score
 
 class Tuner:
     def __init__(self, mode='random_sk'):
@@ -29,8 +31,8 @@ class Tuner:
         'random_kt': RandomSearch
         """
         
-        if mode not in {'random_sk', 'grid_search_cv', 'hyperband', 'bayesian', 'random_kt'}:
-            raise ValueError('Please choose valid tuner mode')
+        # if mode not in {'random_sk', 'grid_search_cv', 'hyperband', 'bayesian', 'random_kt'}:
+        #     raise ValueError('Please choose valid tuner mode')
         self.mode = mode
         # smaller parameter space - always runs in GridSearchCV
         self.param_grid_1 = dict(
@@ -55,17 +57,26 @@ class Tuner:
             model = KerasClassifier(self.gridModel, verbose=0)
             if self.mode == 'grid_search_cv':
                 param_grid = self.param_grid_1
-                grid = GridSearchCV(estimator=model, param_grid=param_grid, cv=2, verbose=2, scoring='roc_auc')
+                param_grid = dict(
+                    layers=np.arange(2, 7, 2).tolist(),
+                    # layers=np.arange(1, 11).tolist(),
+                    batch_norm=[True, False],
+                    dropout=[None, 0.2],
+                    epochs=[50],
+                    batch_size=[8192, 16384],
+                    # batch_size= [2**i for i in range(10, 19)]
+                )
+                grid = GridSearchCV(estimator=model, param_grid=param_grid, cv=2, verbose=2, scoring='roc_auc', n_jobs=2)
             else:
                 # param_grid = self.param_grid_2
                 param_grid = dict(
-                    # layers=np.arange(1, 7).tolist(),
-                    layers=np.arange(1, 11).tolist(),
+                    layers=np.arange(1, 7).tolist(),
+                    # layers=np.arange(1, 11).tolist(),
                     batch_norm=[True, False],
-                    dropout=[None, 0.1, 0.2, 0.3],
-                    epochs=[50, 100, 200],
-                    # batch_size=[2**i for i in range(8, 19)],
-                    batch_size= [2**i for i in range(10, 18, 2)]
+                    dropout=[None, 0.2, 0.4],
+                    epochs=[50, 100],
+                    batch_size=[2**i for i in range(8, 19, 2)],
+                    # batch_size= [2**i for i in range(10, 19)]
                 )
                 # layers = np.array([2,3]).tolist()
                 # batch_norms = [True, False]
@@ -80,7 +91,7 @@ class Tuner:
                 #     batch_size=batch_sizes
                 # )
 
-                grid = RandomizedSearchCV(estimator=model, param_distributions=param_grid, verbose=10, scoring='roc_auc', random_state=seed_value, n_iter=10, cv=2,)
+                grid = RandomizedSearchCV(estimator=model, param_distributions=param_grid, verbose=10, scoring='roc_auc', random_state=seed_value, n_iter=20, cv=2, n_jobs=2)
             grid_result = grid.fit(X_train, y_train)
             model_grid = self.gridModel(layers=grid_result.best_params_['layers'], batch_norm=grid_result.best_params_['batch_norm'], dropout=grid_result.best_params_['dropout'])
             return model_grid, grid_result, param_grid
@@ -120,16 +131,39 @@ class Tuner:
             print(tuner.results_summary())
             model = tuner.hypermodel.build(best_hps)
             return model, best_hps, None
-        else:
+        elif self.mode in {'hyperopt'}:
             # in hyperopt territory
-            # space_grid = {
+            # space = {
             #     'num_layers': hp.choice('num_layers', np.arange(1, 11)),
             #     'batch_norm': hp.choice('batch_norm', [True, False]),
             #     'dropout': hp.choice('dropout', [0, 0.1, 0.2, 0.3, 0.4, 0.5]),
             #     'epochs': hp.choice('epochs', [50, 100, 200, 500]),
             #     'batch_size': hp.choice('batch_size', [2**i for i in range(8, 19)]),
             # }
-            exit()
+            space_display = {
+                'num_layers': [2, 6, 1],
+                'batch_norm': [True, False],
+                'dropout': [0, 0.4, 0.1],
+                'epochs': [20, 50, 10],
+                'batch_size': [8192, 16384, 65536, 131072],
+            }
+            space = {
+                'num_layers': hp.quniform('num_layers', *space_display['num_layers']),
+                'batch_norm': hp.choice('batch_norm', space_display['batch_norm']),
+                'dropout': hp.quniform('dropout', *space_display['dropout']),
+                'epochs': hp.quniform('epochs', *space_display['epochs']),
+                'batch_size': hp.choice('batch_size', space_display['batch_size'])
+            }
+            self.X_train, self.y_train, self.X_test, self.y_test = X_train, y_train, X_test, y_test
+            trials = Trials()
+            best = fmin(self.hyperOptObj, space, algo=tpe.suggest, trials=trials, max_evals=10)
+            best_params = hyperopt.space_eval(space, best)
+            model, _ = self.hyperOptModel(best_params)
+            # print(best_params)
+            # print(trials.best_trial)
+            return model, best_params, space_display
+        else:
+            raise ValueError('Tuning mode not valid')
 
 
     def hyperModel(self, hp):
@@ -165,18 +199,40 @@ class Tuner:
         return self.model
 
     def hyperOptModel(self, params):
+        params = {
+                'num_layers': int(params['num_layers']),
+                'batch_norm': bool(params['batch_norm']),
+                'dropout': int(params['dropout']),
+                'epochs': int(params['epochs']),
+                'batch_size': int(params['batch_size']),
+            }
         model = tf.keras.models.Sequential()
         for _ in range(params['num_layers']):
             model.add(tf.keras.layers.Dense(300, kernel_initializer='normal'))
             if params['batch_norm']:
                 model.add(tf.keras.layers.BatchNormalization())
             model.add(tf.keras.layers.Activation('relu'))
-            if params['dropout'] is not None:
-                model.add(tf.keras.layers.Dropout(dropout))
+            if not params['dropout']:
+                model.add(tf.keras.layers.Dropout(params['dropout']))
         model.add(tf.keras.layers.Dense(1, activation="sigmoid"))
         metrics = ['AUC', 'accuracy']
         model.compile(loss='binary_crossentropy', optimizer='adam', metrics=metrics)
+        early_stop = tf.keras.callbacks.EarlyStopping(monitor='auc', patience=10)
+        return model, early_stop
 
+    def hyperOptObj(self, params):
+        params = {
+                'num_layers': int(params['num_layers']),
+                'batch_norm': bool(params['batch_norm']),
+                'dropout': int(params['dropout']),
+                'epochs': int(params['epochs']),
+                'batch_size': int(params['batch_size']),
+            }
+        model, early_stop = self.hyperOptModel(params)
+        model.fit(self.X_train, self.y_train, epochs=params['epochs'], batch_size=params['batch_size'], callbacks=[early_stop], verbose=0)
+        y_proba = model.predict(self.X_test)  # outputs two probabilties
+        auc = roc_auc_score(self.y_test, y_proba)
+        return {'loss': -auc, 'status': STATUS_OK}
 
 if __name__ == "__main__":
     pass
