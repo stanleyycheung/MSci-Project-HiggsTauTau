@@ -61,6 +61,8 @@ class NeuralNetwork:
             df = self.initializeGen(read=read, from_pickle=from_pickle)
         X_train, X_test, y_train, y_test = self.configure(df, config_num)
         print(f'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Training config {config_num}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+        # self.model = self.custom_model()
+        # print('training with custom model')
         if self.model is None:
             print(f'Training with DEFAULT - kristof_model')
         model = self.train(X_train, X_test, y_train, y_test, epochs=epochs, batch_size=batch_size, patience=patience)
@@ -235,7 +237,7 @@ class NeuralNetwork:
         X_train, X_test, y_train, y_test = CL.configTrainTestData(self.config_num, self.binary, mode)
         return X_train, X_test, y_train, y_test
 
-    def train(self, X_train, X_test, y_train, y_test, epochs=50, batch_size=1024, patience=10, save=False, verbose=1):
+    def train(self, X_train, X_test, y_train, y_test, epochs=50, batch_size=1024, patience=20, save=False, verbose=1):
         self.epochs = epochs
         self.batch_size = batch_size
         if self.model is None:
@@ -324,6 +326,24 @@ class NeuralNetwork:
         metrics = ['AUC', 'accuracy']
         model.add(tf.keras.layers.Dense(300, input_dim=dimensions, kernel_initializer='normal', activation='relu'))
         model.add(tf.keras.layers.Dense(300, kernel_initializer='normal', activation='relu'))
+        model.add(tf.keras.layers.Dense(1, activation="sigmoid"))
+        opt = tf.keras.optimizers.Adam(learning_rate=0.001)
+        model.compile(loss='binary_crossentropy', optimizer=opt, metrics=metrics)
+        return model
+
+    def custom_model(self):
+        from tensorflow.keras.backend import sigmoid
+        def swish(x, beta = 1):
+            return (x * sigmoid(beta * x))
+        model = tf.keras.models.Sequential()
+        from tensorflow.keras import utils
+        from tensorflow.keras.layers import Activation
+        utils.get_custom_objects().update({'swish': Activation(swish)})
+        self.layers = 2
+        self.model_str = "custom_model"
+        metrics = ['AUC', 'accuracy']
+        model.add(tf.keras.layers.Dense(300, kernel_initializer='normal', activation='swish'))
+        model.add(tf.keras.layers.Dense(300, kernel_initializer='normal', activation='swish'))
         model.add(tf.keras.layers.Dense(1, activation="sigmoid"))
         opt = tf.keras.optimizers.Adam(learning_rate=0.001)
         model.compile(loss='binary_crossentropy', optimizer=opt, metrics=metrics)

@@ -13,12 +13,12 @@ class ConfigLoader:
     - Support more maps
     """
 
-    def __init__(self, df_inputs, channel='rho_rho'):
+    def __init__(self, df_inputs, channel: str='rho_rho'):
         # error in pandas is KeyError
         self.df = df_inputs
         self.channel = channel
 
-    def chooseConfigMap(self, config_num, binary, mode=0):
+    def chooseConfigMap(self, config_num: int, binary: bool, mode: int=0):
         """
         Chooses which configurations of inputs to load to NN training
         Modes:
@@ -49,6 +49,9 @@ class ConfigLoader:
                     # 10: np.c_[pi_1_transformed, pi_2_transformed, pi0_1_transformed, pi0_2_transformed, self.df.E_miss],
                     # 11: np.c_[pi_1_transformed, pi_2_transformed, pi0_1_transformed, pi0_2_transformed, self.df.aco_angle_1, self.df.y_1_1, self.df.y_1_2, self.df.m_1**2, self.df.m_2**2, self.df.aco_angle_5, self.df.aco_angle_6, self.df.aco_angle_7, self.df.E_miss],
                 }
+                # print(config_num)
+                # print(np.c_[pi_1_transformed, pi_2_transformed, pi0_1_transformed, pi0_2_transformed, self.df.aco_angle_1_calc, self.df.y_rho_1, self.df.y_rho_2, self.df.m_rho_1**2, self.df.m_rho_2**2])
+                # print(config_map_norho[config_num])
                 return config_map_norho[config_num]
             if mode == 1:
                 """
@@ -125,7 +128,7 @@ class ConfigLoader:
         else:
             raise Exception('Channel not understood!')
 
-    def configTrainTestData(self, config_num, binary, mode=0, alt_label=False):
+    def configTrainTestData(self, config_num: int, binary: bool, mode: int=0, alt_label: str=False):
         """
         Loads specific configuration of input NN and splits inputs in test/train set
         """
@@ -149,8 +152,16 @@ class ConfigLoader:
 
 if __name__ == '__main__':
     import pandas as pd
-    df = pd.read_pickle('input_df/input_rho_rho.pkl')
-    binary = False
-    CL = ConfigLoader(df)
-    X_train, X_test, y_train, y_test = CL.configTrainTestData(3, binary)
-    print(X_train, X_test, y_train, y_test)
+    from data_loader import DataLoader
+    import config
+    addons_config = {}
+    read = True
+    from_pickle = True
+    binary = True
+    DL = DataLoader(config.variables_rho_rho, 'rho_rho')
+    df = DL.loadRecoData(binary)
+
+    CL = ConfigLoader(df, 'rho_rho')
+    X_train, X_test, y_train, y_test = CL.configTrainTestData(6, binary)
+    print(X_train.shape, X_test.shape)
+    print(y_train, y_test)

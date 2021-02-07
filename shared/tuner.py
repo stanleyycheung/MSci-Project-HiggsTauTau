@@ -143,7 +143,7 @@ class Tuner:
             space_display = {
                 'num_layers': [2, 6, 1],
                 'batch_norm': [True, False],
-                'dropout': [0, 0.4, 0.1],
+                'dropout': [0, 0.4, 0.2],
                 'epochs': [20, 50, 10],
                 'batch_size': [8192, 16384, 65536, 131072],
             }
@@ -156,6 +156,7 @@ class Tuner:
             }
             self.X_train, self.y_train, self.X_test, self.y_test = X_train, y_train, X_test, y_test
             trials = Trials()
+            # tpe, annealing, random
             best = fmin(self.hyperOptObj, space, algo=tpe.suggest, trials=trials, max_evals=10)
             best_params = hyperopt.space_eval(space, best)
             model, _ = self.hyperOptModel(best_params)
