@@ -131,7 +131,7 @@ class ConfigLoader:
         """
         try:
             # config_map = self.chooseConfigMap(binary, mode=mode)
-            X = self.chooseConfigMap(binary, config_num, mode=mode)
+            X = self.chooseConfigMap(config_num, binary, mode=mode)
         except KeyError as e:
             raise ValueError(f'Wrong config input : {e}')
         # X = config_map[config_num]

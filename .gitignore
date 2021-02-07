@@ -159,3 +159,4 @@ shared/saved_models/
 !shared/run_scripts/gen/*
 shared/run_scripts/reco/*.sh.*
 shared/run_scripts/gen/*.sh.*
+shared/core.*

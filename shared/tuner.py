@@ -66,7 +66,7 @@ class Tuner:
                     batch_size=[8192, 16384],
                     # batch_size= [2**i for i in range(10, 19)]
                 )
-                grid = GridSearchCV(estimator=model, param_grid=param_grid, cv=2, verbose=2, scoring='roc_auc', n_jobs=2)
+                grid = GridSearchCV(estimator=model, param_grid=param_grid, cv=2, verbose=2, scoring='roc_auc')
             else:
                 # param_grid = self.param_grid_2
                 param_grid = dict(
@@ -91,7 +91,7 @@ class Tuner:
                 #     batch_size=batch_sizes
                 # )
 
-                grid = RandomizedSearchCV(estimator=model, param_distributions=param_grid, verbose=10, scoring='roc_auc', random_state=seed_value, n_iter=20, cv=2, n_jobs=2)
+                grid = RandomizedSearchCV(estimator=model, param_distributions=param_grid, verbose=10, scoring='roc_auc', random_state=seed_value, n_iter=20, cv=2)
             grid_result = grid.fit(X_train, y_train)
             model_grid = self.gridModel(layers=grid_result.best_params_['layers'], batch_norm=grid_result.best_params_['batch_norm'], dropout=grid_result.best_params_['dropout'])
             return model_grid, grid_result, param_grid
