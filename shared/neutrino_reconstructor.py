@@ -154,8 +154,25 @@ class NeutrinoReconstructor:
             theta_f[idx1] = max_theta[idx1]
             return theta_f, sv_norm
         
+        if self.channel == 'rho_a1':
+            pi_1 = Momentum4(df['pi_E_1'], df['pi_px_1'], df['pi_py_1'], df['pi_pz_1'])
+            pi0_1 = Momentum4(df['pi0_E_1'], df['pi0_px_1'], df['pi0_py_1'], df['pi0_pz_1'])
+            pi_2 = Momentum4(df['pi_E_2'], df['pi_px_2'], df['pi_py_2'], df['pi_pz_2'])
+            pi2_2 = Momentum4(df['pi2_E_2'], df['pi2_px_2'], df['pi2_py_2'], df['pi2_pz_2'])
+            pi3_2 = Momentum4(df['pi3_E_2'], df['pi3_px_2'], df['pi3_py_2'], df['pi3_pz_2'])
+            
+            metx, mety = df['metx'], df['mety']
+            
+            a1_2 = pi_2 + pi3_2 + pi2_2
+            sv_2 = np.c_[df['sv_x_2'], df['sv_y_2'], df['sv_z_2']]
+            theta_f_2 = getPhiTauForOne(a1_2, sv_2)
+            sol_2, sv_norm_2 = self.ANSolution(a1_2.m, a1_2.p, theta_f_2)
+            tau_p_2_1 = sol_2[0][:,None]*sv_norm_2
+            tau_p_2_2 = sol_2[1][:,None]*sv_norm_2
+            E_tau_2_1 = np.sqrt(np.linalg.norm(tau_p_2_1, axis=1)**2 + self.m_tau**2)
+            E_tau_2_2 = np.sqrt(np.linalg.norm(tau_p_2_2, axis=1)**2 + self.m_tau**2)
         
-        if self.channel == "a1_a1":
+        elif self.channel == "a1_a1":
             pi_1 = Momentum4(df['pi_E_1'], df['pi_px_1'], df['pi_py_1'], df['pi_pz_1'])
             pi2_1 = Momentum4(df['pi2_E_1'], df['pi2_px_1'], df['pi2_py_1'], df['pi2_pz_1'])
             pi3_1 = Momentum4(df['pi3_E_1'], df['pi3_px_1'], df['pi3_py_1'], df['pi3_pz_1'])

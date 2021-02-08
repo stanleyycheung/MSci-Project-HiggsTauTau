@@ -10,6 +10,7 @@ import numpy as np
 import datetime
 import config
 import argparse
+from utils import TensorBoardExtended
 seed_value = config.seed_value
 # 1. Set the `PYTHONHASHSEED` environment variable at a fixed value
 os.environ['PYTHONHASHSEED'] = str(seed_value)
@@ -244,8 +245,24 @@ class NeuralNetwork:
             self.model = self.kristof_model(X_train.shape[1])
         self.history = tf.keras.callbacks.History()
         early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=patience)
-        log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        if not self.gen:
+            log_dir = f"logs/fit/{self.channel}_reco/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + f'_{self.config_num}_{self.layers}_{self.epochs}_{self.batch_size}_{self.model_str}'
+        else:
+            log_dir = f"logs/fit/{self.channel}_gen/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + f'_{self.epochs}'
+        if self.binary:
+            log_dir += '_b'
         tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
+        # text_dict_to_log = {
+        #     'channel': str(self.channel),
+        #     'binary' : str(self.binary),
+        #     'gen' : str(self.gen),
+        #     'config_num': str(self.config_num),
+        #     'layers' : str(self.layers),
+        #     'epochs': self.epochs,
+        #     'batch_size': self.batch_size,
+        #     'model_str': self.model_str,
+        # }
+        # tensorboard_callback = TensorBoardExtended(text_dict_to_log=text_dict_to_log, log_dir=log_dir, histogram_freq=1)
         self.model.fit(X_train, y_train,
                        batch_size=batch_size,
                        epochs=epochs,
@@ -362,13 +379,13 @@ def parser():
     parser.add_argument('-p', '--from_pickle', action='store_false', default=True, help='if read .root file from pickle')
     parser.add_argument('-a', '--addons', nargs='*', default=None, help='load addons')
     parser.add_argument('-s', '--show_graph', action='store_true', default=False, help='if show graphs')
+    parser.add_argument('-e', '--epochs', type=int, default=50, help='epochs to train on')
+    parser.add_argument('-bs', '--batch_size', type=int, default=10000, help='batch size ')
+
     args = parser.parse_args()
     return args
 
 if __name__ == '__main__':
-    if not os.path.exists('C:\\Kristof') and not os.path.exists('./testing_ssh.txt'):  # then we are on Stanley's computer
-        print(tf.test.is_built_with_cuda(), tf.config.list_physical_devices('GPU'))
-        exit()
     if not os.path.exists('C:\\Kristof'):  # then we are on Stanley's computer
         # print(tf.test.is_built_with_cuda(), tf.config.list_physical_devices('GPU'))
         # exit()
@@ -386,9 +403,11 @@ if __name__ == '__main__':
             from_pickle = args.from_pickle
             addons = args.addons
             show_graph = args.show_graph
+            epochs = args.epochs
+            batch_size = args.batch_size
             NN = NeuralNetwork(channel=channel, gen=gen, binary=binary, write_filename='NN_output', show_graph=show_graph)
             if not tuning:
-                NN.run(config_num, read=read, from_pickle=from_pickle, epochs=50, batch_size=10000)
+                NN.run(config_num, read=read, from_pickle=from_pickle, epochs=epochs, batch_size=batch_size)
             else:
                 NN.runTuning(config_num, tuning_mode=tuning_mode)
         else:
