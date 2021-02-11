@@ -7,3 +7,6 @@ uproot==3.12.0
 tensorflow
 matplotlib
 scikit_learn
+hyperopt
+tensorboard_plugin_profile
+xgboost
