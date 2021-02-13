@@ -48,8 +48,8 @@ class XGBoost(NN.NeuralNetwork):
         self.binary = binary
         self.write_filename = write_filename
         self.gen = gen
-        self.save_dir = 'NN_output'
-        self.write_dir = 'NN_output'
+        self.save_dir = 'XGB_output'
+        self.write_dir = 'XGB_output'
         self.model = None
 
     # def initializer(self, ...): This is inherited from NN
@@ -60,6 +60,7 @@ class XGBoost(NN.NeuralNetwork):
         arguments of train function
         print(f'Training with DEFAULT - xgboost model')
         self.history maybe I should remove that?"""
+        print('checkpoint 1')
         if not self.gen:
             df = self.initialize(self.addons_config_reco, read=read, from_hdf=from_hdf)
         else:
@@ -75,6 +76,7 @@ class XGBoost(NN.NeuralNetwork):
             w_a = df.w_a
             w_b = df.w_b
             auc = self.evaluate(model, X_test, y_test, self.history, w_a, w_b)
+        print('Writing...')
         self.write(self.gen, auc, self.history, self.addons_config_reco)
 
     def train(self, X_train, X_test, y_train, y_test, stopping_rounds=200, save=False, verbose=1):
@@ -144,7 +146,9 @@ if __name__ == '__main__':
         load_alpha = args.load_alpha
         termination = args.termination
 
+        print('checkpoint 0')
         XGB = XGBoost(channel=channel, gen=gen, binary=binary, write_filename='XGB_output', show_graph=show_graph)
-        XGB.run
+        print('checkpoint 0.5')
+        XGB.run(config_num, read=read, from_hdf=from_hdf)
     else:
         pass
