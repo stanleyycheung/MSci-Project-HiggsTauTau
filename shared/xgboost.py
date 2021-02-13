@@ -11,6 +11,7 @@ import datetime
 import config
 import argparse
 from utils import TensorBoardExtended
+import NN
 seed_value = config.seed_value
 # 1. Set the `PYTHONHASHSEED` environment variable at a fixed value
 os.environ['PYTHONHASHSEED'] = str(seed_value)
@@ -35,13 +36,48 @@ if gpus:
 print("GPU list: ", tf.config.list_physical_devices('GPU'))
 
 
-class XGBoost:
+class XGBoost(NN.NeuralNetwork):
 
 
-    def __init__(self):
-        pass
+    def __init__(self, channel, gen, binary=True, write_filename='NN_output', show_graph=False):
+        print(f'Loaded in {channel}, binary={binary}, gen={gen}')
+        self.addons_config_reco = {'neutrino': {'load_alpha':False, 'termination':1000}, 'met': {}, 'ip': {}, 'sv': {}}
+        self.addons_config_gen = {'neutrino': {'load_alpha':False, 'termination':1000}, 'sv': {}}
+        self.show_graph = show_graph
+        self.channel = channel
+        self.binary = binary
+        self.write_filename = write_filename
+        self.gen = gen
+        self.save_dir = 'NN_output'
+        self.write_dir = 'NN_output'
+        self.model = None
 
-    def train(self, X_train, X_test, y_train, y_test, stopping_rounds=200 save=False, verbose=1):
+    # def initializer(self, ...): This is inherited from NN
+
+    def run(self, config_num, read=True, from_hdf=True,):
+        """almost copy pasted from NN.py. The only changes are:
+        arguments of run function
+        arguments of train function
+        print(f'Training with DEFAULT - xgboost model')
+        self.history maybe I should remove that?"""
+        if not self.gen:
+            df = self.initialize(self.addons_config_reco, read=read, from_hdf=from_hdf)
+        else:
+            df = self.initialize(self.addons_config_gen, read=read, from_hdf=from_hdf)
+        X_train, X_test, y_train, y_test = self.configure(df, config_num)
+        print(f'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Training config {config_num}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+        if self.model is None:
+            print(f'Training with DEFAULT - xgboost model')
+        model = self.train(X_train, X_test, y_train, y_test,)
+        if self.binary:
+            auc = self.evaluateBinary(model, X_test, y_test, self.history)
+        else:
+            w_a = df.w_a
+            w_b = df.w_b
+            auc = self.evaluate(model, X_test, y_test, self.history, w_a, w_b)
+        self.write(self.gen, auc, self.history, self.addons_config_reco)
+
+    def train(self, X_train, X_test, y_train, y_test, stopping_rounds=200, save=False, verbose=1):
         if self.model is None:
             self.model = self.model()
         self.model.fit(X_train, y_train,
@@ -107,5 +143,8 @@ if __name__ == '__main__':
         batch_size = args.batch_size
         load_alpha = args.load_alpha
         termination = args.termination
+
+        XGB = XGBoost(channel=channel, gen=gen, binary=binary, write_filename='XGB_output', show_graph=show_graph)
+        XGB.run
     else:
         pass
