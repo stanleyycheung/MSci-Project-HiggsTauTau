@@ -12,6 +12,7 @@ import config
 import argparse
 from utils import TensorBoardExtended
 import NN
+import xgboost as xgb
 seed_value = config.seed_value
 # 1. Set the `PYTHONHASHSEED` environment variable at a fixed value
 os.environ['PYTHONHASHSEED'] = str(seed_value)
@@ -81,9 +82,9 @@ class XGBoost(NN.NeuralNetwork):
 
     def train(self, X_train, X_test, y_train, y_test, stopping_rounds=200, save=False, verbose=1):
         if self.model is None:
-            self.model = self.model()
+            self.model = self.get_model()
         self.model.fit(X_train, y_train,
-            early_stopping_rounds=stoppping_rounds, # stops the training if doesn't improve after 200 iterations
+            early_stopping_rounds=stopping_rounds, # stops the training if doesn't improve after 200 iterations
             eval_set=[(X_train, y_train), (X_test, y_test)],
             eval_metric = "auc", # can use others
             verbose=verbose)
@@ -91,7 +92,7 @@ class XGBoost(NN.NeuralNetwork):
             self.model.save_model(f'./saved_models/{self.save_dir}/xgboost.json')
         return self.model
 
-    def model(self):
+    def get_model(self):
         xgb_params = {
             "objective": "binary:logistic",
             "max_depth": 5,
