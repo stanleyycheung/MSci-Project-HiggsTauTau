@@ -35,7 +35,8 @@ class Evaluator:
             auc, y_label_roc, y_pred_roc = self.customROCScore(y_pred_test, w_a_test, w_b_test)
             fpr, tpr, _ = roc_curve(y_label_roc, y_pred_roc, sample_weight=np.r_[w_a_test, w_b_test])
         self.plotROCCurve(fpr, tpr, auc)
-        self.plotLoss(history)
+        if history is not None:
+            self.plotLoss(history)
         if show:
             plt.show()
         return auc

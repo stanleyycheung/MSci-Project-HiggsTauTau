@@ -70,17 +70,50 @@ class XGBoost(NN.NeuralNetwork):
         print(f'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Training config {config_num}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
         if self.model is None:
             print(f'Training with DEFAULT - xgboost model')
-        model = self.train(X_train, X_test, y_train, y_test,)
+        model = self.train(X_train, X_test, y_train, y_test)
         if self.binary:
-            auc = self.evaluateBinary(model, X_test, y_test, self.history)
+            auc = self.evaluateBinary(model, X_test, y_test, None)
         else:
             w_a = df.w_a
             w_b = df.w_b
-            auc = self.evaluate(model, X_test, y_test, self.history, w_a, w_b)
+            auc = self.evaluate(model, X_test, y_test, None, w_a, w_b)
         print('Writing...')
-        self.write(self.gen, auc, self.history, self.addons_config_reco)
+        self.write(self.gen, auc, None, self.addons_config_reco)
 
-    def train(self, X_train, X_test, y_train, y_test, stopping_rounds=200, save=False, verbose=1):
+    def createConfigStr(self):
+        """almost copy pasted. Differences:
+        erased some variables from config_str"""
+        self.model_str = 'XGBoost'
+        if self.binary:
+            config_str = f'config{self.config_num}_{self.model_str}_binary'
+        else:
+            config_str = f'config{self.config_num}_{self.model_str}'
+        return config_str
+
+    def write(self, gen, auc, history, addons_config):
+        """almost copy pasted. Differences:
+        actual_epochs deleted
+        history is None, but it's not used
+        f.write(...) erased epochs, batch size, etc."""
+        if not addons_config:
+            addons = []
+        else:
+            addons = addons_config.keys()
+        addons_loaded = "None"
+        if addons:
+            addons_loaded = '_'+'_'.join(addons)
+        if not self.gen:
+            file = f'{self.write_dir}/{self.write_filename}_reco_{self.channel}.txt'
+        else:
+            file = f'{self.write_dir}/{self.write_filename}_gen_{self.channel}.txt'    
+        with open(file, 'a+') as f:
+            print(f'Writing to {file}')
+            time_str = datetime.datetime.now().strftime('%Y/%m/%d|%H:%M:%S')
+            f.write(f'{time_str},{auc},{self.config_num},{self.binary},{self.model_str},{addons_loaded}\n')
+        print('Finish writing')
+        f.close()
+
+    def train(self, X_train, X_test, y_train, y_test, stopping_rounds=100, save=False, verbose=1):
         if self.model is None:
             self.model = self.get_model()
         self.model.fit(X_train, y_train,
@@ -98,7 +131,7 @@ class XGBoost(NN.NeuralNetwork):
             "max_depth": 5,
             "learning_rate": 0.02,
             "silent": 1,
-            "n_estimators": 1000,
+            "n_estimators": 100,
             "subsample": 0.9,
             "seed": 123451,
         }
