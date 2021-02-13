@@ -41,6 +41,30 @@ class XGBoost:
     def __init__(self):
         pass
 
+    def train(self, X_train, X_test, y_train, y_test, stopping_rounds=200 save=False, verbose=1):
+        if self.model is None:
+            self.model = self.model()
+        self.model.fit(X_train, y_train,
+            early_stopping_rounds=stoppping_rounds, # stops the training if doesn't improve after 200 iterations
+            eval_set=[(X_train, y_train), (X_test, y_test)],
+            eval_metric = "auc", # can use others
+            verbose=verbose)
+        if save:
+            self.model.save_model(f'./saved_models/{self.save_dir}/xgboost.json')
+        return self.model
+
+    def model(self):
+        xgb_params = {
+            "objective": "binary:logistic",
+            "max_depth": 5,
+            "learning_rate": 0.02,
+            "silent": 1,
+            "n_estimators": 1000,
+            "subsample": 0.9,
+            "seed": 123451,
+        }
+        xgb_clf = xgb.XGBClassifier(**xgb_params)
+        return xgb_clf
 
 
 def parser():
