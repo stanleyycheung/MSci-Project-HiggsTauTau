@@ -400,8 +400,6 @@ if __name__ == '__main__':
             batch_size = args.batch_size
             load_alpha = args.load_alpha
             termination = args.termination
-            print(config_num)
-            exit()
             NN = NeuralNetwork(channel=channel, gen=gen, binary=binary, write_filename='NN_output', show_graph=show_graph)
             if not gen:
                 NN.addons_config_reco['neutrino']['load_alpha'] = load_alpha
