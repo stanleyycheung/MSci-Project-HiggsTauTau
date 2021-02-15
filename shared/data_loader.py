@@ -142,6 +142,7 @@ class DataLoader:
             df_clean = df[(df['dm_1'] == 10) & (df['dm_2'] == 10)]
         else:
             raise ValueError('Incorrect channel inputted')
+        df_clean = df_clean.dropna()
         df_clean = df_clean.loc[~(df_clean == 0).all(axis=1)]
         df_rho_ps = df_clean[(df_clean["rand"] < df_clean["wt_cp_ps"]/2)]
         df_rho_sm = df_clean[(df_clean["rand"] < df_clean["wt_cp_sm"]/2)]
@@ -168,7 +169,7 @@ class DataLoader:
         # removing all 0s in df
         # df.loc[(df!=0).any(1)]
         # select ps and sm data
-        df_clean.dropna(inplace=True)
+        df_clean = df_clean.dropna()
         df_clean = df_clean[(df_clean != 0).all(1)]
         df_rho_ps = df_clean[(df_clean["rand"] < df_clean["wt_cp_ps"]/2)]
         df_rho_sm = df_clean[(df_clean["rand"] < df_clean["wt_cp_sm"]/2)]
@@ -752,7 +753,7 @@ class DataLoader:
             'rho02_px_2_br': rho02_2_boosted_rot[:, 0],
             'rho02_py_2_br': rho02_2_boosted_rot[:, 1],
             'rho02_pz_2_br': rho02_2_boosted_rot[:, 2],
-            'a1_1_E_br': a1_1_boosted[0],
+            'a1_E_1_br': a1_1_boosted[0],
             'a1_px_1_br': a1_1_boosted_rot[:, 0],
             'a1_py_1_br': a1_1_boosted_rot[:, 1],
             'a1_pz_1_br': a1_1_boosted_rot[:, 2],
