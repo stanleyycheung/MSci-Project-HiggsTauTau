@@ -18,6 +18,7 @@ MSci Project with Kristof Galambos
   - [ ] Extend paramterspace (Thursday)
 - [ ] Integrate additional information - Stanley (Thursday/ Friday)
   - [ ] Neutrino information
+    - [ ] Fix imputer KNN and Linear modes
   - [ ] Phi tau
   - [x] Double check if aco angles are redundant
   - [x] PV/IP/SV

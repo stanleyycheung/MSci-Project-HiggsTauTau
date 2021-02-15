@@ -852,6 +852,7 @@ class DataLoader:
                 print('Addon neutrino loaded')
                 load_alpha = addons_config['neutrino']['load_alpha']
                 termination = addons_config['neutrino']['termination']
+                imputer_mode = addons_config['neutrino']['imputer_mode']
                 # alpha_1, alpha_2, E_nu_1, E_nu_2, p_t_nu_1, p_t_nu_2, p_z_nu_1, p_z_nu_2 = self.addonNeutrinos(df, df_inputs, binary, load_alpha, termination=termination)
                 # df_inputs['alpha_1'] = alpha_1
                 # df_inputs['alpha_2'] = alpha_2
@@ -861,7 +862,7 @@ class DataLoader:
                 # df_inputs['p_t_nu_2'] = p_t_nu_2
                 # df_inputs['p_z_nu_1'] = p_z_nu_1
                 # df_inputs['p_z_nu_2'] = p_z_nu_2
-                df_inputs = self.addonNeutrinos(df, df_inputs, binary, load_alpha, termination=termination)
+                df_inputs = self.addonNeutrinos(df, df_inputs, binary, load_alpha, imputer_mode, termination=termination)
             if addon == 'ip' and boost is not None:
                 print('Impact paramter loaded')
                 ip_1_boosted_rot, ip_2_boosted_rot = self.addonIP(df, boost)
@@ -902,7 +903,7 @@ class DataLoader:
         mety_b = met_y.boost_particle(boost)[0]
         return metx_b, mety_b
 
-    def addonNeutrinos(self, df, df_inputs, binary, load_alpha, termination=100):
+    def addonNeutrinos(self, df, df_inputs, binary, load_alpha, imputer_mode, termination=100):
         """
         Addon configuration for neutrino information
         TODO:
@@ -915,9 +916,8 @@ class DataLoader:
             df_inputs = NR.runAlphaReconstructor(df.reset_index(drop=True), df_inputs.reset_index(drop=True), load_alpha=load_alpha, termination=termination)
         else:
             df_inputs = NR.runGenAlphaReconstructor(df.reset_index(drop=True), df_inputs.reset_index(drop=True), load_alpha=load_alpha)
-
-        # return NR.dealWithMissingData(df_inputs, mode=2)
-        return df_inputs
+        df_inputs_imputed = NR.dealWithMissingData(df_inputs, imputer_mode)
+        return df_inputs_imputed
 
     def addonIP(self, df, boost):
         N = len(df.ip_x_1)
