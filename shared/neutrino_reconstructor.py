@@ -92,6 +92,7 @@ class NeutrinoReconstructor:
         'linear' - Linear interpolation - BayesianRidge algorithm
         'knn' - KNN algorithm
         'mean' - Replace with mean
+        'remove' - Remove events
         """
         print('Imputing missing data')
         # change to return df_br and modify in place
@@ -105,7 +106,7 @@ class NeutrinoReconstructor:
             # print(df_br.head())
             # default is BayesianRidge
             # itImp = IterativeImputer(missing_values=alpha_flag, random_state=0, verbose=1)
-            itImp = IterativeImputer(missing_values=NeutrinoReconstructor.DEFAULT_VALUE, random_state=0, verbose=1)
+            itImp = IterativeImputer(missing_values=NeutrinoReconstructor.DEFAULT_VALUE, random_state=0, verbose=2, max_iter=10, n_nearest_features=10)
             df_br_imputed = pd.DataFrame(itImp.fit_transform(df_br), columns=df_br.columns)
             return df_br_imputed
             # return self.calculateFromAlpha(df_br_imputed, df_br_imputed['alpha_1'], df_br_imputed['alpha_2'])
@@ -121,6 +122,10 @@ class NeutrinoReconstructor:
             simpImp = SimpleImputer(missing_values=NeutrinoReconstructor.DEFAULT_VALUE, strategy='mean')
             df_br_imputed = pd.DataFrame(simpImp.fit_transform(df_br), columns=df_br.columns)
             return df_br_imputed
+        elif mode == 'remove':
+            df_br_red = df_br[df_br.alpha_1 != NeutrinoReconstructor.DEFAULT_VALUE]
+            print(f'Reduced events from {df_br.shape[0]} to {df_br_red.shape[0]}')
+            return df_br_red
         else:
             raise ValueError('Missing data mode not understood')
 
@@ -410,7 +415,7 @@ if __name__ == '__main__':
         df_br = DL.loadGenData(True, addons).reset_index(drop=True)
     df_b, _ = DL.augmentDfToBinary(df_ps, df_sm)
     # NR.runAlphaReconstructor(df_b.reset_index(drop=True), df_br, load_alpha=False, termination=100)
-    NR.dealWithMissingData(df_br, mode=2)
+    NR.dealWithMissingData(df_br, mode='mean')
 
     # NR = NeutrinoReconstructor(binary=False, channel='rho_rho')
     # # NR.testRunAlphaReconstructor()

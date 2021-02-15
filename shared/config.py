@@ -23,59 +23,46 @@ ip = [
 sv_1 = ['sv_x_1', 'sv_y_1', 'sv_z_1']
 sv_2 = ['sv_x_2', 'sv_y_2', 'sv_z_2']
 # variables are now fully loaded
-variables_rho_rho = [
-    "aco_angle_1", "aco_angle_5", "aco_angle_6", "aco_angle_7",
+particles_rho_rho = [
     "pi_E_1", "pi_px_1", "pi_py_1", "pi_pz_1",
     "pi_E_2", "pi_px_2", "pi_py_2", "pi_pz_2",
     "pi0_E_1", "pi0_px_1", "pi0_py_1", "pi0_pz_1",
     "pi0_E_2", "pi0_px_2", "pi0_py_2", "pi0_pz_2",
+]
+variables_rho_rho = [
+    "aco_angle_1", "aco_angle_5", "aco_angle_6", "aco_angle_7",
     "y_1_1", "y_1_2",
     # "gen_nu_p_1", "gen_nu_phi_1", "gen_nu_eta_1",  # leading neutrino, gen level
     # "gen_nu_p_2", "gen_nu_phi_2", "gen_nu_eta_2"  # subleading neutrino, gen level
-] + selectors_reco + met_reco + ip
+] + selectors_reco + met_reco + ip + particles_rho_rho
+particles_rho_a1 = [
+    "pi_E_1", "pi_px_1", "pi_py_1", "pi_pz_1",
+    "pi0_E_1", "pi0_px_1", "pi0_py_1", "pi0_pz_1",
+    "pi_E_2", "pi_px_2", "pi_py_2", "pi_pz_2",
+    "pi2_px_2", "pi2_py_2", "pi2_pz_2", "pi2_E_2",
+    "pi3_px_2", "pi3_py_2", "pi3_pz_2", "pi3_E_2",
+]
 variables_rho_a1 = [
     "aco_angle_1", "aco_angle_2", "aco_angle_3", "aco_angle_4", 
+    "y_1_1", "y_1_2", "y_2_2", "y_3_2", "y_4_2",
+] + selectors_reco + met_reco + ip + sv_2 + particles_rho_a1
+particles_a1_a1 = [
     "pi_E_1", "pi_px_1", "pi_py_1", "pi_pz_1",
-    "pi0_E_1", "pi0_px_1", "pi0_py_1", "pi0_pz_1",
     "pi_E_2", "pi_px_2", "pi_py_2", "pi_pz_2",
+    "pi2_E_1", "pi2_px_1", "pi2_py_1", "pi2_pz_1",
+    "pi3_E_1", "pi3_px_1", "pi3_py_1", "pi3_pz_1",
     "pi2_px_2", "pi2_py_2", "pi2_pz_2", "pi2_E_2",
     "pi3_px_2", "pi3_py_2", "pi3_pz_2", "pi3_E_2",
-    "y_1_1", "y_1_2", "y_2_2", "y_3_2", "y_4_2",
-] + selectors_reco + met_reco + ip + sv_2
+]
 variables_a1_a1 = [
     "aco_angle_1", "aco_angle_2", "aco_angle_3", "aco_angle_4", 
-    "pi_E_1", "pi_px_1", "pi_py_1", "pi_pz_1",
-    "pi_E_2", "pi_px_2", "pi_py_2", "pi_pz_2",
-    "pi2_E_1", "pi2_px_1", "pi2_py_1", "pi2_pz_1",
-    "pi3_E_1", "pi3_px_1", "pi3_py_1", "pi3_pz_1",
-    "pi2_px_2", "pi2_py_2", "pi2_pz_2", "pi2_E_2",
-    "pi3_px_2", "pi3_py_2", "pi3_pz_2", "pi3_E_2",
     "y_1_1", "y_1_2", "y_2_2", "y_3_2", "y_4_2",
     'pv_angle',
-] + selectors_reco + met_reco + ip + sv_1 + sv_2
+] + selectors_reco + met_reco + ip + sv_1 + sv_2 + particle_a1_a1
 
 
-variables_gen_rho_rho = [
-    "pi_E_1", "pi_px_1", "pi_py_1", "pi_pz_1",  # charged pion 1
-    "pi_E_2", "pi_px_2", "pi_py_2", "pi_pz_2",  # charged pion 2
-    "pi0_E_1", "pi0_px_1", "pi0_py_1", "pi0_pz_1",  # neutral pion 1
-    "pi0_E_2", "pi0_px_2", "pi0_py_2", "pi0_pz_2",  # neutral pion 2,
-] + selectors_gen + met_gen + sv_1 + sv_2
+variables_gen_rho_rho = particles_rho_rho + selectors_gen + met_gen + sv_1 + sv_2
 
-variables_gen_rho_a1 = [
-    "pi_E_1", "pi_px_1", "pi_py_1", "pi_pz_1",
-    "pi0_E_1", "pi0_px_1", "pi0_py_1", "pi0_pz_1",
-    "pi_E_2", "pi_px_2", "pi_py_2", "pi_pz_2",
-    "pi2_px_2", "pi2_py_2", "pi2_pz_2", "pi2_E_2",
-    "pi3_px_2", "pi3_py_2", "pi3_pz_2", "pi3_E_2",
-] + selectors_gen + met_gen + sv_1 + sv_2
+variables_gen_rho_a1 = particles_rho_a1 + selectors_gen + met_gen + sv_1 + sv_2
 
-
-variables_gen_a1_a1 = [
-    "pi_E_1", "pi_px_1", "pi_py_1", "pi_pz_1",
-    "pi2_E_1", "pi2_px_1", "pi2_py_1", "pi2_pz_1",
-    "pi3_E_1", "pi3_px_1", "pi3_py_1", "pi3_pz_1",
-    "pi_E_2", "pi_px_2", "pi_py_2", "pi_pz_2",
-    "pi2_px_2", "pi2_py_2", "pi2_pz_2", "pi2_E_2",
-    "pi3_px_2", "pi3_py_2", "pi3_pz_2", "pi3_E_2",
-] + selectors_gen + met_gen + sv_1 + sv_2
+variables_gen_a1_a1 = particles_a1_a1 + selectors_gen + met_gen + sv_1 + sv_2
