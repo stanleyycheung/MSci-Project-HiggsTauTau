@@ -916,8 +916,9 @@ class DataLoader:
             df_inputs = NR.runAlphaReconstructor(df.reset_index(drop=True), df_inputs.reset_index(drop=True), load_alpha=load_alpha, termination=termination)
         else:
             df_inputs = NR.runGenAlphaReconstructor(df.reset_index(drop=True), df_inputs.reset_index(drop=True), load_alpha=load_alpha)
-        df_inputs_imputed = NR.dealWithMissingData(df_inputs, imputer_mode)
-        return df_inputs_imputed
+        # df_inputs_imputed = NR.dealWithMissingData(df_inputs, imputer_mode)
+        # return df_inputs_imputed
+        return df_inputs
 
     def addonIP(self, df, boost):
         N = len(df.ip_x_1)
