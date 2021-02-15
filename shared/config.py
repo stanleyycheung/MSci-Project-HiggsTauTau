@@ -58,7 +58,7 @@ variables_a1_a1 = [
     "aco_angle_1", "aco_angle_2", "aco_angle_3", "aco_angle_4", 
     "y_1_1", "y_1_2", "y_2_2", "y_3_2", "y_4_2",
     'pv_angle',
-] + selectors_reco + met_reco + ip + sv_1 + sv_2 + particle_a1_a1
+] + selectors_reco + met_reco + ip + sv_1 + sv_2 + particles_a1_a1
 
 
 variables_gen_rho_rho = particles_rho_rho + selectors_gen + met_gen + sv_1 + sv_2
