@@ -7,6 +7,9 @@ from pylorentz import Momentum4, Position4
 from alpha_calculator import AlphaCalculator
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import SimpleImputer, IterativeImputer, KNNImputer
+from sklearn.ensemble import ExtraTreesRegressor
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.neighbors import KNeighborsRegressor
 import config
 
 
@@ -84,12 +87,15 @@ class NeutrinoReconstructor:
         rotation_matrix = np.tile(np.eye(3), (len(vec1), 1, 1)) + kmat + np.linalg.matrix_power(kmat, 2)*((1 - c) / (s ** 2))[:, None][:, np.newaxis]
         return rotation_matrix
 
-    def dealWithMissingData(self, df_br, mode, **kwargs):
+    def dealWithMissingData(self, df_br, mode):
         """
         Deals with rejected events according to mode
         Mode:
         'flag - Simple flag
-        'linear' - Linear interpolation - BayesianRidge algorithm
+        'bayesian_ridge' - BayesianRidge algorithm
+        'decision_tree' - DecisionTree algorithm
+        'extra_trees' - similar to missForest in R
+        'kn_reg' - similar to 'knn'
         'knn' - KNN algorithm
         'mean' - Replace with mean
         'remove' - Remove events
@@ -100,34 +106,54 @@ class NeutrinoReconstructor:
         if mode == 'flag':
             df_br['flag'] = np.where(df_br['alpha_1']==NeutrinoReconstructor.DEFAULT_VALUE, 0, 1)
             return df_br
-        elif mode == 'linear':
-            # df_br['alpha_1'].replace(NeutrinoReconstructor.DEFAULT_VALUE, alpha_flag, inplace=True)
-            # df_br['alpha_2'].replace(NeutrinoReconstructor.DEFAULT_VALUE, alpha_flag, inplace=True)
-            # print(df_br.head())
-            # default is BayesianRidge
-            # itImp = IterativeImputer(missing_values=alpha_flag, random_state=0, verbose=1)
-            itImp = IterativeImputer(missing_values=NeutrinoReconstructor.DEFAULT_VALUE, random_state=0, verbose=2, max_iter=10, n_nearest_features=10)
-            df_br_imputed = pd.DataFrame(itImp.fit_transform(df_br), columns=df_br.columns)
-            return df_br_imputed
-            # return self.calculateFromAlpha(df_br_imputed, df_br_imputed['alpha_1'], df_br_imputed['alpha_2'])
-        elif mode == 'knn':
-            # df_br['alpha_1'].replace(NeutrinoReconstructor.DEFAULT_VALUE, alpha_flag, inplace=True)
-            # df_br['alpha_2'].replace(NeutrinoReconstructor.DEFAULT_VALUE, alpha_flag, inplace=True)
-            # KNNImp = KNNImputer(missing_values=alpha_flag, n_neighbors=2) 
-            KNNImp = KNNImputer(missing_values=NeutrinoReconstructor.DEFAULT_VALUE, n_neighbors=2)
-            df_br_imputed = pd.DataFrame(KNNImp.fit_transform(df_br), columns=df_br.columns)
-            return df_br_imputed
-            # return self.calculateFromAlpha(df_br_imputed, df_br_imputed['alpha_1'], df_br_imputed['alpha_2'])
         elif mode == 'mean':
             simpImp = SimpleImputer(missing_values=NeutrinoReconstructor.DEFAULT_VALUE, strategy='mean')
             df_br_imputed = pd.DataFrame(simpImp.fit_transform(df_br), columns=df_br.columns)
             return df_br_imputed
         elif mode == 'remove':
             df_br_red = df_br[df_br.alpha_1 != NeutrinoReconstructor.DEFAULT_VALUE]
-            # print(df_br_red.index)
-            df = kwargs['df']
             print(f'Reduced events from {df_br.shape[0]} to {df_br_red.shape[0]}')
-            return df_br_red, df.reindex(df_br_red.index)
+            return df_br_red
+        elif mode in {'bayesian_ridge', 'decision_tree', 'extra_trees', 'kn_reg', 'knn'}:
+            # only leave rotated 4 vectors in df
+            neutrino_features = ['alpha_1', 'alpha_2', 'E_nu_1', 'E_nu_2', 'p_t_nu_1', 'p_t_nu_2', 'p_z_nu_1', 'p_z_nu_2']
+            if self.channel == 'rho_rho':
+                features = [str(x)+'_br' for x in config.particles_rho_rho] + neutrino_features
+            elif self.channel == 'rho_a1':
+                features = [str(x)+'_br' for x in config.particles_rho_a1] + neutrino_features
+            else:
+                features = [str(x)+'_br' for x in config.particles_a1_a1] + neutrino_features
+            df_br_red = df_br[features]
+            print(df_br_red.columns)
+            if mode == 'bayesian_ridge':
+                # df_br['alpha_1'].replace(NeutrinoReconstructor.DEFAULT_VALUE, alpha_flag, inplace=True)
+                # df_br['alpha_2'].replace(NeutrinoReconstructor.DEFAULT_VALUE, alpha_flag, inplace=True)
+                # print(df_br.head())
+                # default is BayesianRidge
+                # itImp = IterativeImputer(missing_values=alpha_flag, random_state=0, verbose=1)
+                itImp = IterativeImputer(missing_values=NeutrinoReconstructor.DEFAULT_VALUE, random_state=config.seed_value, verbose=2, max_iter=10)
+                df_br_imputed = pd.DataFrame(itImp.fit_transform(df_br_red), columns=df_br_red.columns)
+                return df_br_imputed
+                # return self.calculateFromAlpha(df_br_imputed, df_br_imputed['alpha_1'], df_br_imputed['alpha_2'])
+            elif mode == 'decision_tree':
+                itImp = IterativeImputer(estimator=DecisionTreeRegressor(max_features='sqrt', random_state=config.seed_value), missing_values=NeutrinoReconstructor.DEFAULT_VALUE, random_state=config.seed_value, verbose=2, max_iter=10)
+                df_br_imputed = pd.DataFrame(itImp.fit_transform(df_br_red), columns=df_br_red.columns)
+                return df_br_imputed
+            elif mode == 'extra_trees':
+                itImp = IterativeImputer(estimator=ExtraTreesRegressor(n_estimators=10), missing_values=NeutrinoReconstructor.DEFAULT_VALUE, random_state=config.seed_value, verbose=2, max_iter=10)
+                df_br_imputed = pd.DataFrame(itImp.fit_transform(df_br_red), columns=df_br_red.columns)
+                return df_br_imputed
+            elif mode == 'kn_reg':
+                itImp = IterativeImputer(estimator=KNeighborsRegressor(n_neighbors=5), missing_values=NeutrinoReconstructor.DEFAULT_VALUE, random_state=config.seed_value, verbose=2, max_iter=10)
+                df_br_imputed = pd.DataFrame(itImp.fit_transform(df_br_red), columns=df_br_red.columns)
+            elif mode == 'knn':
+                # df_br['alpha_1'].replace(NeutrinoReconstructor.DEFAULT_VALUE, alpha_flag, inplace=True)
+                # df_br['alpha_2'].replace(NeutrinoReconstructor.DEFAULT_VALUE, alpha_flag, inplace=True)
+                # KNNImp = KNNImputer(missing_values=alpha_flag, n_neighbors=2) 
+                KNNImp = KNNImputer(missing_values=NeutrinoReconstructor.DEFAULT_VALUE)
+                df_br_imputed = pd.DataFrame(KNNImp.fit_transform(df_br_red), columns=df_br_red.columns)
+                return df_br_imputed
+                # return self.calculateFromAlpha(df_br_imputed, df_br_imputed['alpha_1'], df_br_imputed['alpha_2'])
         else:
             raise ValueError('Missing data mode not understood')
 
@@ -417,9 +443,8 @@ if __name__ == '__main__':
         df_br = DL.loadGenData(True, addons).reset_index(drop=True)
     df_b, _ = DL.augmentDfToBinary(df_ps, df_sm)
     # NR.runAlphaReconstructor(df_b.reset_index(drop=True), df_br, load_alpha=False, termination=100)
-    df_br, df = NR.dealWithMissingData(df_br, mode='remove', df=df)
-    print(df_br.shape)
-    print(df.shape)
+    df_br_imputed = NR.dealWithMissingData(df_br, mode='extra_trees')
+    print(df_br_imputed.head())
     # NR = NeutrinoReconstructor(binary=False, channel='rho_rho')
     # # NR.testRunAlphaReconstructor()
     # variables_rho_rho = [

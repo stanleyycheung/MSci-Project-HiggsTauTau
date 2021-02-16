@@ -384,7 +384,7 @@ def parser():
     parser.add_argument('-bs', '--batch_size', type=int, default=10000, help='batch size')
     parser.add_argument('-la', '--load_alpha', action='store_false', default=True, help='if load alpha')
     parser.add_argument('-ter', '--termination', type=int, default=1000, help='termination number for alpha')
-    parser.add_argument('-imp', '--imputer_mode', default='remove', choices=['flag', 'linear', 'knn', 'mean', 'remove'], help='imputation mode for neutrino information')
+    parser.add_argument('-imp', '--imputer_mode', default='remove', choices=['flag', 'bayesian_ridge', 'decision_tree', 'extra_trees', 'kn_reg', 'knn', 'mean', 'remove'], help='imputation mode for neutrino information')
 
     args = parser.parse_args()
     return args
@@ -411,16 +411,17 @@ if __name__ == '__main__':
             batch_size = args.batch_size
             load_alpha = args.load_alpha
             termination = args.termination
+            imputer_mode = args.imputer_mode
             NN = NeuralNetwork(channel=channel, gen=gen, binary=binary, write_filename='NN_output', show_graph=show_graph)
             if not gen:
                 NN.addons_config_reco['neutrino']['load_alpha'] = load_alpha
                 NN.addons_config_reco['neutrino']['termination'] = termination
-                NN.addons_config_reco['neutrino']['imputer_mode'] = 'remove'
+                NN.addons_config_reco['neutrino']['imputer_mode'] = imputer_mode
                 print(f'Using addons config: {NN.addons_config_reco}')
             else:
                 NN.addons_config_gen['neutrino']['load_alpha'] = load_alpha
                 NN.addons_config_gen['neutrino']['termination'] = termination
-                NN.addons_config_reco['neutrino']['imputer_mode'] = 'remove'
+                NN.addons_config_reco['neutrino']['imputer_mode'] = imputer_mode
                 print(f'Using addons config: {NN.addons_config_gen}')
             if not tuning:
                 NN.run(config_num, read=read, from_hdf=from_hdf, epochs=epochs, batch_size=batch_size)
