@@ -91,7 +91,7 @@ class Tuner:
                 #     batch_size=batch_sizes
                 # )
 
-                grid = RandomizedSearchCV(estimator=model, param_distributions=param_grid, verbose=10, scoring='roc_auc', random_state=seed_value, n_iter=20, cv=2)
+                grid = RandomizedSearchCV(estimator=model, param_distributions=param_grid, verbose=10, scoring='roc_auc', random_state=seed_value, n_iter=10, cv=2) # the old value was n_iter=20
             grid_result = grid.fit(X_train, y_train)
             model_grid = self.gridModel(layers=grid_result.best_params_['layers'], batch_norm=grid_result.best_params_['batch_norm'], dropout=grid_result.best_params_['dropout'])
             return model_grid, grid_result, param_grid
@@ -146,18 +146,26 @@ class Tuner:
                 'dropout': [0, 0.4, 0.2],
                 'epochs': [20, 50, 10],
                 'batch_size': [8192, 16384, 65536, 131072],
+                'learning_rate': [np.log(0.0001), np.log(0.01)],
+                # 'learning_rate': [0.0001, 0.01],
+                'activation': ['relu', 'lrelu', 'swish'],
+                'initializer_std': [0.001, 0.01, 0.1]
             }
             space = {
                 'num_layers': hp.quniform('num_layers', *space_display['num_layers']),
                 'batch_norm': hp.choice('batch_norm', space_display['batch_norm']),
                 'dropout': hp.quniform('dropout', *space_display['dropout']),
                 'epochs': hp.quniform('epochs', *space_display['epochs']),
-                'batch_size': hp.choice('batch_size', space_display['batch_size'])
+                'batch_size': hp.choice('batch_size', space_display['batch_size']),
+                'learning_rate': hp.loguniform('learning_rate', *space_display['learning_rate']),
+                'activation': hp.choice('activation', space_display['activation']),
+                'initializer_std': hp.choice('intializer_std', space_display['initializer_std'])
+                # maybe change batch_size to quniform, or qloguniform?
             }
             self.X_train, self.y_train, self.X_test, self.y_test = X_train, y_train, X_test, y_test
             trials = Trials()
             # tpe, annealing, random
-            best = fmin(self.hyperOptObj, space, algo=tpe.suggest, trials=trials, max_evals=10)
+            best = fmin(self.hyperOptObj, space, algo=tpe.suggest, trials=trials, max_evals=60) # the old value was max_evals=10
             best_params = hyperopt.space_eval(space, best)
             model, _ = self.hyperOptModel(best_params)
             # print(best_params)
@@ -206,19 +214,34 @@ class Tuner:
                 'dropout': int(params['dropout']),
                 'epochs': int(params['epochs']),
                 'batch_size': int(params['batch_size']),
+                'learning_rate': float(params['learning_rate']),
+                'activation': str(params['activation']),
+                'initializer_std': float(params['initializer_std']),
             }
         model = tf.keras.models.Sequential()
+        std = params['initializer_std']
         for _ in range(params['num_layers']):
-            model.add(tf.keras.layers.Dense(300, kernel_initializer='normal'))
+            # model.add(tf.keras.layers.Dense(300, kernel_initializer='normal'))
+            model.add(tf.keras.layers.Dense(300, kernel_initializer=tf.keras.initializers.RandomNormal(stddev=std), bias_initializer='zeros'))
             if params['batch_norm']:
                 model.add(tf.keras.layers.BatchNormalization())
-            model.add(tf.keras.layers.Activation('relu'))
+            if params['activation'] == 'relu':
+                model.add(tf.keras.layers.Activation('relu'))
+            elif params['activation'] == 'lrelu':
+                model.add(tf.keras.layers.LeakyReLU(alpha=0.3))
+            elif params['activation'] == 'swish':
+                model.add(tf.keras.layers.Activation(tf.keras.activations.swish))
+            else:
+                raise Exception('Activation function not understood!')
             if not params['dropout']:
                 model.add(tf.keras.layers.Dropout(params['dropout']))
         model.add(tf.keras.layers.Dense(1, activation="sigmoid"))
         metrics = ['AUC', 'accuracy']
-        model.compile(loss='binary_crossentropy', optimizer='adam', metrics=metrics)
-        early_stop = tf.keras.callbacks.EarlyStopping(monitor='auc', patience=10)
+        # change the learning rate of the adam optimizer from default of 0.001
+        lrate = params['learning_rate']
+        optimizer = tf.keras.optimizers.Adam(learning_rate=lrate)
+        model.compile(loss='binary_crossentropy', optimizer=optimizer, metrics=metrics)
+        early_stop = tf.keras.callbacks.EarlyStopping(monitor='auc', patience=20)
         return model, early_stop
 
     def hyperOptObj(self, params):
@@ -228,6 +251,9 @@ class Tuner:
                 'dropout': int(params['dropout']),
                 'epochs': int(params['epochs']),
                 'batch_size': int(params['batch_size']),
+                'learning_rate': float(params['learning_rate']),
+                'activation': str(params['activation']),
+                'initializer_std': float(params['initializer_std']),
             }
         model, early_stop = self.hyperOptModel(params)
         model.fit(self.X_train, self.y_train, epochs=params['epochs'], batch_size=params['batch_size'], callbacks=[early_stop], verbose=0)
