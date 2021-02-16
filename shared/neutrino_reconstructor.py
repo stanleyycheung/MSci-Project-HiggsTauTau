@@ -84,7 +84,7 @@ class NeutrinoReconstructor:
         rotation_matrix = np.tile(np.eye(3), (len(vec1), 1, 1)) + kmat + np.linalg.matrix_power(kmat, 2)*((1 - c) / (s ** 2))[:, None][:, np.newaxis]
         return rotation_matrix
 
-    def dealWithMissingData(self, df_br, mode):
+    def dealWithMissingData(self, df_br, mode, **kwargs):
         """
         Deals with rejected events according to mode
         Mode:
@@ -124,8 +124,10 @@ class NeutrinoReconstructor:
             return df_br_imputed
         elif mode == 'remove':
             df_br_red = df_br[df_br.alpha_1 != NeutrinoReconstructor.DEFAULT_VALUE]
+            # print(df_br_red.index)
+            df = kwargs['df']
             print(f'Reduced events from {df_br.shape[0]} to {df_br_red.shape[0]}')
-            return df_br_red
+            return df_br_red, df.reindex(df_br_red.index)
         else:
             raise ValueError('Missing data mode not understood')
 
@@ -415,8 +417,9 @@ if __name__ == '__main__':
         df_br = DL.loadGenData(True, addons).reset_index(drop=True)
     df_b, _ = DL.augmentDfToBinary(df_ps, df_sm)
     # NR.runAlphaReconstructor(df_b.reset_index(drop=True), df_br, load_alpha=False, termination=100)
-    NR.dealWithMissingData(df_br, mode='mean')
-
+    df_br, df = NR.dealWithMissingData(df_br, mode='remove', df=df)
+    print(df_br.shape)
+    print(df.shape)
     # NR = NeutrinoReconstructor(binary=False, channel='rho_rho')
     # # NR.testRunAlphaReconstructor()
     # variables_rho_rho = [

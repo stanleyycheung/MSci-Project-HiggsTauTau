@@ -196,18 +196,18 @@ class DataLoader:
         else:
             y = None
         if self.channel == 'rho_rho':
-            df_inputs_data, boost = self.calculateRhoRhoData(df)
+            df_inputs_data = self.calculateRhoRhoData(df)
         elif self.channel == 'rho_a1':
-            df_inputs_data, boost = self.calculateRhoA1Data(df)
+            df_inputs_data = self.calculateRhoA1Data(df)
         else:
             # no need to check here as checked in cleanRecoData
-            df_inputs_data, boost = self.calculateA1A1Data(df)
+            df_inputs_data = self.calculateA1A1Data(df)
         df_inputs = pd.DataFrame(df_inputs_data)
         if binary:
             df_inputs['y'] = y
         addons_loaded = ""
         if addons:
-            df_inputs = self.createAddons(addons, df, df_inputs, binary, addons_config, boost=boost)
+            df_inputs = self.createAddons(addons, df, df_inputs, binary, addons_config)
             addons_loaded = '_'+'_'.join(addons)
         if save:
             if not gen:
@@ -300,7 +300,7 @@ class DataLoader:
                 'sv_y_2': df['sv_y_2'],
                 'sv_z_2': df['sv_z_2'],
             })
-        return df_inputs_data, boost
+        return df_inputs_data
 
     def rotateVectors(self, **kwargs):
         """
@@ -672,7 +672,7 @@ class DataLoader:
                 'sv_y_2': df['sv_y_2'],
                 'sv_z_2': df['sv_z_2'],
             })
-        return df_inputs_data, boost
+        return df_inputs_data
 
     def calculateA1A1Data(self, df):
         pi_1 = Momentum4(df['pi_E_1'], df["pi_px_1"], df["pi_py_1"], df["pi_pz_1"])
@@ -829,21 +829,20 @@ class DataLoader:
                 'sv_y_2': df['sv_y_2'],
                 'sv_z_2': df['sv_z_2'],
             })
-        return df_inputs_data, boost
+        return df_inputs_data
 
-    def createAddons(self, addons, df, df_inputs, binary, addons_config={}, **kwargs):
+    def createAddons(self, addons, df, df_inputs, binary, addons_config={}):
         """
         If you want to create more addon features, put the necessary arguments through kwargs,
         unpack them at the start of this function, and add an if case to your needs
         TODO: need to catch incorrectly loaded kwargs
         Return: df_inputs (modified)
         """
-        boost = None
-        if kwargs:
-            boost = kwargs["boost"]
+        
         for addon in addons:
-            if addon == 'met' and boost is not None:
+            if addon == 'met':
                 print('Addon MET loaded')
+                boost = self.createBoostAndRotationMatrices(df)
                 metx_b, mety_b = self.addonMET(df, boost)
                 # TODO: CHANGE
                 df_inputs['metx_b'] = metx_b
@@ -862,9 +861,14 @@ class DataLoader:
                 # df_inputs['p_t_nu_2'] = p_t_nu_2
                 # df_inputs['p_z_nu_1'] = p_z_nu_1
                 # df_inputs['p_z_nu_2'] = p_z_nu_2
-                df_inputs = self.addonNeutrinos(df, df_inputs, binary, load_alpha, imputer_mode, termination=termination)
-            if addon == 'ip' and boost is not None:
+                if imputer_mode == 'remove':
+                    # modifies the original df by removing events
+                    df_inputs, df = self.addonNeutrinos(df, df_inputs, binary, load_alpha, imputer_mode, termination=termination)
+                else:
+                    df_inputs = self.addonNeutrinos(df, df_inputs, binary, load_alpha, imputer_mode, termination=termination)
+            if addon == 'ip':
                 print('Impact paramter loaded')
+                boost = self.createBoostAndRotationMatrices(df)
                 ip_1_boosted_rot, ip_2_boosted_rot = self.addonIP(df, boost)
                 df_inputs['ip_x_1_br'] = ip_1_boosted_rot[:, 0]
                 df_inputs['ip_y_1_br'] = ip_1_boosted_rot[:, 1]
@@ -872,7 +876,8 @@ class DataLoader:
                 df_inputs['ip_x_2_br'] = ip_2_boosted_rot[:, 0]
                 df_inputs['ip_y_2_br'] = ip_2_boosted_rot[:, 1]
                 df_inputs['ip_z_2_br'] = ip_2_boosted_rot[:, 2]
-            if addon == 'sv' and boost is not None:
+            if addon == 'sv':
+                boost = self.createBoostAndRotationMatrices(df)
                 if self.channel == 'a1_a1' or self.gen:
                     sv_1_boosted_rot, sv_2_boosted_rot = self.addonSV(df, boost)
                     df_inputs['sv_x_1_br'] = sv_1_boosted_rot[:, 0]
@@ -887,7 +892,7 @@ class DataLoader:
                     df_inputs['sv_y_2_br'] = sv_2_boosted_rot[:, 1]
                     df_inputs['sv_z_2_br'] = sv_2_boosted_rot[:, 2]
                 else:
-                    print('No SV on rho_rho channel!')
+                    print('WARNING (createAddons): No SV on rho_rho channel!')
 
         return df_inputs
 
@@ -916,9 +921,12 @@ class DataLoader:
             df_inputs = NR.runAlphaReconstructor(df.reset_index(drop=True), df_inputs.reset_index(drop=True), load_alpha=load_alpha, termination=termination)
         else:
             df_inputs = NR.runGenAlphaReconstructor(df.reset_index(drop=True), df_inputs.reset_index(drop=True), load_alpha=load_alpha)
-        # df_inputs_imputed = NR.dealWithMissingData(df_inputs, imputer_mode)
+        if imputer_mode == 'remove':
+            df_inputs_imputed, df = NR.dealWithMissingData(df_inputs, imputer_mode, df=df)
+            return df_inputs_imputed, df
         # return df_inputs_imputed
-        return df_inputs
+        df_inputs_imputed = NR.dealWithMissingData(df_inputs, imputer_mode)
+        return df_inputs_imputed
 
     def addonIP(self, df, boost):
         N = len(df.ip_x_1)
@@ -951,6 +959,51 @@ class DataLoader:
             return sv_2_boosted_rot
         else:
             raise ValueError('No SV on rho_rho channel/ Channel not understood')
+
+    def createBoostAndRotationMatrices(self, df):
+        if self.channel == 'rho_rho':
+            pi_1 = Momentum4(df['pi_E_1'], df["pi_px_1"], df["pi_py_1"], df["pi_pz_1"])
+            pi_2 = Momentum4(df['pi_E_2'], df["pi_px_2"], df["pi_py_2"], df["pi_pz_2"])
+            pi0_1 = Momentum4(df['pi0_E_1'], df["pi0_px_1"], df["pi0_py_1"], df["pi0_pz_1"])
+            pi0_2 = Momentum4(df['pi0_E_2'], df["pi0_px_2"], df["pi0_py_2"], df["pi0_pz_2"])
+            rho_1 = pi_1 + pi0_1
+            rho_2 = pi_2 + pi0_2
+            rest_frame = rho_1 + rho_2
+            boost = Momentum4(rest_frame[0], -rest_frame[1], -rest_frame[2], -rest_frame[3])
+            pi_1_boosted = pi_1.boost_particle(boost)
+            pi0_1_boosted = pi0_1.boost_particle(boost)
+            self.rotationMatrices = self.rotationMatrixVectorised((pi_1_boosted + pi0_1_boosted)[1:].T, np.tile(np.array([0, 0, 1]), (pi_1_boosted.e.shape[0], 1)))
+            return boost
+        elif self.channel == 'rho_a1':
+            pi_1 = Momentum4(df['pi_E_1'], df["pi_px_1"], df["pi_py_1"], df["pi_pz_1"])
+            pi_2 = Momentum4(df['pi_E_2'], df["pi_px_2"], df["pi_py_2"], df["pi_pz_2"])
+            pi0_1 = Momentum4(df['pi0_E_1'], df["pi0_px_1"], df["pi0_py_1"], df["pi0_pz_1"])
+            pi2_2 = Momentum4(df['pi2_E_2'], df["pi2_px_2"], df["pi2_py_2"], df["pi2_pz_2"])
+            pi3_2 = Momentum4(df['pi3_E_2'], df["pi3_px_2"], df["pi3_py_2"], df["pi3_pz_2"])
+            rho_1 = pi_1 + pi0_1  # charged rho
+            a1_2 = pi_2 + pi2_2 + pi3_2
+            rest_frame = rho_1 + a1_2
+            boost = Momentum4(rest_frame[0], -rest_frame[1], -rest_frame[2], -rest_frame[3])
+            pi_1_boosted = pi_1.boost_particle(boost)
+            pi0_1_boosted = pi0_1.boost_particle(boost)
+            self.rotationMatrices = self.rotationMatrixVectorised((pi_1_boosted + pi0_1_boosted)[1:].T, np.tile(np.array([0, 0, 1]), (pi_1_boosted.e.shape[0], 1)))
+            return boost
+        elif self.channel == 'a1_a1':
+            pi_1 = Momentum4(df['pi_E_1'], df["pi_px_1"], df["pi_py_1"], df["pi_pz_1"])
+            pi2_1 = Momentum4(df['pi2_E_1'], df["pi2_px_1"], df["pi2_py_1"], df["pi2_pz_1"])
+            pi3_1 = Momentum4(df['pi3_E_1'], df["pi3_px_1"], df["pi3_py_1"], df["pi3_pz_1"])
+            pi_2 = Momentum4(df['pi_E_2'], df["pi_px_2"], df["pi_py_2"], df["pi_pz_2"])
+            pi2_2 = Momentum4(df['pi2_E_2'], df["pi2_px_2"], df["pi2_py_2"], df["pi2_pz_2"])
+            pi3_2 = Momentum4(df['pi3_E_2'], df["pi3_px_2"], df["pi3_py_2"], df["pi3_pz_2"])
+            rest_frame = pi_1 + pi2_1 + pi3_1 + pi_2 + pi2_2 + pi3_2
+            boost = Momentum4(rest_frame[0], -rest_frame[1], -rest_frame[2], -rest_frame[3])
+            pi_1_boosted = pi_1.boost_particle(boost)
+            pi2_1_boosted = pi2_1.boost_particle(boost)
+            pi3_1_boosted = pi3_1.boost_particle(boost)
+            self.rotationMatrices = self.rotationMatrixVectorised((pi_1_boosted+pi2_1_boosted+pi3_1_boosted)[1:].T, np.tile(np.array([0, 0, 1]), (pi_1_boosted.e.shape[0], 1)))
+            return boost
+        else:
+            raise ValueError('Channel not understood')
 
     def rotation_matrix_from_vectors(self, vec1, vec2):
         """ Find the rotation matrix that aligns vec1 to vec2

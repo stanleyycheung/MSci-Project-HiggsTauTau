@@ -110,6 +110,8 @@ class ConfigLoader:
                     return np.c_[base]
             elif config_num > 2.5:
                 # not accessible to gen level
+                if self.gen:
+                    raise ValueError('Configs >2.5 are not accessible to gen level')
                 ip_1_transformed = np.c_[self.df.ip_x_1_br, self.df.ip_y_1_br, self.df.ip_z_1_br]
                 ip_2_transformed = np.c_[self.df.ip_x_2_br, self.df.ip_y_2_br, self.df.ip_z_2_br]
                 if config_num == 2.6:
@@ -147,24 +149,8 @@ class ConfigLoader:
                 return ValueError('Subconfig in config 2 not understood')
 
         elif config_num < 4:
-            if config_num == 3.1:
-                # without alphas
-                return np.c_[four_vectors, self.df.E_nu_1, self.df.E_nu_2, self.df.p_t_nu_1, self.df.p_t_nu_2, self.df.p_z_nu_1, self.df.p_z_nu_2]
-            elif config_num == 3.2:
-                # with alphas
-                return np.c_[four_vectors, self.df.E_nu_1, self.df.E_nu_2, self.df.p_t_nu_1, self.df.p_t_nu_2, self.df.p_z_nu_1, self.df.p_z_nu_2, self.df.alpha_1, self.df.alpha_2]
-            elif config_num == 3.2:
-                return np.c_[four_vectors, self.df.E_nu_1, self.df.E_nu_2, self.df.p_t_nu_1, self.df.p_t_nu_2, self.df.p_z_nu_1, self.df.p_z_nu_2, self.df.metx_b, self.df.mety_b]
-            elif config_num == 3.3:
-                # met + neutrino + 1.6
-                return np.c_[four_vectors, aco_angles_calc, y_s, m_s, self.df.E_nu_1, self.df.E_nu_2, self.df.p_t_nu_1, self.df.p_t_nu_2, self.df.p_z_nu_1, self.df.p_z_nu_2, self.df.metx_b, self.df.mety_b]
-            elif config_num == 3.4:
-                # 3.2 + phis
-                # return np.c_[]
-                pass
-            else:
-                return ValueError('Subconfig in config 3 not understood')
-
+            NR = NeutrinoReconstructor(binary)
+            pass
         else:
             return ValueError('Config number is not understood')
 
