@@ -113,6 +113,9 @@ class NeuralNetwork:
             self.dropout = grid_result.best_params_['dropout']
             self.epochs = grid_result.best_params_['epochs']
             self.batchsize = grid_result.best_params_['batch_size']
+            self.learning_rate = grid_result.best_params_['learning_rate']
+            self.activation = grid_result.best_params_['activation']
+            self.initializer_std = grid_result.best_params_['initializer_std']
             self.model_str = 'grid_model'
             grid_best_score = grid_result.best_score_
             self.model = tuner.gridModel(layers=self.layers, batch_norm=self.batch_norm, dropout=self.dropout)
@@ -130,6 +133,9 @@ class NeuralNetwork:
             self.layers = best_hps.get('num_layers')
             self.batch_norm = best_hps.get('batch_norm')
             self.dropout = best_hps.get('dropout')
+            self.learning_rate = best_hps.get('learning_rate')
+            self.activation = best_hps.get('activation')
+            self.initializer_std = best_hps.get('initializer_std')
             self.model_str = 'hyper_model'
             grid_best_score = None
         elif tuning_mode in {'hyperopt'}:
@@ -139,6 +145,9 @@ class NeuralNetwork:
             self.dropout = best_params['dropout']
             self.epochs = int(best_params['epochs'])
             self.batchsize = int(best_params['batch_size'])
+            self.learning_rate = best_params['learning_rate']
+            self.activation = best_params['activation']
+            self.initializer_std = best_params['initializer_std']
             self.model_str = 'grid_model'
             grid_best_score = None
         else:
@@ -154,10 +163,12 @@ class NeuralNetwork:
             file = f'{self.write_dir}/tuning_reco_{self.channel}.txt'
         else:
             file = f'{self.write_dir}/tuning_gen_{self.channel}.txt'
+        self.model.save(f'{self.write_dir}/tuning_model_{self.channel}.h5')
         with open(file, 'a+') as f:
             print(f'Writing HPs to {file}')
             time_str = datetime.datetime.now().strftime('%Y/%m/%d|%H:%M:%S')
-            message = f'{time_str},{auc},{self.config_num},{self.layers},{self.batch_norm},{self.dropout},{self.epochs},{self.batchsize},{tuning_mode},{grid_best_score},{param_grid},{self.addons_config_reco}\n'
+            # message = f'{time_str},{auc},{self.config_num},{self.layers},{self.batch_norm},{self.dropout},{self.epochs},{self.batchsize},{tuning_mode},{grid_best_score},{param_grid}\n'
+            message = f'{time_str},{auc},{self.config_num},{self.layers},{self.batch_norm},{self.dropout},{self.epochs},{self.batchsize},{tuning_mode},{grid_best_score},{self.learning_rate},{self.activation},{self.initializer_std},{param_grid}\n'
             print(f"Message: {message}")
             f.write(message)
         # model.save(f'./saved_models/grid_search_model_{config_num}_{self.channel}_{search_mode}/')
