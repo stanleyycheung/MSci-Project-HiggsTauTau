@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import roc_curve, roc_auc_score
 from sklearn.model_selection import train_test_split
-
+import datetime
 
 class Evaluator:
     """
@@ -35,7 +35,8 @@ class Evaluator:
             auc, y_label_roc, y_pred_roc = self.customROCScore(y_pred_test, w_a_test, w_b_test)
             fpr, tpr, _ = roc_curve(y_label_roc, y_pred_roc, sample_weight=np.r_[w_a_test, w_b_test])
         self.plotROCCurve(fpr, tpr, auc)
-        self.plotLoss(history)
+        if history is not None:
+            self.plotLoss(history)
         if show:
             plt.show()
         return auc
@@ -59,7 +60,7 @@ class Evaluator:
         plt.xlabel("Epochs"), plt.ylabel("Loss")
         # plt.yscale("log")
         plt.legend()
-        plt.savefig(f'./{self.save_dir}/fig/loss_{self.config_str}')
+        plt.savefig(f'./{self.save_dir}/fig/{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}_loss_{self.config_str}.PNG')
 
     def plotROCCurve(self, fpr, tpr, auc):
         #  define a function to plot the ROC curves - just makes the roc_curve look nicer than the default
@@ -73,4 +74,4 @@ class Evaluator:
         ax.plot(lims, lims, 'k--')
         ax.set_xlim(lims)
         ax.set_ylim(lims)
-        plt.savefig(f'{self.save_dir}/fig/ROC_curve_{self.config_str}.PNG')
+        plt.savefig(f'{self.save_dir}/fig/{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}_ROC_curve_{self.config_str}.PNG')

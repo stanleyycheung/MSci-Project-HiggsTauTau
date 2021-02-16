@@ -84,32 +84,33 @@ class NeutrinoReconstructor:
         rotation_matrix = np.tile(np.eye(3), (len(vec1), 1, 1)) + kmat + np.linalg.matrix_power(kmat, 2)*((1 - c) / (s ** 2))[:, None][:, np.newaxis]
         return rotation_matrix
 
-    def dealWithMissingData(self, df_br, mode):
+    def dealWithMissingData(self, df_br, mode, **kwargs):
         """
         Deals with rejected events according to mode
         Mode:
-        0 - Simple flag
-        1 - Linear interpolation - BayesianRidge algorithm
-        2 - KNN algorithm
-        3 - Replace with mean
+        'flag - Simple flag
+        'linear' - Linear interpolation - BayesianRidge algorithm
+        'knn' - KNN algorithm
+        'mean' - Replace with mean
+        'remove' - Remove events
         """
         print('Imputing missing data')
         # change to return df_br and modify in place
         # alpha_flag = NeutrinoReconstructor.DEFAULT_VALUE + 1
-        if mode == 0:
+        if mode == 'flag':
             df_br['flag'] = np.where(df_br['alpha_1']==NeutrinoReconstructor.DEFAULT_VALUE, 0, 1)
             return df_br
-        elif mode == 1:
+        elif mode == 'linear':
             # df_br['alpha_1'].replace(NeutrinoReconstructor.DEFAULT_VALUE, alpha_flag, inplace=True)
             # df_br['alpha_2'].replace(NeutrinoReconstructor.DEFAULT_VALUE, alpha_flag, inplace=True)
             # print(df_br.head())
             # default is BayesianRidge
             # itImp = IterativeImputer(missing_values=alpha_flag, random_state=0, verbose=1)
-            itImp = IterativeImputer(missing_values=NeutrinoReconstructor.DEFAULT_VALUE, random_state=0, verbose=1)
+            itImp = IterativeImputer(missing_values=NeutrinoReconstructor.DEFAULT_VALUE, random_state=0, verbose=2, max_iter=10, n_nearest_features=10)
             df_br_imputed = pd.DataFrame(itImp.fit_transform(df_br), columns=df_br.columns)
             return df_br_imputed
             # return self.calculateFromAlpha(df_br_imputed, df_br_imputed['alpha_1'], df_br_imputed['alpha_2'])
-        elif mode == 2:
+        elif mode == 'knn':
             # df_br['alpha_1'].replace(NeutrinoReconstructor.DEFAULT_VALUE, alpha_flag, inplace=True)
             # df_br['alpha_2'].replace(NeutrinoReconstructor.DEFAULT_VALUE, alpha_flag, inplace=True)
             # KNNImp = KNNImputer(missing_values=alpha_flag, n_neighbors=2) 
@@ -117,10 +118,16 @@ class NeutrinoReconstructor:
             df_br_imputed = pd.DataFrame(KNNImp.fit_transform(df_br), columns=df_br.columns)
             return df_br_imputed
             # return self.calculateFromAlpha(df_br_imputed, df_br_imputed['alpha_1'], df_br_imputed['alpha_2'])
-        elif mode == 3:
+        elif mode == 'mean':
             simpImp = SimpleImputer(missing_values=NeutrinoReconstructor.DEFAULT_VALUE, strategy='mean')
             df_br_imputed = pd.DataFrame(simpImp.fit_transform(df_br), columns=df_br.columns)
             return df_br_imputed
+        elif mode == 'remove':
+            df_br_red = df_br[df_br.alpha_1 != NeutrinoReconstructor.DEFAULT_VALUE]
+            # print(df_br_red.index)
+            df = kwargs['df']
+            print(f'Reduced events from {df_br.shape[0]} to {df_br_red.shape[0]}')
+            return df_br_red, df.reindex(df_br_red.index)
         else:
             raise ValueError('Missing data mode not understood')
 
@@ -139,8 +146,7 @@ class NeutrinoReconstructor:
         df_br['p_t_nu_2'] = p_t_nu_2
         df_br['p_z_nu_1'] = p_z_nu_1
         df_br['p_z_nu_2'] = p_z_nu_2
-        return df_br
-    
+        return df_br 
 
     def getPhiTau(self, df):
         def getPhiTauForOne(self, a1, sv):
@@ -155,14 +161,13 @@ class NeutrinoReconstructor:
             return theta_f, sv_norm
         
         if self.channel == 'rho_a1':
+            # TODO: not completed
             pi_1 = Momentum4(df['pi_E_1'], df['pi_px_1'], df['pi_py_1'], df['pi_pz_1'])
             pi0_1 = Momentum4(df['pi0_E_1'], df['pi0_px_1'], df['pi0_py_1'], df['pi0_pz_1'])
             pi_2 = Momentum4(df['pi_E_2'], df['pi_px_2'], df['pi_py_2'], df['pi_pz_2'])
             pi2_2 = Momentum4(df['pi2_E_2'], df['pi2_px_2'], df['pi2_py_2'], df['pi2_pz_2'])
-            pi3_2 = Momentum4(df['pi3_E_2'], df['pi3_px_2'], df['pi3_py_2'], df['pi3_pz_2'])
-            
+            pi3_2 = Momentum4(df['pi3_E_2'], df['pi3_px_2'], df['pi3_py_2'], df['pi3_pz_2'])            
             metx, mety = df['metx'], df['mety']
-            
             a1_2 = pi_2 + pi3_2 + pi2_2
             sv_2 = np.c_[df['sv_x_2'], df['sv_y_2'], df['sv_z_2']]
             theta_f_2 = getPhiTauForOne(a1_2, sv_2)
@@ -224,10 +229,10 @@ class NeutrinoReconstructor:
         c = 2*(m**2+p**2*np.sin(theta)**2)
         return (a+b)/c, (a-b)/c
 
-    def runAlphaReconstructor(self, df_reco_gen, df_br, load_alpha, termination=1000):
+    def runAlphaReconstructor(self, df_reco, df_br, load_alpha, termination=1000):
         """
         Calculates the alphas and reconstructs neutrino momenta
-        df_reco_gen - events straight from the .root file with gen info
+        df_reco - events straight from the .root file
         df_br - BR events
         Default error value: -1
         To do:
@@ -237,7 +242,7 @@ class NeutrinoReconstructor:
         -- Returns: alpha_1, alpha_2, E_nu_1, E_nu_2, p_t_nu_1, p_t_nu_2, p_z_nu_1, p_z_nu_2 --
         Returns: df_br (with neutrino information contained)
         """
-        AC = AlphaCalculator(df_reco_gen, df_br, self.binary, self.m_higgs,
+        AC = AlphaCalculator(self.channel, df_reco, df_br, self.binary, self.m_higgs,
                              self.m_tau, load=load_alpha, seed=self.seed, default_value=NeutrinoReconstructor.DEFAULT_VALUE)
         alpha_1, alpha_2, p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2 = AC.runAlpha(termination=termination)
         # alpha_1, alpha_2 = AC.runAlpha(termination=termination)
@@ -268,6 +273,26 @@ class NeutrinoReconstructor:
         # return alpha_1, alpha_2, E_nu_1, E_nu_2, p_t_nu_1, p_t_nu_2, p_z_nu_1, p_z_nu_2
         return df_br
 
+    def runGenAlphaReconstructor(self, df_gen, df_br, load_alpha):
+        AC = AlphaCalculator(self.channel, df_gen, df_br, self.binary, self.m_higgs,
+                             self.m_tau, load=load_alpha, seed=self.seed, default_value=NeutrinoReconstructor.DEFAULT_VALUE)
+        alpha_1, alpha_2, p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2 = AC.runAlphaGen()
+        idx = alpha_1==NeutrinoReconstructor.DEFAULT_VALUE
+        p_t_nu_1 = np.sqrt(np.array(E_nu_1)**2 - np.array(p_z_nu_1)**2)
+        p_t_nu_2 = np.sqrt(np.array(E_nu_2)**2 - np.array(p_z_nu_2)**2)
+        p_t_nu_1[idx] = NeutrinoReconstructor.DEFAULT_VALUE
+        p_t_nu_2[idx] = NeutrinoReconstructor.DEFAULT_VALUE
+        # populate input df with neutrino variables
+        df_br['alpha_1'] = alpha_1
+        df_br['alpha_2'] = alpha_2
+        df_br['E_nu_1'] = E_nu_1
+        df_br['E_nu_2'] = E_nu_2
+        df_br['p_t_nu_1'] = p_t_nu_1
+        df_br['p_t_nu_2'] = p_t_nu_2
+        df_br['p_z_nu_1'] = p_z_nu_1
+        df_br['p_z_nu_2'] = p_z_nu_2
+        return df_br
+
     def runGraphs(self, df_reco_gen, termination=1000):
         """
         Creates profile graph and other graphs
@@ -295,12 +320,12 @@ class NeutrinoReconstructor:
         AC.profileAlphaPz(df_red, termination=termination)
         # AC.checkAlphaPz(df_red, termination=termination)
 
-    def test1(self, df_reco_gen, df_br, load_alpha, termination=1000):
+    def test1(self, df_reco, df_br, load_alpha, termination=1000):
         """
         Runs test from old criteria
         """
-        # df_reco_gen = self.loadRecoData(skip=load_alpha)
-        AC = AlphaCalculator(df_reco_gen, df_br, self.binary, self.m_higgs,
+        # df_reco = self.loadRecoData(skip=load_alpha)
+        AC = AlphaCalculator(df_reco, df_br, self.binary, self.m_higgs,
                              self.m_tau, load=load_alpha, seed=self.seed)
         alpha_1, alpha_2 = AC.runAlphaOld(termination=termination)
         df = df_br
@@ -374,29 +399,50 @@ class NeutrinoReconstructor:
 
 if __name__ == '__main__':
     from data_loader import DataLoader
-    NR = NeutrinoReconstructor(binary=False)
-    # NR.testRunAlphaReconstructor()
-    variables_rho_rho = [
-        "wt_cp_sm", "wt_cp_ps", "wt_cp_mm", "rand",
-        "aco_angle_1",
-        "mva_dm_1", "mva_dm_2",
-        "tau_decay_mode_1", "tau_decay_mode_2",
-        "pi_E_1", "pi_px_1", "pi_py_1", "pi_pz_1",
-        "pi_E_2", "pi_px_2", "pi_py_2", "pi_pz_2",
-        "pi0_E_1", "pi0_px_1", "pi0_py_1", "pi0_pz_1",
-        "pi0_E_2", "pi0_px_2", "pi0_py_2", "pi0_pz_2",
-        "y_1_1", "y_1_2",
-        'met', 'metx', 'mety',
-        'metcov00', 'metcov01', 'metcov10', 'metcov11',
-        "gen_nu_p_1", "gen_nu_phi_1", "gen_nu_eta_1",  # leading neutrino, gen level
-        "gen_nu_p_2", "gen_nu_phi_2", "gen_nu_eta_2"  # subleading neutrino, gen level
-    ]
+    import config
+    gen = False
     channel = 'rho_rho'
-    DL = DataLoader(variables_rho_rho, channel)
-    df, df_rho_ps, df_rho_sm = DL.cleanRecoData(DL.readRecoData(from_pickle=True))
-    df_br = DL.loadRecoData(binary=False).reset_index(drop=True)
-    # augment the binary df
-    df_reco_gen, _ = DL.augmentDfToBinary(df_rho_ps, df_rho_sm)
+    NR = NeutrinoReconstructor(binary=True, channel=channel)
+    if not gen:
+        addons_config_reco = {'neutrino': {'load_alpha':False, 'termination':100}, 'met': {}, 'ip': {}, 'sv': {}}
+        addons = addons_config_reco.keys()
+        DL = DataLoader(config.variables_rho_rho, channel, gen)
+        df, df_ps, df_sm = DL.cleanRecoData(DL.readRecoData(from_hdf=True))
+        df_br = DL.loadRecoData(True, addons).reset_index(drop=True)
+    else:
+        addons_config_gen = {'neutrino': {'load_alpha':False, 'termination':100}, 'sv': {}}
+        addons = addons_config_gen.keys()
+        DL = DataLoader(config.variables_gen_rho_rho, channel, gen)
+        df, df_ps, df_sm = DL.cleanGenData(DL.readGenData(from_hdf=True))
+        df_br = DL.loadGenData(True, addons).reset_index(drop=True)
+    df_b, _ = DL.augmentDfToBinary(df_ps, df_sm)
+    # NR.runAlphaReconstructor(df_b.reset_index(drop=True), df_br, load_alpha=False, termination=100)
+    df_br, df = NR.dealWithMissingData(df_br, mode='remove', df=df)
+    print(df_br.shape)
+    print(df.shape)
+    # NR = NeutrinoReconstructor(binary=False, channel='rho_rho')
+    # # NR.testRunAlphaReconstructor()
+    # variables_rho_rho = [
+    #     "wt_cp_sm", "wt_cp_ps", "wt_cp_mm", "rand",
+    #     "aco_angle_1",
+    #     "mva_dm_1", "mva_dm_2",
+    #     "tau_decay_mode_1", "tau_decay_mode_2",
+    #     "pi_E_1", "pi_px_1", "pi_py_1", "pi_pz_1",
+    #     "pi_E_2", "pi_px_2", "pi_py_2", "pi_pz_2",
+    #     "pi0_E_1", "pi0_px_1", "pi0_py_1", "pi0_pz_1",
+    #     "pi0_E_2", "pi0_px_2", "pi0_py_2", "pi0_pz_2",
+    #     "y_1_1", "y_1_2",
+    #     'met', 'metx', 'mety',
+    #     'metcov00', 'metcov01', 'metcov10', 'metcov11',
+    #     "gen_nu_p_1", "gen_nu_phi_1", "gen_nu_eta_1",  # leading neutrino, gen level
+    #     "gen_nu_p_2", "gen_nu_phi_2", "gen_nu_eta_2"  # subleading neutrino, gen level
+    # ]
+    # channel = 'rho_rho'
+    # DL = DataLoader(variables_rho_rho, channel, gen=False)
+    # df, df_rho_ps, df_rho_sm = DL.cleanRecoData(DL.readRecoData(from_pickle=True))
+    # df_br = DL.loadRecoData(binary=False).reset_index(drop=True)
+    # # augment the binary df
+    # df_reco, _ = DL.augmentDfToBinary(df_rho_ps, df_rho_sm)
     # slightly different lengths - due to binary/non_binary
 
     # debug = pd.read_pickle('./misc/debugging_2.pkl')
@@ -404,10 +450,13 @@ if __name__ == '__main__':
     # alpha_1, alpha_2, E_nu_1, E_nu_2, p_t_nu_1, p_t_nu_2, p_z_nu_1, p_z_nu_2 = NR.runAlphaReconstructor(df_reco_gen, df_br, load_alpha=False, termination=100)
     # alpha_1, alpha_2, E_nu_1, E_nu_2, p_t_nu_1, p_t_nu_2, p_z_nu_1, p_z_nu_2 = NR.runAlphaReconstructor(df.reset_index(drop=True), df_br, load_alpha=True, termination=1000)
     # NR.runGraphs(df.reset_index(drop=True))
-    df_inputs = NR.runAlphaReconstructor(df.reset_index(drop=True), df_br, load_alpha=True, termination=1000)
+    # df_inputs = NR.runAlphaReconstructor(df.reset_index(drop=True), df_br, load_alpha=True, termination=1000)
     # print(df_inputs.head())
-    print(NR.dealWithMissingData(df_inputs, mode=1).head())
-    exit()
+    # print(NR.dealWithMissingData(df_inputs, mode=1).head())
+
+    # NR.runAlphaReconstructor(df.reset_index(drop=True), df_br, load_alpha=False, termination=100)
+    # print(df.shape, df_br.shape)
+    # exit()
     # df_br['alpha_1'] = alpha_1
     # df_br['alpha_2'] = alpha_2
     # df_br['E_nu_1'] = E_nu_1
@@ -417,7 +466,7 @@ if __name__ == '__main__':
     # df_br['p_z_nu_1'] = p_z_nu_1
     # df_br['p_z_nu_2'] = p_z_nu_2
     # print(df_br.columns)
-    pd.to_pickle(df_br, 'misc/df_br.pkl')
+    # pd.to_pickle(df_br, 'misc/df_br.pkl')
     # NR.test1(df.reset_index(drop=False), df_br, load_alpha=False, termination=1000)
 
     # THIS COMBINATION WORKS -> DON'T KNOW WHY

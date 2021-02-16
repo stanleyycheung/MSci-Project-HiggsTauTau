@@ -43,9 +43,14 @@ class NeuralNetwork:
     - Will automatically write and save results of model - see save_dir and write_dir for more information
     Notes:
     - Supports Tensorboard
+    - By default, will load all addons
     """
+    
 
     def __init__(self,  channel, gen, binary=True, write_filename='NN_output', show_graph=False):
+        print(f'Loaded in {channel}, binary={binary}, gen={gen}')
+        self.addons_config_reco = {'neutrino': {'load_alpha':False, 'termination':1000}, 'met': {}, 'ip': {}, 'sv': {}}
+        self.addons_config_gen = {'neutrino': {'load_alpha':False, 'termination':1000}, 'sv': {}}
         self.show_graph = show_graph
         self.channel = channel
         self.binary = binary
@@ -55,11 +60,11 @@ class NeuralNetwork:
         self.write_dir = 'NN_output'
         self.model = None
 
-    def run(self, config_num, read=True, from_pickle=True, epochs=50, batch_size=1024, patience=10, addons_config={}):
+    def run(self, config_num, read=True, from_hdf=True, epochs=50, batch_size=1024, patience=15):
         if not self.gen:
-            df = self.initialize(addons_config, read=read, from_pickle=from_pickle)
+            df = self.initialize(self.addons_config_reco, read=read, from_hdf=from_hdf)
         else:
-            df = self.initializeGen(read=read, from_pickle=from_pickle)
+            df = self.initialize(self.addons_config_gen, read=read, from_hdf=from_hdf)
         X_train, X_test, y_train, y_test = self.configure(df, config_num)
         print(f'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Training config {config_num}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
         # self.model = self.custom_model()
@@ -73,36 +78,14 @@ class NeuralNetwork:
             w_a = df.w_a
             w_b = df.w_b
             auc = self.evaluate(model, X_test, y_test, self.history, w_a, w_b)
-        if not self.gen:
-            self.write(auc, self.history, addons_config)
-        else:
-            self.writeGen(auc, self.history)
+        self.write(self.gen, auc, self.history, self.addons_config_reco)
+        
 
-    def runWithNeutrino(self, config_num, load_alpha=False, termination=1000, read=True, from_pickle=True, epochs=50, batch_size=1024, patience=10):
-        """
-        Does not support gen
-        """
-        if self.gen:
-            print("runWithNeutrino does not support gen")
-            raise SystemExit
-        addons_config={'neutrino': {'load_alpha':load_alpha, 'termination':termination}, 'met':{}}
-        df = self.initialize(addons_config, read=read, from_pickle=from_pickle)
-        X_train, X_test, y_train, y_test = self.configure(df, config_num, mode=1)
-        print(f'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Training config {config_num}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-        model = self.train(X_train, X_test, y_train, y_test, epochs=epochs, batch_size=batch_size, patience=patience)
-        if self.binary:
-            auc = self.evaluateBinary(model, X_test, y_test, self.history)
-        else:
-            w_a = df.w_a
-            w_b = df.w_b
-            auc = self.evaluate(model, X_test, y_test, self.history, w_a, w_b)
-        self.write(auc, self.history, addons_config)
-
-    def runMultiple(self, configs, read=True, from_pickle=True, epochs=50, batch_size=1024, patience=10, addons_config={}):
+    def runMultiple(self, configs, read=True, from_hdf=True, epochs=50, batch_size=1024, patience=10):
         if not self.gen:
-            df = self.initialize(addons_config, read=read, from_pickle=from_pickle)
+            df = self.initialize(self.addons_config_reco, read=read, from_hdf=from_hdf)
         else:
-            df = self.initializeGen(read=read, from_pickle=from_pickle)
+            df = self.initialize(self.addons_config_gen, read=read, from_hdf=from_hdf)
         for config_num in configs:
             print(f'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Training config {config_num}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
             X_train, X_test, y_train, y_test = self.configure(df, config_num)
@@ -113,16 +96,13 @@ class NeuralNetwork:
                 w_a = df.w_a
                 w_b = df.w_b
                 auc = self.evaluate(model, X_test, y_test, self.history, w_a, w_b)
-            if not self.gen:
-                self.write(auc, self.history, addons_config)
-            else:
-                self.writeGen(auc, self.history)
+            self.write(self.gen, auc, self.history, self.addons_config_reco)
 
-    def runTuning(self, config_num, tuning_mode='random_sk', addons_config={}, read=True, from_pickle=True):
+    def runTuning(self, config_num, tuning_mode='random_sk', addons_config={}, read=True, from_hdf=True):
         if not self.gen:
-            df = self.initialize(addons_config, read=read, from_pickle=from_pickle)
+            df = self.initialize(self.addons_config_reco, read=read, from_hdf=from_hdf)
         else:
-            df = self.initializeGen(read=read, from_pickle=from_pickle)
+            df = self.initialize(self.addons_config_gen, read=read, from_hdf=from_hdf)
         X_train, X_test, y_train, y_test = self.configure(df, config_num)
         print(f'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Tuning on config {config_num}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
         tuner = Tuner(mode=tuning_mode)
@@ -193,60 +173,76 @@ class NeuralNetwork:
             f.write(message)
         # model.save(f'./saved_models/grid_search_model_{config_num}_{self.channel}_{search_mode}/')
 
-    def initialize(self, addons_config={}, read=True, from_pickle=True):
+    def initialize(self, addons_config={}, read=True, from_hdf=True):
         """
         Initialize NN by loading/ creating the input data for NN via DataLoader
         Params:
         addons(dict) - addon map each value being an addon configuration
         read - will read df inputs instead of creating them
-        from_pickle - will read events from pickle instead of .root file
+        from_hdf - will read events from HDF5 instead of .root file
         Returns: df of NN inputs (to be configured) 
         """
         if not addons_config:
             addons = []
         else:
             addons = addons_config.keys()
-        if self.channel == 'rho_rho':
-            self.DL = DataLoader(config.variables_rho_rho, self.channel)
-        elif self.channel == 'rho_a1':
-            self.DL = DataLoader(config.variables_rho_a1, self.channel)
-        elif self.channel == 'a1_a1':
-            self.DL = DataLoader(config.variables_a1_a1, self.channel)
+        if not self.gen:
+            if self.channel == 'rho_rho':
+                self.DL = DataLoader(config.variables_rho_rho, self.channel, self.gen)
+            elif self.channel == 'rho_a1':
+                self.DL = DataLoader(config.variables_rho_a1, self.channel, self.gen)
+            elif self.channel == 'a1_a1':
+                self.DL = DataLoader(config.variables_a1_a1, self.channel, self.gen)  
+            else:
+                raise ValueError('Incorrect channel inputted')
         else:
-            raise ValueError('Incorrect channel inputted')
-        CC = ConfigChecker(self.channel, self.binary)
-        CC.checkInitialize(self.DL, addons_config, read, from_pickle)
+            if self.channel == 'rho_rho':
+                self.DL = DataLoader(config.variables_gen_rho_rho, self.channel, self.gen)
+            elif self.channel == 'rho_a1':
+                self.DL = DataLoader(config.variables_gen_rho_a1, self.channel, self.gen)
+            elif self.channel == 'a1_a1':
+                self.DL = DataLoader(config.variables_gen_a1_a1, self.channel, self.gen)
+            else:
+                raise ValueError('Incorrect channel inputted')
+        CC = ConfigChecker(self.channel, self.binary, self.gen)
+        CC.checkInitialize(self.DL, addons_config, read, from_hdf)
         if read:
             print("WARNING: skipping over creating new configs")
-            df = self.DL.loadRecoData(self.binary, addons)
+            if not self.gen:
+                df = self.DL.loadRecoData(self.binary, addons)
+            else:
+                df = self.DL.loadGenData(self.binary, addons)
         else:
-            df = self.DL.createRecoData(self.binary, from_pickle, addons, addons_config)
+            if not self.gen:
+                df = self.DL.createRecoData(self.binary, from_hdf, addons, addons_config)
+            else:
+                df = self.DL.createGenData(self.binary, from_hdf, addons, addons_config)
         return df
 
-    def initializeGen(self, read=True, from_pickle=True):
-        if self.channel == 'rho_rho':
-            self.DL = DataLoader(config.variables_gen_rho_rho, self.channel)
-        elif self.channel == 'rho_a1':
-            self.DL = DataLoader(config.variables_gen_rho_a1, self.channel)
-        elif self.channel == 'a1_a1':
-            self.DL = DataLoader(config.variables_gen_a1_a1, self.channel)
-        else:
-            raise ValueError('Incorrect channel inputted')
-        CC = ConfigChecker(self.channel, self.binary)
-        CC.checkInitializeGen(self.DL, read, from_pickle)
-        if read:
-            df = self.DL.loadGenData(self.binary)
-        else:
-            df = self.DL.createGenData(self.binary, from_pickle)
-        return df
+    # def initializeGen(self, read=True, from_hdf=True):
+    #     if self.channel == 'rho_rho':
+    #         self.DL = DataLoader(config.variables_gen_rho_rho, self.channel, self.gen)
+    #     elif self.channel == 'rho_a1':
+    #         self.DL = DataLoader(config.variables_gen_rho_a1, self.channel, self.gen)
+    #     elif self.channel == 'a1_a1':
+    #         self.DL = DataLoader(config.variables_gen_a1_a1, self.channel, self.gen)
+    #     else:
+    #         raise ValueError('Incorrect channel inputted')
+    #     CC = ConfigChecker(self.channel, self.binary, self.gen)
+    #     CC.checkInitializeGen(self.DL, read, from_hdf)
+    #     if read:
+    #         df = self.DL.loadGenData(self.binary)
+    #     else:
+    #         df = self.DL.createGenData(self.binary, from_hdf)
+    #     return df
 
-    def configure(self, df, config_num, mode=0):
+    def configure(self, df, config_num):
         """
         Configures NN inputs - selects config_num and creates train/test split
         """
         self.config_num = config_num
-        CL = ConfigLoader(df, self.channel)
-        X_train, X_test, y_train, y_test = CL.configTrainTestData(self.config_num, self.binary, mode)
+        CL = ConfigLoader(df, self.channel, self.gen)
+        X_train, X_test, y_train, y_test = CL.configTrainTestData(self.config_num, self.binary)
         return X_train, X_test, y_train, y_test
 
     def train(self, X_train, X_test, y_train, y_test, epochs=50, batch_size=1024, patience=20, save=False, verbose=1):
@@ -290,7 +286,7 @@ class NeuralNetwork:
         auc = E.evaluate(X_test, y_test, history, show=self.show_graph, w_a=w_a, w_b=w_b)
         return auc
 
-    def write(self, auc, history, addons_config):
+    def write(self, gen, auc, history, addons_config):
         if not addons_config:
             addons = []
         else:
@@ -298,7 +294,10 @@ class NeuralNetwork:
         addons_loaded = "None"
         if addons:
             addons_loaded = '_'+'_'.join(addons)
-        file = f'{self.write_dir}/{self.write_filename}_reco_{self.channel}.txt'    
+        if not self.gen:
+            file = f'{self.write_dir}/{self.write_filename}_reco_{self.channel}.txt'
+        else:
+            file = f'{self.write_dir}/{self.write_filename}_gen_{self.channel}.txt'    
         with open(file, 'a+') as f:
             print(f'Writing to {file}')
             time_str = datetime.datetime.now().strftime('%Y/%m/%d|%H:%M:%S')
@@ -307,15 +306,6 @@ class NeuralNetwork:
         print('Finish writing')
         f.close()
 
-    def writeGen(self, auc, history):
-        file = f'{self.write_dir}/{self.write_filename}_gen_{self.channel}.txt'
-        with open(file, 'a+') as f:
-            print(f'Writing to {file}')
-            time_str = datetime.datetime.now().strftime('%Y/%m/%d|%H:%M:%S')
-            actual_epochs = len(history.history["loss"])
-            f.write(f'{time_str},{auc},{self.config_num},{self.layers},{self.epochs},{actual_epochs},{self.batch_size},{self.binary},{self.model_str}\n')
-        print('Finish writing')
-        f.close()
 
     def evaluateBinary(self, model, X_test, y_test, history):
         config_str = self.createConfigStr()
@@ -381,17 +371,20 @@ def parser():
     # TODO: epochs, batch_size, write_filename
     parser = argparse.ArgumentParser()
     parser.add_argument('channel', default='rho_rho', choices=['rho_rho', 'rho_a1', 'a1_a1'], help='which channel to load to')
-    parser.add_argument('config_num', type=int, help='config num to run on')
+    parser.add_argument('config_num', type=float, help='config num to run on')
     parser.add_argument('-g', '--gen', action='store_true', default=False, help='if load gen data')
     parser.add_argument('-b', '--binary', action='store_false', default=True, help='if learn binary labels')
     parser.add_argument('-t', '--tuning', action='store_true', default=False, help='if tuning is run')
     parser.add_argument('-tm', '--tuning_mode', help='choose tuning mode to tune on', default='random_sk')
     parser.add_argument('-r', '--read', action='store_false', default=True, help='if read NN input')
-    parser.add_argument('-p', '--from_pickle', action='store_false', default=True, help='if read .root file from pickle')
+    parser.add_argument('-hdf', '--from_hdf', action='store_false', default=True, help='if read .root file from HDF5')
     parser.add_argument('-a', '--addons', nargs='*', default=None, help='load addons')
     parser.add_argument('-s', '--show_graph', action='store_true', default=False, help='if show graphs')
     parser.add_argument('-e', '--epochs', type=int, default=50, help='epochs to train on')
-    parser.add_argument('-bs', '--batch_size', type=int, default=10000, help='batch size ')
+    parser.add_argument('-bs', '--batch_size', type=int, default=10000, help='batch size')
+    parser.add_argument('-la', '--load_alpha', action='store_false', default=True, help='if load alpha')
+    parser.add_argument('-ter', '--termination', type=int, default=1000, help='termination number for alpha')
+    parser.add_argument('-imp', '--imputer_mode', default='remove', choices=['flag', 'linear', 'knn', 'mean', 'remove'], help='imputation mode for neutrino information')
 
     args = parser.parse_args()
     return args
@@ -405,43 +398,55 @@ if __name__ == '__main__':
         if use_parser:
             args = parser()
             channel = args.channel
-            config_num = args.config_num 
+            config_num = args.config_num / 10
             gen = args.gen
             binary = args.binary
             tuning = args.tuning
             tuning_mode = args.tuning_mode
             read = args.read
-            from_pickle = args.from_pickle
+            from_hdf = args.from_hdf
             addons = args.addons
             show_graph = args.show_graph
             epochs = args.epochs
             batch_size = args.batch_size
+            load_alpha = args.load_alpha
+            termination = args.termination
             NN = NeuralNetwork(channel=channel, gen=gen, binary=binary, write_filename='NN_output', show_graph=show_graph)
+            if not gen:
+                NN.addons_config_reco['neutrino']['load_alpha'] = load_alpha
+                NN.addons_config_reco['neutrino']['termination'] = termination
+                NN.addons_config_reco['neutrino']['imputer_mode'] = 'remove'
+                print(f'Using addons config: {NN.addons_config_reco}')
+            else:
+                NN.addons_config_gen['neutrino']['load_alpha'] = load_alpha
+                NN.addons_config_gen['neutrino']['termination'] = termination
+                NN.addons_config_reco['neutrino']['imputer_mode'] = 'remove'
+                print(f'Using addons config: {NN.addons_config_gen}')
             if not tuning:
-                NN.run(config_num, read=read, from_pickle=from_pickle, epochs=epochs, batch_size=batch_size)
+                NN.run(config_num, read=read, from_hdf=from_hdf, epochs=epochs, batch_size=batch_size)
             else:
                 NN.runTuning(config_num, tuning_mode=tuning_mode)
         else:
             NN = NeuralNetwork(channel='rho_rho', gen=True, binary=True, write_filename='NN_output', show_graph=False)
-            # NN.initialize(addons_config={'neutrino': {'load_alpha':False, 'termination':1000}}, read=False, from_pickle=True)
-            # NN.initialize(addons_config={}, read=False, from_pickle=True)
+            # NN.initialize(addons_config={'neutrino': {'load_alpha':False, 'termination':1000}}, read=False, from_hdf=True)
+            # NN.initialize(addons_config={}, read=False, from_hdf=True)
             # NN.model = NN.seq_model(units=(300, 300, 300), batch_norm=True, dropout=0.2)
-            # NN.run(1, read=True, from_pickle=True, epochs=100, batch_size=8192) # 16384, 131072
-            NN.run(3, read=True, from_pickle=True, epochs=50, batch_size=10000)
+            # NN.run(1, read=True, from_hdf=True, epochs=100, batch_size=8192) # 16384, 131072
+            NN.run(3, read=True, from_hdf=True, epochs=50, batch_size=10000)
             # configs = [1,2,3,4,5,6]
             # NN.runMultiple(configs, epochs=1, batch_size=10000)
-            # NN.runWithNeutrino(1, load_alpha=False, termination=100, read=False, from_pickle=True, epochs=50, batch_size=1024)
+            # NN.runWithNeutrino(1, load_alpha=False, termination=100, read=False, from_hdf=True, epochs=50, batch_size=1024)
             # NN.runTuning(3, tuning_mode='random_kt')
 
     else:  # if we are on Kristof's computer
         # NN = NeuralNetwork(channel='rho_rho', binary=True, write_filename='NN_output', show_graph=False)
         NN = NeuralNetwork(channel='rho_a1', gen=False, binary=True, write_filename='NN_output', show_graph=False)
         # NN = NeuralNetwork(channel='a1_a1', binary=True, write_filename='NN_output', show_graph=False)
-        # NN.run(2, read=True, from_pickle=True, epochs=10, batch_size=10000)
-        NN.run(1, read=False, from_pickle=False, epochs=10, batch_size=10000)
+        # NN.run(2, read=True, from_hdf=True, epochs=10, batch_size=10000)
+        NN.run(1, read=False, from_hdf=False, epochs=10, batch_size=10000)
         
         # for _ in range(7):
-        #     NN.run(1, read=False, from_pickle=False, epochs=10, batch_size=10000)
+        #     NN.run(1, read=False, from_hdf=False, epochs=10, batch_size=10000)
         #     print()
         #     print()
         #     print('ITERATION', _, 'done')
