@@ -140,7 +140,7 @@ class NeutrinoReconstructor:
                 df_br_imputed = pd.DataFrame(itImp.fit_transform(df_br_red), columns=df_br_red.columns)
                 return df_br_imputed
             elif mode == 'extra_trees':
-                itImp = IterativeImputer(estimator=ExtraTreesRegressor(), missing_values=NeutrinoReconstructor.DEFAULT_VALUE, random_state=config.seed_value, verbose=2, max_iter=10)
+                itImp = IterativeImputer(estimator=ExtraTreesRegressor(n_estimators=10), missing_values=NeutrinoReconstructor.DEFAULT_VALUE, random_state=config.seed_value, verbose=2, max_iter=10)
                 df_br_imputed = pd.DataFrame(itImp.fit_transform(df_br_red), columns=df_br_red.columns)
                 return df_br_imputed
             elif mode == 'kn_reg':
