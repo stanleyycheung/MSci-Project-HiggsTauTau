@@ -375,7 +375,7 @@ def parser():
     parser.add_argument('-g', '--gen', action='store_true', default=False, help='if load gen data')
     parser.add_argument('-b', '--binary', action='store_false', default=True, help='if learn binary labels')
     parser.add_argument('-t', '--tuning', action='store_true', default=False, help='if tuning is run')
-    parser.add_argument('-tm', '--tuning_mode', help='choose tuning mode to tune on', default='random_sk')
+    parser.add_argument('-tm', '--tuning_mode', help='choose tuning mode to tune on', default='hyperopt')
     parser.add_argument('-r', '--read', action='store_false', default=True, help='if read NN input')
     parser.add_argument('-hdf', '--from_hdf', action='store_false', default=True, help='if read .root file from HDF5')
     parser.add_argument('-a', '--addons', nargs='*', default=None, help='load addons')
