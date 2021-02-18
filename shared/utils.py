@@ -40,10 +40,12 @@ def profileplot(x, y, xlabel='', ylabel='', bins=100, mode=0):
         p = np.poly1d(fit)
         print(f"Fit params: {fit[0]}, {fit[1]}")
         print(f"Diag of cov: {cov[0][0]} , {cov[1][1]}")
-        plt.plot(bin_centers, p(bin_centers))
+        plt.plot(bin_centers, p(bin_centers), label=f'gradient:{fit[0]:.2f}\nintercept:{fit[1]:.3f}')
+        return fit, cov
     plt.grid()
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
+    plt.legend()
     plt.tight_layout()
     
 

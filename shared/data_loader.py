@@ -204,9 +204,9 @@ class DataLoader:
         # select ps and sm data
         df_clean = df_clean.dropna()
         df_clean = df_clean[(df_clean != 0).all(1)]
-        df_rho_ps = df_clean[(df_clean["rand"] < df_clean["wt_cp_ps"]/2)]
-        df_rho_sm = df_clean[(df_clean["rand"] < df_clean["wt_cp_sm"]/2)]
-        return df_clean, df_rho_ps, df_rho_sm
+        df_ps = df_clean[(df_clean["rand"] < df_clean["wt_cp_ps"]/2)]
+        df_sm = df_clean[(df_clean["rand"] < df_clean["wt_cp_sm"]/2)]
+        return df_clean, df_ps, df_sm
 
     def cleanSmearingData(self, df):
         """exactly the same as cleanGenData"""
@@ -265,6 +265,7 @@ class DataLoader:
                 hdf_file_name = f'{DataLoader.input_df_save_dir_gen}/input_gen_{self.channel}{addons_loaded}'
             if binary:
                 hdf_file_name += '_b'
+            # hdf_file_name = './alpha_analysis/df_br'
             print(f'Saving df to {hdf_file_name}')
             df_inputs.to_hdf(hdf_file_name+'.h5', key='df')
         return df_inputs
@@ -323,6 +324,29 @@ class DataLoader:
             'w_b': df.wt_cp_ps,
             'm_rho_1': rho_1.m,
             'm_rho_2': rho_2.m,
+            # for alpha error graphs
+            # "gen_nu_p_1": df.gen_nu_p_1,
+            # "gen_nu_phi_1": df.gen_nu_phi_1,
+            # "gen_nu_eta_1": df.gen_nu_eta_1,
+            # "gen_nu_p_2": df.gen_nu_p_2,
+            # "gen_nu_phi_2": df.gen_nu_phi_2,
+            # "gen_nu_eta_2": df.gen_nu_eta_2,
+            # 'pi_E_1': pi_1[0],
+            # 'pi_px_1': pi_1[1],
+            # 'pi_py_1': pi_1[2],
+            # 'pi_pz_1': pi_1[3],
+            # 'pi_E_2': pi_2[0],
+            # 'pi_px_2': pi_2[1],
+            # 'pi_py_2': pi_2[2],
+            # 'pi_pz_2': pi_2[3],
+            # 'pi0_E_1': pi0_1[0],
+            # 'pi0_px_1': pi0_1[1],
+            # 'pi0_py_1': pi0_1[2],
+            # 'pi0_pz_1': pi0_1[3],
+            # 'pi0_E_2': pi0_2[0],
+            # 'pi0_px_2': pi0_2[1],
+            # 'pi0_py_2': pi0_2[2],
+            # 'pi0_pz_2': pi0_2[3],
         }
         # additional info from .root
         if not self.gen:
@@ -887,7 +911,6 @@ class DataLoader:
         TODO: need to catch incorrectly loaded kwargs
         Return: df_inputs (modified)
         """
-        
         for addon in addons:
             if addon == 'met':
                 print('Addon MET loaded')

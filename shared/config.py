@@ -1,5 +1,9 @@
 seed_value = 1
 
+extra_variables_reco = [
+    "gen_nu_p_1", "gen_nu_phi_1", "gen_nu_eta_1",  # leading neutrino, gen level
+    "gen_nu_p_2", "gen_nu_phi_2", "gen_nu_eta_2"  # subleading neutrino, gen level
+]
 selectors_reco = [
     "wt_cp_sm", "wt_cp_ps", "wt_cp_mm", "rand",
     "mva_dm_1", "mva_dm_2",
@@ -25,8 +29,8 @@ sv_2 = ['sv_x_2', 'sv_y_2', 'sv_z_2']
 # variables are now fully loaded
 particles_rho_rho = [
     "pi_E_1", "pi_px_1", "pi_py_1", "pi_pz_1",
-    "pi_E_2", "pi_px_2", "pi_py_2", "pi_pz_2",
     "pi0_E_1", "pi0_px_1", "pi0_py_1", "pi0_pz_1",
+    "pi_E_2", "pi_px_2", "pi_py_2", "pi_pz_2",
     "pi0_E_2", "pi0_px_2", "pi0_py_2", "pi0_pz_2",
 ]
 variables_rho_rho = [
@@ -34,7 +38,7 @@ variables_rho_rho = [
     "y_1_1", "y_1_2",
     # "gen_nu_p_1", "gen_nu_phi_1", "gen_nu_eta_1",  # leading neutrino, gen level
     # "gen_nu_p_2", "gen_nu_phi_2", "gen_nu_eta_2"  # subleading neutrino, gen level
-] + selectors_reco + met_reco + ip + particles_rho_rho
+] + selectors_reco + met_reco + ip + particles_rho_rho + extra_variables_reco
 particles_rho_a1 = [
     "pi_E_1", "pi_px_1", "pi_py_1", "pi_pz_1",
     "pi0_E_1", "pi0_px_1", "pi0_py_1", "pi0_pz_1",

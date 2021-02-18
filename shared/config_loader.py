@@ -98,7 +98,11 @@ class ConfigLoader:
             elif config_num == 2.5:
                 # add sv + config 2.4
                 base = np.c_[four_vectors, aco_angles_calc, y_s, m_s, self.df.metx_b, self.df.mety_b]
-                if self.channel == 'a1_a1' or self.gen:
+                if self.gen:
+                    sv_1_transformed = np.c_[self.df.sv_x_1_br, self.df.sv_y_1_br, self.df.sv_z_1_br]
+                    sv_2_transformed = np.c_[self.df.sv_x_2_br, self.df.sv_y_2_br, self.df.sv_z_2_br]
+                    return np.c_[base, sv_1_transformed, sv_2_transformed]
+                elif self.channel == 'a1_a1' :
                     sv_1_transformed = np.c_[self.df.sv_x_1_br, self.df.sv_y_1_br, self.df.sv_z_1_br]
                     sv_2_transformed = np.c_[self.df.sv_x_2_br, self.df.sv_y_2_br, self.df.sv_z_2_br]
                     return np.c_[base, sv_1_transformed, sv_2_transformed, self.df.pv_angle]
