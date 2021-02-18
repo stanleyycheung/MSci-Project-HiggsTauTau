@@ -421,7 +421,7 @@ if __name__ == '__main__':
             else:
                 NN.addons_config_gen['neutrino']['load_alpha'] = load_alpha
                 NN.addons_config_gen['neutrino']['termination'] = termination
-                NN.addons_config_reco['neutrino']['imputer_mode'] = imputer_mode
+                NN.addons_config_gen['neutrino']['imputer_mode'] = imputer_mode
                 print(f'Using addons config: {NN.addons_config_gen}')
             if not tuning:
                 NN.run(config_num, read=read, from_hdf=from_hdf, epochs=epochs, batch_size=batch_size)
