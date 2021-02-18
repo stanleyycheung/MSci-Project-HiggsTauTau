@@ -41,8 +41,10 @@ class DataLoader:
         print('Running on Imperial HEP LX machines')
         reco_root_path = "/vols/cms/shc3117/MVAFILE_AllHiggs_tt.root"
         gen_root_path = "/vols/cms/shc3117/MVAFILE_GEN_AllHiggs_tt.root"
+        smearing_root_path = '/vols/cms/dw515/Offline/output/SM/master_gen_ntuple_1502/MVAFILE_tt.root'
         reco_df_path = '/vols/cms/shc3117/df_tt'
         gen_df_path = '/vols/cms/shc3117/df_tt_gen'
+        smearing_df_path = '/vols/cms/shc3117/df_tt_smearing'
     input_df_save_dir_reco = './input_df_reco'
     input_df_save_dir_gen = './input_df_gen'
 
@@ -54,6 +56,7 @@ class DataLoader:
         self.channel = channel
         self.variables = variables
         self.gen = gen
+        self.smearing = True # !!! should be an input parameter! Possibly from command line?
 
     def loadRecoData(self, binary, addons=[]):
         """
@@ -83,6 +86,17 @@ class DataLoader:
         df_inputs = pd.read_hdf(hdf_file_name+'.h5', 'df')
         return df_inputs
 
+    def loadSmearingData(self, binary, addons=[]):
+        print('Reading smearing df HDF5 file')
+        addons_loaded = ""
+        if addons:
+            addons_loaded = '_'+'_'.join(addons)
+        hdf_file_name = f'{DataLoader.input_df_save_dir_reco}/input_{self.channel}{addons_loaded}'
+        if binary:
+            hdf_file_name += '_b'
+        df_inputs = pd.read_hdf(hdf_file_name+'.h5', 'df')
+        return df_inputs
+
     def createRecoData(self, binary, from_hdf=True, addons=[], addons_config={}):
         """
         Creates the input (reco) data for the NN either from .root file or a previously saved .h5 file
@@ -104,6 +118,15 @@ class DataLoader:
         df_inputs = self.createTrainTestData(df_clean, df_ps_clean, df_sm_clean, binary, True, addons, addons_config, save=True)
         return df_inputs
 
+    def createSmearingData(self, binary, from_hdf=False, addons=[], addons_config={}):
+        print(f'Loading .root info with using HDF5 as {from_hdf}')
+        df = self.readSmearingData(from_hdf=from_hdf)
+        print('Cleaning data')
+        df_clean, df_ps_clean, df_sm_clean = self.cleanSmearingData(df)
+        print('Creating input data')
+        df_inputs = self.createTrainTestData(df_clean, df_ps_clean, df_sm_clean, binary, True, addons, addons_config, save=True)
+        return df_inputs
+        
     def readRecoData(self, from_hdf=False):
         """
         Reads the reco root file, can save contents into .h5 for fast read/write abilities
@@ -128,6 +151,16 @@ class DataLoader:
             df.to_hdf(f"{DataLoader.gen_df_path}_{self.channel}.h5", 'df')
         else:
             df = pd.read_hdf(f"{DataLoader.gen_df_path}_{self.channel}.h5", 'df')
+        return df
+
+    def readSmearingData(self, from_hdf=False):
+        if not from_hdf:
+            tree_tt = uproot.open(DataLoader.smearing_root_path)["ntuple"]
+            print('keys=', tree_tt.keys())
+            df = tree_tt.pandas.df(self.variables)
+            df.to_hdf(f"{DataLoader.smearing_df_path}_{self.channel}.h5", 'df')
+        else:
+            df = pd.read_hdf(f"{DataLoader.smearing_df_path}_{self.channel}.h5", 'df')
         return df
 
     def cleanGenData(self, df):
@@ -171,6 +204,22 @@ class DataLoader:
         # select ps and sm data
         df_clean = df_clean.dropna()
         df_clean = df_clean[(df_clean != 0).all(1)]
+        df_rho_ps = df_clean[(df_clean["rand"] < df_clean["wt_cp_ps"]/2)]
+        df_rho_sm = df_clean[(df_clean["rand"] < df_clean["wt_cp_sm"]/2)]
+        return df_clean, df_rho_ps, df_rho_sm
+
+    def cleanSmearingData(self, df):
+        """exactly the same as cleanGenData"""
+        if self.channel == 'rho_rho':
+            df_clean = df[(df['dm_1'] == 1) & (df['dm_2'] == 1)]
+        elif self.channel == 'rho_a1':
+            df_clean = df[(df['dm_1'] == 1) & (df['dm_2'] == 10)]
+        elif self.channel == 'a1_a1':
+            df_clean = df[(df['dm_1'] == 10) & (df['dm_2'] == 10)]
+        else:
+            raise ValueError('Incorrect channel inputted')
+        df_clean = df_clean.dropna()
+        df_clean = df_clean.loc[~(df_clean == 0).all(axis=1)]
         df_rho_ps = df_clean[(df_clean["rand"] < df_clean["wt_cp_ps"]/2)]
         df_rho_sm = df_clean[(df_clean["rand"] < df_clean["wt_cp_sm"]/2)]
         return df_clean, df_rho_ps, df_rho_sm
