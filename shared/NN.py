@@ -49,8 +49,8 @@ class NeuralNetwork:
 
     def __init__(self,  channel, gen, binary=True, write_filename='NN_output', show_graph=False):
         print(f'Loaded in {channel}, binary={binary}, gen={gen}')
-        self.addons_config_reco = {'neutrino': {'load_alpha':False, 'termination':1000}, 'met': {}, 'ip': {}, 'sv': {}}
-        self.addons_config_gen = {'neutrino': {'load_alpha':False, 'termination':1000}, 'met': {}, 'sv': {}}
+        self.addons_config_reco = {'neutrino': {'load_alpha':False, 'termination':1000, 'imputer_mode':'remove'}, 'met': {}, 'ip': {}, 'sv': {}}
+        self.addons_config_gen = {'neutrino': {'load_alpha':False, 'termination':1000, 'imputer_mode':'remove'}, 'met': {}, 'sv': {}}
         self.show_graph = show_graph
         self.channel = channel
         self.binary = binary
@@ -219,23 +219,6 @@ class NeuralNetwork:
                 df = self.DL.createGenData(self.binary, from_hdf, addons, addons_config)
         return df
 
-    # def initializeGen(self, read=True, from_hdf=True):
-    #     if self.channel == 'rho_rho':
-    #         self.DL = DataLoader(config.variables_gen_rho_rho, self.channel, self.gen)
-    #     elif self.channel == 'rho_a1':
-    #         self.DL = DataLoader(config.variables_gen_rho_a1, self.channel, self.gen)
-    #     elif self.channel == 'a1_a1':
-    #         self.DL = DataLoader(config.variables_gen_a1_a1, self.channel, self.gen)
-    #     else:
-    #         raise ValueError('Incorrect channel inputted')
-    #     CC = ConfigChecker(self.channel, self.binary, self.gen)
-    #     CC.checkInitializeGen(self.DL, read, from_hdf)
-    #     if read:
-    #         df = self.DL.loadGenData(self.binary)
-    #     else:
-    #         df = self.DL.createGenData(self.binary, from_hdf)
-    #     return df
-
     def configure(self, df, config_num):
         """
         Configures NN inputs - selects config_num and creates train/test split
@@ -384,7 +367,7 @@ def parser():
     parser.add_argument('-bs', '--batch_size', type=int, default=10000, help='batch size')
     parser.add_argument('-la', '--load_alpha', action='store_false', default=True, help='if load alpha')
     parser.add_argument('-ter', '--termination', type=int, default=1000, help='termination number for alpha')
-    parser.add_argument('-imp', '--imputer_mode', default='remove', choices=['flag', 'bayesian_ridge', 'decision_tree', 'extra_trees', 'kn_reg', 'knn', 'mean', 'remove'], help='imputation mode for neutrino information')
+    parser.add_argument('-imp', '--imputer_mode', default='remove', choices=['pass', 'flag', 'bayesian_ridge', 'decision_tree', 'extra_trees', 'kn_reg', 'knn', 'mean', 'remove'], help='imputation mode for neutrino information')
 
     args = parser.parse_args()
     return args
@@ -421,7 +404,7 @@ if __name__ == '__main__':
             else:
                 NN.addons_config_gen['neutrino']['load_alpha'] = load_alpha
                 NN.addons_config_gen['neutrino']['termination'] = termination
-                NN.addons_config_reco['neutrino']['imputer_mode'] = imputer_mode
+                NN.addons_config_gen['neutrino']['imputer_mode'] = imputer_mode
                 print(f'Using addons config: {NN.addons_config_gen}')
             if not tuning:
                 NN.run(config_num, read=read, from_hdf=from_hdf, epochs=epochs, batch_size=batch_size)

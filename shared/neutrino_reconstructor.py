@@ -61,13 +61,15 @@ class NeutrinoReconstructor:
         pi_2 = Momentum4(df['pi_E_2'], df["pi_px_2"], df["pi_py_2"], df["pi_pz_2"])
         pi0_1 = Momentum4(df['pi0_E_1'], df["pi0_px_1"], df["pi0_py_1"], df["pi0_pz_1"])
         pi0_2 = Momentum4(df['pi0_E_2'], df["pi0_px_2"], df["pi0_py_2"], df["pi0_pz_2"])
+
+        
         # boost into rest frame of resonances
         rest_frame = pi_1 + pi_2 + pi0_1 + pi0_2
         boost = Momentum4(rest_frame[0], -rest_frame[1], -rest_frame[2], -rest_frame[3])
         nu_1_boosted = nu_1.boost_particle(boost)
         nu_2_boosted = nu_2.boost_particle(boost)
-        rho_1_boosted = pi_1.boost_particle(boost) + pi0_1.boost_particle(boost)
-        nu_1_boosted_rot, nu_2_boosted_rot = []
+        rho_1 = pi_1 + pi0_1
+        rho_1_boosted = rho_1.boost_particle(boost)
         rotationMatrices = self.rotationMatrixVectorised(rho_1_boosted[1:].T, np.tile(np.array([0, 0, 1]), (rho_1_boosted.e.shape[0], 1)))
         nu_1_boosted_rot = np.einsum('ij,ikj->ik', nu_1_boosted[1:].T, rotationMatrices)
         nu_2_boosted_rot = np.einsum('ij,ikj->ik', nu_2_boosted[1:].T, rotationMatrices)
@@ -87,10 +89,11 @@ class NeutrinoReconstructor:
         rotation_matrix = np.tile(np.eye(3), (len(vec1), 1, 1)) + kmat + np.linalg.matrix_power(kmat, 2)*((1 - c) / (s ** 2))[:, None][:, np.newaxis]
         return rotation_matrix
 
-    def dealWithMissingData(self, df_br, mode):
+    def dealWithMissingData(self, df_br, mode, **kwargs):
         """
         Deals with rejected events according to mode
         Mode:
+        'pass' - do nothing
         'flag - Simple flag
         'bayesian_ridge' - BayesianRidge algorithm
         'decision_tree' - DecisionTree algorithm
@@ -100,10 +103,12 @@ class NeutrinoReconstructor:
         'mean' - Replace with mean
         'remove' - Remove events
         """
-        print('Imputing missing data')
+        print(f'Imputing missing data with mode: {mode}')
         # change to return df_br and modify in place
         # alpha_flag = NeutrinoReconstructor.DEFAULT_VALUE + 1
-        if mode == 'flag':
+        if mode == 'pass':
+            return df_br
+        elif mode == 'flag':
             df_br['flag'] = np.where(df_br['alpha_1']==NeutrinoReconstructor.DEFAULT_VALUE, 0, 1)
             return df_br
         elif mode == 'mean':
@@ -112,8 +117,10 @@ class NeutrinoReconstructor:
             return df_br_imputed
         elif mode == 'remove':
             df_br_red = df_br[df_br.alpha_1 != NeutrinoReconstructor.DEFAULT_VALUE]
+            # print(df_br_red.index)
+            df = kwargs['df']
             print(f'Reduced events from {df_br.shape[0]} to {df_br_red.shape[0]}')
-            return df_br_red
+            return df_br_red, df.reindex(df_br_red.index)
         elif mode in {'bayesian_ridge', 'decision_tree', 'extra_trees', 'kn_reg', 'knn'}:
             # only leave rotated 4 vectors in df
             neutrino_features = ['alpha_1', 'alpha_2', 'E_nu_1', 'E_nu_2', 'p_t_nu_1', 'p_t_nu_2', 'p_z_nu_1', 'p_z_nu_2']
@@ -196,8 +203,8 @@ class NeutrinoReconstructor:
             metx, mety = df['metx'], df['mety']
             a1_2 = pi_2 + pi3_2 + pi2_2
             sv_2 = np.c_[df['sv_x_2'], df['sv_y_2'], df['sv_z_2']]
-            theta_f_2 = getPhiTauForOne(a1_2, sv_2)
-            sol_2, sv_norm_2 = self.ANSolution(a1_2.m, a1_2.p, theta_f_2)
+            theta_f_2, sv_norm_2 = getPhiTauForOne(a1_2, sv_2)
+            sol_2 = self.ANSolution(a1_2.m, a1_2.p, theta_f_2)
             tau_p_2_1 = sol_2[0][:,None]*sv_norm_2
             tau_p_2_2 = sol_2[1][:,None]*sv_norm_2
             E_tau_2_1 = np.sqrt(np.linalg.norm(tau_p_2_1, axis=1)**2 + self.m_tau**2)
@@ -214,10 +221,10 @@ class NeutrinoReconstructor:
             a1_2 = pi_2 + pi3_2 + pi2_2
             sv_1 = np.c_[df['sv_x_1'], df['sv_y_1'], df['sv_z_1']]
             sv_2 = np.c_[df['sv_x_2'], df['sv_y_2'], df['sv_z_2']]
-            theta_f_1 = getPhiTauForOne(a1_1, sv_1)
+            theta_f_1, sv_norm_1 = getPhiTauForOne(a1_1, sv_1)
             theta_f_2 = getPhiTauForOne(a1_2, sv_2)
-            sol_1, sv_norm_1 = self.ANSolution(a1_1.m, a1_1.p, theta_f_1)
-            sol_2, sv_norm_2 = self.ANSolution(a1_2.m, a1_2.p, theta_f_2)
+            sol_1, sv_norm_2 = self.ANSolution(a1_1.m, a1_1.p, theta_f_1)
+            sol_2 = self.ANSolution(a1_2.m, a1_2.p, theta_f_2)
             tau_p_1_1 = sol_1[0][:,None]*sv_norm_1
             tau_p_1_2 = sol_1[1][:,None]*sv_norm_1
             tau_p_2_1 = sol_2[0][:,None]*sv_norm_2
@@ -430,21 +437,23 @@ if __name__ == '__main__':
     channel = 'rho_rho'
     NR = NeutrinoReconstructor(binary=True, channel=channel)
     if not gen:
-        addons_config_reco = {'neutrino': {'load_alpha':False, 'termination':100}, 'met': {}, 'ip': {}, 'sv': {}}
+        addons_config_reco = {'neutrino': {'load_alpha':False, 'termination':1000}, 'met': {}, 'ip': {}, 'sv': {}}
         addons = addons_config_reco.keys()
         DL = DataLoader(config.variables_rho_rho, channel, gen)
         df, df_ps, df_sm = DL.cleanRecoData(DL.readRecoData(from_hdf=True))
-        df_br = DL.loadRecoData(True, addons).reset_index(drop=True)
+        # df_br = DL.loadRecoData(True, addons).reset_index(drop=True)
+        df_br = pd.read_hdf('./alpha_analysis/df_br.h5', df)
     else:
-        addons_config_gen = {'neutrino': {'load_alpha':False, 'termination':100}, 'sv': {}}
+        addons_config_gen = {'neutrino': {'load_alpha':False, 'termination':1000}, 'sv': {}}
         addons = addons_config_gen.keys()
         DL = DataLoader(config.variables_gen_rho_rho, channel, gen)
         df, df_ps, df_sm = DL.cleanGenData(DL.readGenData(from_hdf=True))
         df_br = DL.loadGenData(True, addons).reset_index(drop=True)
     df_b, _ = DL.augmentDfToBinary(df_ps, df_sm)
-    # NR.runAlphaReconstructor(df_b.reset_index(drop=True), df_br, load_alpha=False, termination=100)
-    df_br_imputed = NR.dealWithMissingData(df_br, mode='extra_trees')
-    print(df_br_imputed.head())
+    df_br = NR.runAlphaReconstructor(df_b.reset_index(drop=True), df_br, load_alpha=True, termination=1000)
+    print(df_br.columns)
+    # df_br_imputed = NR.dealWithMissingData(df_br, mode='extra_trees')
+    # print(df_br_imputed.head())
     # NR = NeutrinoReconstructor(binary=False, channel='rho_rho')
     # # NR.testRunAlphaReconstructor()
     # variables_rho_rho = [
