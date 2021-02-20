@@ -10,6 +10,7 @@ import numpy as np
 import datetime
 import config
 import argparse
+import matplotlib.pyplot as plt
 from utils import TensorBoardExtended
 seed_value = config.seed_value
 # 1. Set the `PYTHONHASHSEED` environment variable at a fixed value
@@ -64,13 +65,32 @@ class NeuralNetwork:
     def run(self, config_num, read=True, from_hdf=True, epochs=50, batch_size=1024, patience=15):
         if not self.gen:
             df = self.initialize(self.addons_config_reco, read=read, from_hdf=from_hdf)
+
+            # smearing
+            print('DOING THE SMEARING IN RECO:')
+            # difference = df['reco_pi_E_1'] - df['pi_E_1']
+            # difference_filtered = [x for x in difference if np.abs(x) < 200]
+            # plt.figure(1)
+            # plt.hist(difference_filtered, bins=50)
+            # plt.title('Difference of pi_E_1')
+            # plt.savefig('difference.png')
+            # print('figure saved')
+            # #print(len(df['reco_pi_E_1']))
+            # diff_px_1 = df['reco_pi_px_1'] - df['pi_px_1']
+            # diff_px_1_filtered = [x for x in diff_px_1 if np.abs(x) < 100]
+            # plt.figure(2)
+            # plt.hist(diff_px_1_filtered, bins=50)
+            # plt.title('Difference of pi_px_1')
+            # plt.savefig('diff_px_1.png')
+            # print('Smearing done')
+
         else:
             df = self.initialize(self.addons_config_gen, read=read, from_hdf=from_hdf)
             
             # smearing
-            print('DOING THE SMEARING:')
+            print('DOING THE SMEARING IN GEN:')
             print(len(df['reco_pi_E_1']))
-            
+
         X_train, X_test, y_train, y_test = self.configure(df, config_num)
         print(f'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Training config {config_num}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
         # self.model = self.custom_model()
