@@ -186,7 +186,7 @@ class DataLoader:
         else:
             raise ValueError('Incorrect channel inputted')
         df_clean = df_clean.dropna()
-        df_clean = df_clean.loc[~(df_clean == 0).all(axis=1)]
+        df_clean = df_clean[(df_clean != 0).all(1)]
         df_rho_ps = df_clean[(df_clean["rand"] < df_clean["wt_cp_ps"]/2)]
         df_rho_sm = df_clean[(df_clean["rand"] < df_clean["wt_cp_sm"]/2)]
         return df_clean, df_rho_ps, df_rho_sm

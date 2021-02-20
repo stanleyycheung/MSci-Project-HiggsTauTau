@@ -165,9 +165,9 @@ class Tuner:
             self.X_train, self.y_train, self.X_test, self.y_test = X_train, y_train, X_test, y_test
             trials = Trials()
             # tpe, annealing, random
-            best = fmin(self.hyperOptObj, space, algo=tpe.suggest, trials=trials, max_evals=60) # the old value was max_evals=10
+            best = fmin(self.hyperOptObjNN, space, algo=tpe.suggest, trials=trials, max_evals=60) # the old value was max_evals=10
             best_params = hyperopt.space_eval(space, best)
-            model, _ = self.hyperOptModel(best_params)
+            model, _ = self.hyperOptModelNN(best_params)
             # print(best_params)
             # print(trials.best_trial)
             return model, best_params, space_display
@@ -207,7 +207,7 @@ class Tuner:
         self.model_str = "grid_model"
         return self.model
 
-    def hyperOptModel(self, params):
+    def hyperOptModelNN(self, params):
         params = {
                 'num_layers': int(params['num_layers']),
                 'batch_norm': bool(params['batch_norm']),
@@ -244,7 +244,7 @@ class Tuner:
         early_stop = tf.keras.callbacks.EarlyStopping(monitor='auc', patience=20)
         return model, early_stop
 
-    def hyperOptObj(self, params):
+    def hyperOptObjNN(self, params):
         params = {
                 'num_layers': int(params['num_layers']),
                 'batch_norm': bool(params['batch_norm']),
@@ -255,7 +255,7 @@ class Tuner:
                 'activation': str(params['activation']),
                 'initializer_std': float(params['initializer_std']),
             }
-        model, early_stop = self.hyperOptModel(params)
+        model, early_stop = self.hyperOptModelNN(params)
         model.fit(self.X_train, self.y_train, epochs=params['epochs'], batch_size=params['batch_size'], callbacks=[early_stop], verbose=0)
         y_proba = model.predict(self.X_test)  # outputs two probabilties
         auc = roc_auc_score(self.y_test, y_proba)

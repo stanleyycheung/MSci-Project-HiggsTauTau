@@ -38,8 +38,6 @@ print("GPU list: ", tf.config.list_physical_devices('GPU'))
 
 
 class XGBoost(NN.NeuralNetwork):
-
-
     def __init__(self, channel, gen, binary=True, write_filename='NN_output', show_graph=False):
         print(f'Loaded in {channel}, binary={binary}, gen={gen}')
         self.addons_config_reco = {'neutrino': {'load_alpha':False, 'termination':1000}, 'met': {}, 'ip': {}, 'sv': {}}
@@ -78,7 +76,7 @@ class XGBoost(NN.NeuralNetwork):
             w_b = df.w_b
             auc = self.evaluate(model, X_test, y_test, None, w_a, w_b)
         print('Writing...')
-        self.write(self.gen, auc, None, self.addons_config_reco)
+        self.write(self.gen, auc, self.addons_config_reco)
 
     def createConfigStr(self):
         """almost copy pasted. Differences:
@@ -90,7 +88,7 @@ class XGBoost(NN.NeuralNetwork):
             config_str = f'config{self.config_num}_{self.model_str}'
         return config_str
 
-    def write(self, gen, auc, history, addons_config):
+    def write(self, auc, addons_config):
         """almost copy pasted. Differences:
         actual_epochs deleted
         history is None, but it's not used
@@ -115,7 +113,7 @@ class XGBoost(NN.NeuralNetwork):
 
     def train(self, X_train, X_test, y_train, y_test, stopping_rounds=100, save=False, verbose=1):
         if self.model is None:
-            self.model = self.get_model()
+            self.model = self.xgbModel()
         self.model.fit(X_train, y_train,
             early_stopping_rounds=stopping_rounds, # stops the training if doesn't improve after 200 iterations
             eval_set=[(X_train, y_train), (X_test, y_test)],
@@ -125,15 +123,15 @@ class XGBoost(NN.NeuralNetwork):
             self.model.save_model(f'./saved_models/{self.save_dir}/xgboost.json')
         return self.model
 
-    def get_model(self):
+    def xgbModel(self):
         xgb_params = {
             "objective": "binary:logistic",
-            "max_depth": 5,
+            "max_depth": 6,
             "learning_rate": 0.02,
             "silent": 1,
             "n_estimators": 100,
             "subsample": 0.9,
-            "seed": 123451,
+            "seed": config.seed_value,
         }
         xgb_clf = xgb.XGBClassifier(**xgb_params)
         return xgb_clf
