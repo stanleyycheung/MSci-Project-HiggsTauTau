@@ -171,7 +171,8 @@ class NeuralNetwork:
             message = f'{time_str},{auc},{self.config_num},{self.layers},{self.batch_norm},{self.dropout},{self.epochs},{self.batchsize},{tuning_mode},{grid_best_score},{self.learning_rate},{self.activation},{self.initializer_std},{param_grid}\n'
             print(f"Message: {message}")
             f.write(message)
-        # model.save(f'./saved_models/grid_search_model_{config_num}_{self.channel}_{search_mode}/')
+        model_save_str = f'./saved_models/{self.channel}/model_{config_num}'
+        model.save(model_save_str)
 
     def initialize(self, addons_config={}, read=True, from_hdf=True):
         """
@@ -269,7 +270,7 @@ class NeuralNetwork:
         auc = E.evaluate(X_test, y_test, history, show=self.show_graph, w_a=w_a, w_b=w_b)
         return auc
 
-    def write(self, gen, auc, history, addons_config):
+    def write(self, auc, history, addons_config):
         if not addons_config:
             addons = []
         else:

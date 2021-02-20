@@ -104,16 +104,13 @@ nu_2_boosted_rot = Momentum4(*nu_2_boosted_rot.T)
 
 
 # %%
-plt.figure(figsize=(12,6))
-p_z_error = nu_1_boosted_rot.p_z-df.p_z_nu_1
-
-plt.hist(np.clip(p_z_error, -200, 200), label=f'mean: {np.mean(p_z_error):.2f}\nstd dev: {np.std(p_z_error, ddof=1):.2f}', bins=200)
-plt.legend()
-plt.show()
-
+plt.rcParams["figure.figsize"] = (10,8)
+# p_z_error = nu_1_boosted_rot.p_z-df.p_z_nu_1
+# plt.hist(np.clip(p_z_error, -200, 200), label=f'mean: {np.mean(p_z_error):.2f}\nstd dev: {np.std(p_z_error, ddof=1):.2f}', bins=200)
+# plt.legend()
+# plt.show()
 
 # %%
-
 p_z_error_1 = nu_1_boosted_rot.p_z-df.p_z_nu_1
 p_z_error_2 = nu_2_boosted_rot.p_z-df.p_z_nu_2
 
@@ -126,13 +123,12 @@ plt.legend()
 plt.savefig('./alpha_analysis/error_graphs/error_rho_rho.png')
 plt.show()
 # %%
-plt.figure(figsize=(8,6))
+# plt.figure(figsize=(8,6))
 p_z_rel_error_1 = p_z_error_1/nu_1_boosted_rot.p_z
 p_z_rel_error_2 = p_z_error_2/nu_2_boosted_rot.p_z
-
-plt.hist(np.clip(p_z_rel_error_1, -20, 20), label=f'nu_1\nmean: {np.mean(p_z_rel_error_1):.2f}\nstd dev: {np.std(p_z_rel_error_1, ddof=1):.2f}', bins=200, alpha=0.5)
-plt.hist(np.clip(p_z_rel_error_2, -20, 20), label=f'nu_2\nmean: {np.mean(p_z_rel_error_2):.2f}\nstd dev: {np.std(p_z_rel_error_2, ddof=1):.2f}', bins=200, alpha=0.5)
-plt.title('clipped between [-20, 20]')
+plt.hist(np.clip(p_z_rel_error_1, -50, 5), label=f'nu_1\nmean: {np.mean(p_z_rel_error_1):.2f}\nstd dev: {np.std(p_z_rel_error_1, ddof=1):.2f}', bins=200, alpha=0.5)
+plt.hist(np.clip(p_z_rel_error_2, -50, 5), label=f'nu_2\nmean: {np.mean(p_z_rel_error_2):.2f}\nstd dev: {np.std(p_z_rel_error_2, ddof=1):.2f}', bins=200, alpha=0.5)
+plt.title('clipped between [-50, 5]')
 plt.xlabel('relative error')
 plt.ylabel('freq')
 plt.legend()
@@ -172,6 +168,9 @@ def pplot(x, y, xlabel='', ylabel='', bins=100, mode=0):
     # fitting
     # print(bin_centers, means, yerr)
     # plt.figure()
+    bin_centers = bin_centers[:-15]
+    means = means[:-15]
+    yerr = yerr[:-15]
     plt.errorbar(x=bin_centers, y=means, yerr=yerr, linestyle='none', marker='.', capsize=2)
     if mode == 1:
         fit, cov = np.polyfit(bin_centers, means, 1, w=1/yerr, cov=True)
@@ -186,7 +185,7 @@ def pplot(x, y, xlabel='', ylabel='', bins=100, mode=0):
     # plt.tight_layout()
 
 # %%
-plt.rcParams["figure.figsize"] = (8,6)
+# plt.rcParams["figure.figsize"] = (8,6)
 plt.figure()
 pplot(df.alpha_1, p_z_error_1, xlabel='alpha', ylabel='p_z_error', bins=100, mode=1)
 pplot(df.alpha_2, p_z_error_2, xlabel='alpha', ylabel='p_z_error', bins=100, mode=1)
@@ -206,8 +205,8 @@ plt.show()
 p_t_error_1 = nu_1_boosted_rot.p_t-df.p_t_nu_1
 p_t_error_2 = nu_2_boosted_rot.p_t-df.p_t_nu_2
 plt.figure()
-pplot(df.alpha_1, p_t_error_1, xlabel='alpha', ylabel='p_t_error', bins=100, mode=1)
-pplot(df.alpha_2, p_t_error_2, xlabel='alpha', ylabel='p_t_error', bins=100, mode=1)
+pplot(df.alpha_1, p_t_error_1, xlabel='alpha', ylabel='p_t_error', bins=100, mode=0)
+pplot(df.alpha_2, p_t_error_2, xlabel='alpha', ylabel='p_t_error', bins=100, mode=0)
 plt.grid()
 plt.savefig('./alpha_analysis/error_graphs/profile_p_t_error.png')
 plt.show()
@@ -216,8 +215,8 @@ plt.show()
 p_t_rel_error_1 = p_t_error_1/nu_1_boosted_rot.p_t
 p_t_rel_error_2 = p_t_error_2/nu_2_boosted_rot.p_t
 plt.figure()
-pplot(df.alpha_1, p_t_rel_error_1, xlabel='alpha', ylabel='p_t_rel_error', bins=100, mode=1)
-pplot(df.alpha_2, p_t_rel_error_1, xlabel='alpha', ylabel='p_t_rel_error', bins=100, mode=1)
+pplot(df.alpha_1, p_t_rel_error_1, xlabel='alpha', ylabel='p_t_rel_error', bins=100, mode=0)
+pplot(df.alpha_2, p_t_rel_error_1, xlabel='alpha', ylabel='p_t_rel_error', bins=100, mode=0)
 plt.grid()
 plt.savefig('./alpha_analysis/error_graphs/profile_p_t_rel_error.png')
 plt.show()
@@ -226,8 +225,8 @@ plt.show()
 E_error_1 = nu_1_boosted_rot.e-df.E_nu_1
 E_error_2 = nu_2_boosted_rot.e-df.E_nu_2
 plt.figure()
-pplot(df.alpha_1, E_error_1, xlabel='alpha', ylabel='E_error', bins=100, mode=1)
-pplot(df.alpha_2, E_error_2, xlabel='alpha', ylabel='E_error', bins=100, mode=1)
+pplot(df.alpha_1, E_error_1, xlabel='alpha', ylabel='E_error', bins=100, mode=0)
+pplot(df.alpha_2, E_error_2, xlabel='alpha', ylabel='E_error', bins=100, mode=0)
 plt.grid()
 plt.savefig('./alpha_analysis/error_graphs/profile_E_error.png')
 plt.show()
@@ -236,8 +235,8 @@ plt.show()
 E_rel_error_1 = E_error_1/nu_1_boosted_rot.e
 E_rel_error_1 = E_error_2/nu_2_boosted_rot.e
 plt.figure()
-pplot(df.alpha_1, E_rel_error_1, xlabel='alpha', ylabel='E_rel_error', bins=100, mode=1)
-pplot(df.alpha_2, E_rel_error_1, xlabel='alpha', ylabel='E_rel_error', bins=100, mode=1)
+pplot(df.alpha_1, E_rel_error_1, xlabel='alpha', ylabel='E_rel_error', bins=100, mode=0)
+pplot(df.alpha_2, E_rel_error_1, xlabel='alpha', ylabel='E_rel_error', bins=100, mode=0)
 plt.grid()
 plt.savefig('./alpha_analysis/error_graphs/profile_E_rel_error.png')
 plt.show()
@@ -254,7 +253,7 @@ print(df.alpha_2.describe())
 # plt.plot(data_points.T[0], data_points.T[1], '.')
 d = pd.DataFrame(np.c_[df.p_z_nu_1,nu_1_boosted_rot.p_z])
 d = d[(d[0]<400) & (d[0]>-0) & (d[1]<100) & (d[1]>-0)]
-plt.hexbin(d[0], d[1], cmap='viridis', mincnt=None, gridsize=30, bins='log')
+plt.hexbin(d[0], d[1], cmap='viridis', mincnt=None, gridsize=200, bins='log')
 plt.plot(np.linspace(0, 100), np.linspace(0, 100), 'r')
 # plt.xlim(-25,25)
 plt.colorbar()
@@ -265,7 +264,7 @@ plt.show()
 # %%
 e = pd.DataFrame(np.c_[df.p_t_nu_1,nu_1_boosted_rot.p_t])
 e = e[(e[0]<4) & (e[0]>-0) & (e[1]<4) & (e[1]>-0)]
-plt.hexbin(e[0], e[1], cmap='viridis', mincnt=None, gridsize=30, bins='log')
+plt.hexbin(e[0], e[1], cmap='viridis', mincnt=None, gridsize=200, bins='log')
 plt.plot(np.linspace(0, 4), np.linspace(0, 4), 'r')
 # plt.xlim(-25,25)
 plt.colorbar()
@@ -278,7 +277,7 @@ plt.show()
 
 f = pd.DataFrame(np.c_[df.E_nu_1,nu_1_boosted_rot.e])
 f = f[(f[0]<300) & (f[0]>-0) & (f[1]<100) & (f[1]>-0)]
-plt.hexbin(f[0], f[1], cmap='viridis', mincnt=None, gridsize=30, bins='log')
+plt.hexbin(f[0], f[1], cmap='viridis', mincnt=None, gridsize=200, bins='log')
 plt.plot(np.linspace(0, 100), np.linspace(0, 100), 'r')
 # plt.xlim(-25,25)
 plt.colorbar()
