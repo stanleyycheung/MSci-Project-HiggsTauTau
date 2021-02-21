@@ -11,6 +11,7 @@ from sklearn.ensemble import ExtraTreesRegressor
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.neighbors import KNeighborsRegressor
 import config
+from tqdm import tqdm
 
 
 class NeutrinoReconstructor:
@@ -28,7 +29,7 @@ class NeutrinoReconstructor:
         np.random.seed(seed)
         self.seed = seed
         self.binary = binary
-        self.m_higgs = 125.18
+        self.m_higgs = 125.35
         self.m_tau = 1.776
         self.channel = channel
 
@@ -107,7 +108,7 @@ class NeutrinoReconstructor:
         if mode == 'pass':
             return df_br
         elif mode == 'flag':
-            df_br['flag'] = np.where(df_br['alpha_1']==NeutrinoReconstructor.DEFAULT_VALUE, 0, 1)
+            df_br['flag'] = np.where(df_br['alpha_1'] == NeutrinoReconstructor.DEFAULT_VALUE, 0, 1)
             return df_br
         elif mode == 'mean':
             simpImp = SimpleImputer(missing_values=NeutrinoReconstructor.DEFAULT_VALUE, strategy='mean')
@@ -141,7 +142,8 @@ class NeutrinoReconstructor:
                 return df_br_imputed
                 # return self.calculateFromAlpha(df_br_imputed, df_br_imputed['alpha_1'], df_br_imputed['alpha_2'])
             elif mode == 'decision_tree':
-                itImp = IterativeImputer(estimator=DecisionTreeRegressor(max_features='sqrt', random_state=config.seed_value), missing_values=NeutrinoReconstructor.DEFAULT_VALUE, random_state=config.seed_value, verbose=2, max_iter=10)
+                itImp = IterativeImputer(estimator=DecisionTreeRegressor(max_features='sqrt', random_state=config.seed_value),
+                                         missing_values=NeutrinoReconstructor.DEFAULT_VALUE, random_state=config.seed_value, verbose=2, max_iter=10)
                 df_br_imputed = pd.DataFrame(itImp.fit_transform(df_br_red), columns=df_br_red.columns)
                 return df_br_imputed
             elif mode == 'extra_trees':
@@ -154,7 +156,7 @@ class NeutrinoReconstructor:
             elif mode == 'knn':
                 # df_br['alpha_1'].replace(NeutrinoReconstructor.DEFAULT_VALUE, alpha_flag, inplace=True)
                 # df_br['alpha_2'].replace(NeutrinoReconstructor.DEFAULT_VALUE, alpha_flag, inplace=True)
-                # KNNImp = KNNImputer(missing_values=alpha_flag, n_neighbors=2) 
+                # KNNImp = KNNImputer(missing_values=alpha_flag, n_neighbors=2)
                 KNNImp = KNNImputer(missing_values=NeutrinoReconstructor.DEFAULT_VALUE)
                 df_br_imputed = pd.DataFrame(KNNImp.fit_transform(df_br_red), columns=df_br_red.columns)
                 return df_br_imputed
@@ -177,37 +179,106 @@ class NeutrinoReconstructor:
         df_br['p_t_nu_2'] = p_t_nu_2
         df_br['p_z_nu_1'] = p_z_nu_1
         df_br['p_z_nu_2'] = p_z_nu_2
-        return df_br 
+        return df_br
 
-    def getPhiTau(self, df):
-        def getPhiTauForOne(self, a1, sv):
+    def getTauNeutrino(self, df):
+        print('Calculating tau/neutrino information')
+        def getPhiTauForOne(a1, sv):
             a1_p = np.c_[a1.p_x, a1.p_y, a1.p_z]
             a1_p_norm = a1_p/np.sqrt((a1_p ** 2).sum(-1))[..., np.newaxis]
             sv_norm = sv/np.sqrt((sv ** 2).sum(-1))[..., np.newaxis]
             theta = np.arccos(np.einsum('ij, ij->i', a1_p_norm, sv_norm))
             max_theta = np.arcsin((self.m_tau**2-a1.m**2)/(2*self.m_tau*a1.p))
-            idx1 = max_theta<theta
+            idx1 = max_theta < theta
             theta_f = theta
             theta_f[idx1] = max_theta[idx1]
             return theta_f, sv_norm
         
+        if self.channel == 'rho_rho':
+            print("No estimated tau/neutrino information in this channel!")
+            return None, None
+
         if self.channel == 'rho_a1':
-            # TODO: not completed
+            def getNuPz(had, nu_p_x, nu_p_y):
+                a = (had.p_z**2-had.e**2)
+                b = (self.m_tau**2 - had.m**2)*had.p_z + 2*had.p_x*nu_p_x*had.p_z + 2*had.p_y*nu_p_y*had.p_z
+                c = ((self.m_tau**2 - had.m**2)/2)**2 + (had.p_x*nu_p_x)**2 + (had.p_y*nu_p_y)**2 + (self.m_tau**2-had.m**2) * \
+                    (had.p_x*nu_p_x + had.p_y*nu_p_y) + 2*had.p_x*nu_p_x*had.p_y*nu_p_y - had.e**2*nu_p_x**2 - had.e**2*nu_p_y**2
+                disc = b**2-4*a*c
+                disc = np.where(disc < 0, 0, disc)
+                return (-b+np.sqrt(disc))/(2*a), (-b-np.sqrt(disc))/(2*a)
+
+            def calcNuE(nu_p_x, nu_p_y, nu_p_z):
+                return np.sqrt(nu_p_x**2 + nu_p_y**2 + nu_p_z**2)
             pi_1 = Momentum4(df['pi_E_1'], df['pi_px_1'], df['pi_py_1'], df['pi_pz_1'])
             pi0_1 = Momentum4(df['pi0_E_1'], df['pi0_px_1'], df['pi0_py_1'], df['pi0_pz_1'])
+            rho_1 = pi_1 + pi0_1
             pi_2 = Momentum4(df['pi_E_2'], df['pi_px_2'], df['pi_py_2'], df['pi_pz_2'])
             pi2_2 = Momentum4(df['pi2_E_2'], df['pi2_px_2'], df['pi2_py_2'], df['pi2_pz_2'])
-            pi3_2 = Momentum4(df['pi3_E_2'], df['pi3_px_2'], df['pi3_py_2'], df['pi3_pz_2'])            
-            metx, mety = df['metx'], df['mety']
+            pi3_2 = Momentum4(df['pi3_E_2'], df['pi3_px_2'], df['pi3_py_2'], df['pi3_pz_2'])
+            a1_2 = pi_2 + pi3_2 + pi2_2
             a1_2 = pi_2 + pi3_2 + pi2_2
             sv_2 = np.c_[df['sv_x_2'], df['sv_y_2'], df['sv_z_2']]
             theta_f_2, sv_norm_2 = getPhiTauForOne(a1_2, sv_2)
             sol_2 = self.ANSolution(a1_2.m, a1_2.p, theta_f_2)
-            tau_p_2_1 = sol_2[0][:,None]*sv_norm_2
-            tau_p_2_2 = sol_2[1][:,None]*sv_norm_2
+            tau_p_2_1 = sol_2[0][:, None]*sv_norm_2
+            tau_p_2_2 = sol_2[1][:, None]*sv_norm_2
             E_tau_2_1 = np.sqrt(np.linalg.norm(tau_p_2_1, axis=1)**2 + self.m_tau**2)
             E_tau_2_2 = np.sqrt(np.linalg.norm(tau_p_2_2, axis=1)**2 + self.m_tau**2)
-        
+            tau_sol_2_1 = Momentum4(E_tau_2_1, *tau_p_2_1.T)
+            tau_sol_2_2 = Momentum4(E_tau_2_2, *tau_p_2_2.T)
+            nu_sol_2_1 = tau_sol_2_1 - a1_2
+            nu_sol_2_2 = tau_sol_2_2 - a1_2
+            nu_x_sol_1_1 = (df['metx'] - nu_sol_2_1[1]).to_numpy()
+            nu_y_sol_1_1 = (df['mety'] - nu_sol_2_1[2]).to_numpy()
+            nu_x_sol_1_2 = (df['metx'] - nu_sol_2_2[1]).to_numpy()
+            nu_y_sol_1_2 = (df['mety'] - nu_sol_2_2[2]).to_numpy()
+            nu_p_z_1_1_1, nu_p_z_1_1_2 = getNuPz(rho_1, nu_x_sol_1_1, nu_y_sol_1_1)
+            E_nu_1_1_1 = calcNuE(nu_x_sol_1_1, nu_y_sol_1_1, nu_p_z_1_1_1)
+            E_nu_1_1_2 = calcNuE(nu_x_sol_1_1, nu_y_sol_1_1, nu_p_z_1_1_2)
+            nu_p_z_1_2_1, nu_p_z_1_2_2 = getNuPz(rho_1, nu_x_sol_1_2, nu_y_sol_1_2)
+            E_nu_1_2_1 = calcNuE(nu_x_sol_1_2, nu_y_sol_1_2, nu_p_z_1_2_1)
+            E_nu_1_2_2 = calcNuE(nu_x_sol_1_2, nu_y_sol_1_2, nu_p_z_1_2_2)
+            nu_1_1_1 = Momentum4(E_nu_1_1_1, nu_x_sol_1_1, nu_y_sol_1_1, nu_p_z_1_1_1)
+            nu_1_1_2 = Momentum4(E_nu_1_1_2, nu_x_sol_1_1, nu_y_sol_1_1, nu_p_z_1_1_2)
+            nu_1_2_1 = Momentum4(E_nu_1_2_1, nu_x_sol_1_2, nu_y_sol_1_2, nu_p_z_1_2_1)
+            nu_1_2_2 = Momentum4(E_nu_1_2_2, nu_x_sol_1_2, nu_y_sol_1_2, nu_p_z_1_2_2)
+            tau_1_1_1 = rho_1 + nu_1_1_1
+            tau_1_1_2 = rho_1 + nu_1_1_2
+            tau_1_2_1 = rho_1 + nu_1_2_1
+            tau_1_2_2 = rho_1 + nu_1_2_2
+            higgs_combinations = [(tau_1_1_1, tau_sol_2_1), (tau_1_1_1, tau_sol_2_2),
+                                  (tau_1_1_2, tau_sol_2_1), (tau_1_1_2, tau_sol_2_2),
+                                  (tau_1_2_1, tau_sol_2_1), (tau_1_2_1, tau_sol_2_2),
+                                  (tau_1_2_2, tau_sol_2_1), (tau_1_2_2, tau_sol_2_2), ]
+            higgs = [x+y for x, y in higgs_combinations]
+            higgs_mass = np.array([x.m for x in higgs])
+            closest_higgs_idx = np.argmin(np.abs(higgs_mass.T-self.m_higgs), axis=1)
+            closest_neutrino_pair = []
+            for i, idx in tqdm(enumerate(closest_higgs_idx)):
+                neutrino_pair = higgs_combinations[idx]
+                first_neutrino = [neutrino_pair[0].e[i], neutrino_pair[0].p_x[i], neutrino_pair[0].p_y[i], neutrino_pair[0].p_z[i]]
+                second_neutrino = [neutrino_pair[1].e[i], neutrino_pair[1].p_x[i], neutrino_pair[1].p_y[i], neutrino_pair[1].p_z[i]]
+                closest_neutrino_pair.append([first_neutrino, second_neutrino])
+            closest_neutrino_pair = np.array(closest_neutrino_pair)
+            est_nu_1_1 = Momentum4(*closest_neutrino_pair[:, 0].T)
+            est_nu_1_2 = Momentum4(*closest_neutrino_pair[:, 1].T)
+            est_tau_1_1 = rho_1 - tau_sol_2_1
+            est_tau_1_2 = rho_1 - tau_sol_2_2
+            rest_frame = rho_1 + a1_2
+            boost = Momentum4(rest_frame[0], -rest_frame[1], -rest_frame[2], -rest_frame[3])
+            est_tau_1_1_boosted = est_tau_1_1.boost_particle(boost)
+            est_tau_1_2_boosted = est_tau_1_2.boost_particle(boost)
+            tau_2_1_boosted = tau_sol_2_1.boost_particle(boost)
+            tau_2_2_boosted = tau_sol_2_2.boost_particle(boost)
+            est_nu_1_1_boosted = est_nu_1_1.boost_particle(boost)
+            est_nu_1_2_boosted = est_nu_1_2.boost_particle(boost)
+            nu_sol_2_1_boosted = nu_sol_2_1.boost_particle(boost)
+            nu_sol_2_2_boosted = nu_sol_2_2.boost_particle(boost)
+            taus = [est_tau_1_1_boosted, est_tau_1_2_boosted, tau_2_1_boosted, tau_2_2_boosted]
+            nus = [est_nu_1_1_boosted, est_nu_1_2_boosted, nu_sol_2_1_boosted, nu_sol_2_2_boosted]
+            return taus, nus
+
         elif self.channel == "a1_a1":
             pi_1 = Momentum4(df['pi_E_1'], df['pi_px_1'], df['pi_py_1'], df['pi_pz_1'])
             pi2_1 = Momentum4(df['pi2_E_1'], df['pi2_px_1'], df['pi2_py_1'], df['pi2_pz_1'])
@@ -220,13 +291,13 @@ class NeutrinoReconstructor:
             sv_1 = np.c_[df['sv_x_1'], df['sv_y_1'], df['sv_z_1']]
             sv_2 = np.c_[df['sv_x_2'], df['sv_y_2'], df['sv_z_2']]
             theta_f_1, sv_norm_1 = getPhiTauForOne(a1_1, sv_1)
-            theta_f_2 = getPhiTauForOne(a1_2, sv_2)
-            sol_1, sv_norm_2 = self.ANSolution(a1_1.m, a1_1.p, theta_f_1)
+            theta_f_2, sv_norm_2 = getPhiTauForOne(a1_2, sv_2)
+            sol_1 = self.ANSolution(a1_1.m, a1_1.p, theta_f_1)
             sol_2 = self.ANSolution(a1_2.m, a1_2.p, theta_f_2)
-            tau_p_1_1 = sol_1[0][:,None]*sv_norm_1
-            tau_p_1_2 = sol_1[1][:,None]*sv_norm_1
-            tau_p_2_1 = sol_2[0][:,None]*sv_norm_2
-            tau_p_2_2 = sol_2[1][:,None]*sv_norm_2
+            tau_p_1_1 = sol_1[0][:, None]*sv_norm_1
+            tau_p_1_2 = sol_1[1][:, None]*sv_norm_1
+            tau_p_2_1 = sol_2[0][:, None]*sv_norm_2
+            tau_p_2_2 = sol_2[1][:, None]*sv_norm_2
             E_tau_1_1 = np.sqrt(np.linalg.norm(tau_p_1_1, axis=1)**2 + self.m_tau**2)
             E_tau_1_2 = np.sqrt(np.linalg.norm(tau_p_1_2, axis=1)**2 + self.m_tau**2)
             E_tau_2_1 = np.sqrt(np.linalg.norm(tau_p_2_1, axis=1)**2 + self.m_tau**2)
@@ -235,27 +306,101 @@ class NeutrinoReconstructor:
             tau_1_2 = Momentum4(E_tau_1_2, *tau_p_1_2.T)
             tau_2_1 = Momentum4(E_tau_2_1, *tau_p_2_1.T)
             tau_2_2 = Momentum4(E_tau_2_2, *tau_p_2_2.T)
+            nu_1_1 = tau_1_1 - a1_1
+            nu_1_2 = tau_1_2 - a1_1
+            nu_2_1 = tau_2_1 - a1_2
+            nu_2_2 = tau_2_2 - a1_2
             rest_frame = a1_1 + a1_2
             boost = Momentum4(rest_frame[0], -rest_frame[1], -rest_frame[2], -rest_frame[3])
             tau_1_1_boosted = tau_1_1.boost_particle(boost)
             tau_1_2_boosted = tau_1_2.boost_particle(boost)
             tau_2_1_boosted = tau_2_1.boost_particle(boost)
             tau_2_2_boosted = tau_2_2.boost_particle(boost)
-            tau_p_1_1_b_norm = tau_1_1_boosted[1:].T/np.linalg.norm(tau_1_1_boosted[1:].T, axis=1)[:,None]
-            tau_p_1_2_b_norm = tau_1_2_boosted[1:].T/np.linalg.norm(tau_1_2_boosted[1:].T, axis=1)[:,None]
-            tau_p_2_1_b_norm = tau_2_1_boosted[1:].T/np.linalg.norm(tau_2_1_boosted[1:].T, axis=1)[:,None]
-            tau_p_2_2_b_norm = tau_2_2_boosted[1:].T/np.linalg.norm(tau_2_2_boosted[1:].T, axis=1)[:,None]
-            angle_1_1 = np.einsum('ij, ij->i', tau_p_1_1_b_norm, tau_p_2_1_b_norm)
-            angle_1_2 = np.einsum('ij, ij->i', tau_p_1_1_b_norm, tau_p_2_2_b_norm)
-            angle_2_1 = np.einsum('ij, ij->i', tau_p_1_2_b_norm, tau_p_2_1_b_norm)
-            angle_2_2 = np.einsum('ij, ij->i', tau_p_1_2_b_norm, tau_p_2_2_b_norm)
-            return angle_1_1, angle_1_2, angle_2_1, angle_2_2
+            nu_1_1_boosted = nu_1_1.boost_particle(boost)
+            nu_1_2_boosted = nu_1_2.boost_particle(boost)
+            nu_2_1_boosted = nu_2_1.boost_particle(boost)
+            nu_2_2_boosted = nu_2_2.boost_particle(boost)
+            # tau_p_1_1_b_norm = tau_1_1_boosted[1:].T/np.linalg.norm(tau_1_1_boosted[1:].T, axis=1)[:,None]
+            # tau_p_1_2_b_norm = tau_1_2_boosted[1:].T/np.linalg.norm(tau_1_2_boosted[1:].T, axis=1)[:,None]
+            # tau_p_2_1_b_norm = tau_2_1_boosted[1:].T/np.linalg.norm(tau_2_1_boosted[1:].T, axis=1)[:,None]
+            # tau_p_2_2_b_norm = tau_2_2_boosted[1:].T/np.linalg.norm(tau_2_2_boosted[1:].T, axis=1)[:,None]
+            # angle_1_1 = np.einsum('ij, ij->i', tau_p_1_1_b_norm, tau_p_2_1_b_norm)
+            # angle_1_2 = np.einsum('ij, ij->i', tau_p_1_1_b_norm, tau_p_2_2_b_norm)
+            # angle_2_1 = np.einsum('ij, ij->i', tau_p_1_2_b_norm, tau_p_2_1_b_norm)
+            # angle_2_2 = np.einsum('ij, ij->i', tau_p_1_2_b_norm, tau_p_2_2_b_norm)
+            # return angle_1_1, angle_1_2, angle_2_1, angle_2_2
+            taus = [tau_1_1_boosted, tau_1_2_boosted, tau_2_1_boosted, tau_2_2_boosted]
+            nus = [nu_1_1_boosted, nu_1_2_boosted, nu_2_1_boosted, nu_2_2_boosted]
+            return taus, nus
+
+    def loadPhiData(self, df_br, taus, nus):
+        tau_1_1_boosted, tau_1_2_boosted, tau_2_1_boosted, tau_2_2_boosted = taus
+        tau_p_1_1_b_norm = tau_1_1_boosted[1:].T/np.linalg.norm(tau_1_1_boosted[1:].T, axis=1)[:,None]
+        tau_p_1_2_b_norm = tau_1_2_boosted[1:].T/np.linalg.norm(tau_1_2_boosted[1:].T, axis=1)[:,None]
+        tau_p_2_1_b_norm = tau_2_1_boosted[1:].T/np.linalg.norm(tau_2_1_boosted[1:].T, axis=1)[:,None]
+        tau_p_2_2_b_norm = tau_2_2_boosted[1:].T/np.linalg.norm(tau_2_2_boosted[1:].T, axis=1)[:,None]
+        tau_phi_1_1 = np.einsum('ij, ij->i', tau_p_1_1_b_norm, tau_p_2_1_b_norm)
+        tau_phi_1_2 = np.einsum('ij, ij->i', tau_p_1_1_b_norm, tau_p_2_2_b_norm)
+        tau_phi_2_1 = np.einsum('ij, ij->i', tau_p_1_2_b_norm, tau_p_2_1_b_norm)
+        tau_phi_2_2 = np.einsum('ij, ij->i', tau_p_1_2_b_norm, tau_p_2_2_b_norm)
+        nu_1_1_boosted, nu_1_2_boosted, nu_2_1_boosted, nu_2_2_boosted = nus 
+        nu_p_1_1_b_norm = nu_1_1_boosted[1:].T/np.linalg.norm(nu_1_1_boosted[1:].T, axis=1)[:,None]
+        nu_p_1_2_b_norm = nu_1_2_boosted[1:].T/np.linalg.norm(nu_1_2_boosted[1:].T, axis=1)[:,None]
+        nu_p_2_1_b_norm = nu_2_1_boosted[1:].T/np.linalg.norm(nu_2_1_boosted[1:].T, axis=1)[:,None]
+        nu_p_2_2_b_norm = nu_2_2_boosted[1:].T/np.linalg.norm(nu_2_2_boosted[1:].T, axis=1)[:,None]
+        nu_phi_1_1 = np.einsum('ij, ij->i', nu_p_1_1_b_norm, nu_p_2_1_b_norm)
+        nu_phi_1_2 = np.einsum('ij, ij->i', nu_p_1_1_b_norm, nu_p_2_2_b_norm)
+        nu_phi_2_1 = np.einsum('ij, ij->i', nu_p_1_2_b_norm, nu_p_2_1_b_norm)
+        nu_phi_2_2 = np.einsum('ij, ij->i', nu_p_1_2_b_norm, nu_p_2_2_b_norm)
+        # load phis
+        df_br['tau_phi_1_1'] = tau_phi_1_1
+        df_br['tau_phi_1_2'] = tau_phi_1_2
+        df_br['tau_phi_2_1'] = tau_phi_2_1
+        df_br['tau_phi_2_2'] = tau_phi_2_2
+        df_br['nu_phi_1_1'] = nu_phi_1_1
+        df_br['nu_phi_1_2'] = nu_phi_1_2
+        df_br['nu_phi_2_1'] = nu_phi_2_1
+        df_br['nu_phi_2_2'] = nu_phi_2_2
+        # load tau four vectors
+        df_br['tau_E_1_1'] = tau_1_1_boosted.e
+        df_br['tau_px_1_1'] = tau_1_1_boosted.p_x
+        df_br['tau_py_1_1'] = tau_1_1_boosted.p_y
+        df_br['tau_pz_1_1'] = tau_1_1_boosted.p_z
+        df_br['tau_E_1_2'] = tau_1_2_boosted.e
+        df_br['tau_px_1_2'] = tau_1_2_boosted.p_x
+        df_br['tau_py_1_2'] = tau_1_2_boosted.p_y
+        df_br['tau_pz_1_2'] = tau_1_2_boosted.p_z
+        df_br['tau_E_2_1'] = tau_2_1_boosted.e
+        df_br['tau_px_2_1'] = tau_2_1_boosted.p_x
+        df_br['tau_py_2_1'] = tau_2_1_boosted.p_y
+        df_br['tau_pz_2_1'] = tau_2_1_boosted.p_z
+        df_br['tau_E_2_2'] = tau_2_2_boosted.e
+        df_br['tau_px_2_2'] = tau_2_2_boosted.p_x
+        df_br['tau_py_2_2'] = tau_2_2_boosted.p_y
+        df_br['tau_pz_2_2'] = tau_2_2_boosted.p_z
+        df_br['nu_E_1_1'] = nu_1_1_boosted.e
+        df_br['nu_px_1_1'] = nu_1_1_boosted.p_x
+        df_br['nu_py_1_1'] = nu_1_1_boosted.p_y
+        df_br['nu_pz_1_1'] = nu_1_1_boosted.p_z
+        df_br['nu_E_1_2'] = nu_1_2_boosted.e
+        df_br['nu_px_1_2'] = nu_1_2_boosted.p_x
+        df_br['nu_py_1_2'] = nu_1_2_boosted.p_y
+        df_br['nu_pz_1_2'] = nu_1_2_boosted.p_z
+        df_br['nu_E_2_1'] = nu_2_1_boosted.e
+        df_br['nu_px_2_1'] = nu_2_1_boosted.p_x
+        df_br['nu_py_2_1'] = nu_2_1_boosted.p_y
+        df_br['nu_pz_2_1'] = nu_2_1_boosted.p_z
+        df_br['nu_E_2_2'] = nu_2_2_boosted.e
+        df_br['nu_px_2_2'] = nu_2_2_boosted.p_x
+        df_br['nu_py_2_2'] = nu_2_2_boosted.p_y
+        df_br['nu_pz_2_2'] = nu_2_2_boosted.p_z
+
 
     def ANSolution(self, m, p, theta):
         # p is the magnitude
         a = (m**2+self.m_tau**2)*p*np.cos(theta)
         d = ((m**2-self.m_tau**2)**2-4*self.m_tau**2*p**2*np.sin(theta)**2)
-        d = np.round(d, 14) # for floating point error
+        d = np.round(d, 14)  # for floating point error
         b = np.sqrt((m**2+p**2)*d)
         c = 2*(m**2+p**2*np.sin(theta)**2)
         return (a+b)/c, (a-b)/c
@@ -284,7 +429,7 @@ class NeutrinoReconstructor:
         #           ** 2 + 2*p_z_nu_1*(df_br.pi_pz_1_br + df_br.pi0_pz_1_br))/(2*(df_br.pi_E_1_br+df_br.pi0_E_1_br))
         # E_nu_2 = (self.m_tau**2 - (df_br.pi_E_2_br+df_br.pi0_E_2_br)**2 + (df_br.pi_pz_2_br + df_br.pi0_pz_2_br)
         #           ** 2 + 2*p_z_nu_2*(df_br.pi_pz_2_br + df_br.pi0_pz_2_br))/(2*(df_br.pi_E_2_br+df_br.pi0_E_2_br))
-        idx = alpha_1==NeutrinoReconstructor.DEFAULT_VALUE
+        idx = alpha_1 == NeutrinoReconstructor.DEFAULT_VALUE
         p_t_nu_1 = np.sqrt(np.array(E_nu_1)**2 - np.array(p_z_nu_1)**2)
         p_t_nu_2 = np.sqrt(np.array(E_nu_2)**2 - np.array(p_z_nu_2)**2)
         p_t_nu_1[idx] = NeutrinoReconstructor.DEFAULT_VALUE
@@ -302,13 +447,19 @@ class NeutrinoReconstructor:
         #     df['E_nu_1'] != NeutrinoReconstructor.DEFAULT_VALUE) & (df['E_nu_2'] != NeutrinoReconstructor.DEFAULT_VALUE)].reset_index(drop=True)
         # AC.profileAlphaPz(df_red)
         # return alpha_1, alpha_2, E_nu_1, E_nu_2, p_t_nu_1, p_t_nu_2, p_z_nu_1, p_z_nu_2
+        # neutrino phi angles
+        taus, nus = self.getTauNeutrino(df_reco)
+        if taus is not None and nus is not None:
+            self.loadPhiData(df_br, taus, nus)
         return df_br
+        
+        
 
     def runGenAlphaReconstructor(self, df_gen, df_br, load_alpha):
         AC = AlphaCalculator(self.channel, df_gen, df_br, self.binary, self.m_higgs,
                              self.m_tau, load=load_alpha, seed=self.seed, default_value=NeutrinoReconstructor.DEFAULT_VALUE)
         alpha_1, alpha_2, p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2 = AC.runAlphaGen()
-        idx = alpha_1==NeutrinoReconstructor.DEFAULT_VALUE
+        idx = alpha_1 == NeutrinoReconstructor.DEFAULT_VALUE
         p_t_nu_1 = np.sqrt(np.array(E_nu_1)**2 - np.array(p_z_nu_1)**2)
         p_t_nu_2 = np.sqrt(np.array(E_nu_2)**2 - np.array(p_z_nu_2)**2)
         p_t_nu_1[idx] = NeutrinoReconstructor.DEFAULT_VALUE
@@ -322,6 +473,9 @@ class NeutrinoReconstructor:
         df_br['p_t_nu_2'] = p_t_nu_2
         df_br['p_z_nu_1'] = p_z_nu_1
         df_br['p_z_nu_2'] = p_z_nu_2
+        taus, nus = self.getTauNeutrino(df_gen)
+        if taus is not None and nus is not None:
+            self.loadPhiData(df_br, taus, nus)
         return df_br
 
     def runGraphs(self, df_reco_gen, termination=1000):
@@ -435,14 +589,14 @@ if __name__ == '__main__':
     channel = 'rho_rho'
     NR = NeutrinoReconstructor(binary=True, channel=channel)
     if not gen:
-        addons_config_reco = {'neutrino': {'load_alpha':False, 'termination':1000}, 'met': {}, 'ip': {}, 'sv': {}}
+        addons_config_reco = {'neutrino': {'load_alpha': False, 'termination': 1000}, 'met': {}, 'ip': {}, 'sv': {}}
         addons = addons_config_reco.keys()
         DL = DataLoader(config.variables_rho_rho, channel, gen)
         df, df_ps, df_sm = DL.cleanRecoData(DL.readRecoData(from_hdf=True))
         # df_br = DL.loadRecoData(True, addons).reset_index(drop=True)
         df_br = pd.read_hdf('./alpha_analysis/df_br.h5', df)
     else:
-        addons_config_gen = {'neutrino': {'load_alpha':False, 'termination':1000}, 'sv': {}}
+        addons_config_gen = {'neutrino': {'load_alpha': False, 'termination': 1000}, 'sv': {}}
         addons = addons_config_gen.keys()
         DL = DataLoader(config.variables_gen_rho_rho, channel, gen)
         df, df_ps, df_sm = DL.cleanGenData(DL.readGenData(from_hdf=True))

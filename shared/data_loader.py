@@ -40,7 +40,8 @@ class DataLoader:
     if os.path.exists('/home/hep/shc3117/'):
         print('Running on Imperial HEP LX machines')
         reco_root_path = "/vols/cms/shc3117/MVAFILE_AllHiggs_tt.root"
-        gen_root_path = "/vols/cms/shc3117/MVAFILE_GEN_AllHiggs_tt.root"
+        # gen_root_path = "/vols/cms/shc3117/MVAFILE_GEN_AllHiggs_tt.root"
+        gen_root_path = "/vols/cms/dw515/Offline/output/SM/master_gen_ntuple_1502/MVAFILE_tt.root"
         reco_df_path = '/vols/cms/shc3117/df_tt'
         gen_df_path = '/vols/cms/shc3117/df_tt_gen'
     input_df_save_dir_reco = './input_df_reco'
@@ -151,7 +152,6 @@ class DataLoader:
     def cleanRecoData(self, df):
         """
         Selects correct channel for reco data, whilst seperating sm/ps distributions as well
-        TODO: remove 0s in events
         """
         if self.channel == 'rho_rho':
             # select only rho-rho events
@@ -867,7 +867,6 @@ class DataLoader:
                 print('Addon MET loaded')
                 boost = self.createBoostAndRotationMatrices(df)
                 metx_b, mety_b = self.addonMET(df, boost)
-                # TODO: CHANGE
                 df_inputs['metx_b'] = metx_b
                 df_inputs['mety_b'] = mety_b
             if addon == 'neutrino':

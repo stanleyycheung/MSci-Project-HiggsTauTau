@@ -85,7 +85,6 @@ tau_p_2_1 = tau_sol_2[0][:, None]*sv_norm_2
 tau_p_2_2 = tau_sol_2[1][:, None]*sv_norm_2
 E_tau_2_1 = np.sqrt(np.linalg.norm(tau_p_2_1, axis=1)**2 + m_tau**2)
 E_tau_2_2 = np.sqrt(np.linalg.norm(tau_p_2_2, axis=1)**2 + m_tau**2)
-
 tau_sol_2_1 = Momentum4(E_tau_2_1, *tau_p_2_1.T)
 tau_sol_2_2 = Momentum4(E_tau_2_2, *tau_p_2_2.T)
 nu_sol_2_1 = tau_sol_2_1 - a1_2
@@ -100,10 +99,10 @@ nu_y_sol_1_2 = (df['mety'] - nu_sol_2_2[2]).to_numpy()
 
 
 def getNuPz(had, nu_p_x, nu_p_y):
-    a = (1-had.p_z**2)
-    b = -2*((m_tau**2 - had.m**2)/(2*had.e)*had.p_z + had.p_y*nu_p_y*had.p_z + had.p_x*nu_p_x*had.p_z)
-    c = nu_p_x**2 + nu_p_y**2 - ((m_tau**2 - had.m**2)/(2*had.e))**2 - (had.p_x*nu_p_x)**2 - (had.p_y*nu_p_y)**2 - 2 * \
-        ((m_tau**2 - had.m**2)/(2*had.e)*(had.p_x*nu_p_x+had.p_y*nu_p_y) + had.p_x*nu_p_x*had.p_y*nu_p_y)
+    a = (had.p_z**2-had.e**2)
+    b = (m_tau**2 - had.m**2)*had.p_z + 2*had.p_x*nu_p_x*had.p_z + 2*had.p_y*nu_p_y*had.p_z
+    c = ((m_tau**2 - had.m**2)/2)**2 + (had.p_x*nu_p_x)**2 + (had.p_y*nu_p_y)**2 + (m_tau**2-had.m**2) * \
+        (had.p_x*nu_p_x + had.p_y*nu_p_y) + 2*had.p_x*nu_p_x*had.p_y*nu_p_y - had.e**2*nu_p_x**2 - had.e**2*nu_p_y**2
     # return b**2-4*a*c
     disc = b**2-4*a*c
     disc = np.where(disc < 0, 0, disc)
@@ -125,8 +124,6 @@ def getNuE(had, nu_p_x, nu_p_y):
     return (-b+np.sqrt(disc))/(2*a), (-b-np.sqrt(disc))/(2*a)
 
 # %%
-
-
 nu_p_z_1_1_1, nu_p_z_1_1_2 = getNuPz(rho_1, nu_x_sol_1_1, nu_y_sol_1_1)
 # E_nu_1, E_nu_2 = getNuE(rho_1, nu_x_sol_1_1, nu_y_sol_1_1)
 E_nu_1_1_1 = calcNuE(nu_x_sol_1_1, nu_y_sol_1_1, nu_p_z_1_1_1)
@@ -160,11 +157,11 @@ taus_2 = [tau_sol_2_1, tau_sol_2_2]
 higgs_combinations = [(tau_1_1_1, tau_sol_2_1), (tau_1_1_1, tau_sol_2_2),
                       (tau_1_1_2, tau_sol_2_1), (tau_1_1_2, tau_sol_2_2),
                       (tau_1_2_1, tau_sol_2_1), (tau_1_2_1, tau_sol_2_2),
-                      (tau_1_2_2, tau_sol_2_1), (tau_1_2_2, tau_sol_2_2),]
+                      (tau_1_2_2, tau_sol_2_1), (tau_1_2_2, tau_sol_2_2), ]
 # for tau_1 in taus_1:
 #     for tau_2 in taus_2:
 #         higgs.append(tau_1+tau_2)
-higgs = [x+y for x,y in higgs_combinations]
+higgs = [x+y for x, y in higgs_combinations]
 higgs_mass = np.array([x.m for x in higgs])
 
 # %%
@@ -188,13 +185,13 @@ for i, idx in enumerate(closest_higgs_idx):
     # if i%10000:
 closest_neutrino_pair = np.array(closest_neutrino_pair)
 # %%
-est_nu_1 = Momentum4(*closest_neutrino_pair[:,0].T)
-est_nu_2 = Momentum4(*closest_neutrino_pair[:,1].T)
+est_nu_1 = Momentum4(*closest_neutrino_pair[:, 0].T)
+est_nu_2 = Momentum4(*closest_neutrino_pair[:, 1].T)
 # %%
 plt.hist(np.clip(closest_higgs_mass, 0, 800), bins=100)
 plt.axvline(x=125.35, c='r')
 plt.xlabel('mass (GeV)')
-plt.savefig('./kinematic_graphs/higgs_closest_mass.PNG')
+# plt.savefig('./kinematic_graphs/higgs_closest_mass.PNG')
 plt.show()
 # %%
 # compare to actual gen neutrinos
@@ -202,10 +199,10 @@ gen_nu_1 = Momentum4(df['nu_E_1'], df['nu_px_1'], df['nu_py_1'], df['nu_pz_1'])
 # gen_nu_2 = Momentum4(df['nu_E_2'], df['nu_px_2'], df['nu_py_2'], df['nu_pz_2'])
 
 # %%
-plt.rcParams["figure.figsize"] = (8,6)
+plt.rcParams["figure.figsize"] = (8, 6)
 # %%
 d = pd.DataFrame(np.c_[est_nu_1.p_x, gen_nu_1.p_x])
-d = d[(d[0]<300) & (d[0]>-300) & (d[1]<200) & (d[1]>-200)]
+d = d[(d[0] < 300) & (d[0] > -300) & (d[1] < 200) & (d[1] > -200)]
 plt.hexbin(d[0], d[1], cmap='viridis', mincnt=None, gridsize=200, bins='log')
 plt.plot(np.linspace(-200, 200), np.linspace(-200, 200), 'r')
 plt.colorbar()
@@ -216,7 +213,7 @@ plt.show()
 
 # %%
 d = pd.DataFrame(np.c_[est_nu_1.p_y, gen_nu_1.p_y])
-d = d[(d[0]<300) & (d[0]>-300) & (d[1]<200) & (d[1]>-200)]
+d = d[(d[0] < 300) & (d[0] > -300) & (d[1] < 200) & (d[1] > -200)]
 plt.hexbin(d[0], d[1], cmap='viridis', mincnt=None, gridsize=200, bins='log')
 plt.plot(np.linspace(-200, 200), np.linspace(-200, 200), 'r')
 plt.colorbar()
@@ -227,7 +224,7 @@ plt.show()
 # %%
 # %%
 d = pd.DataFrame(np.c_[est_nu_1.p_z, gen_nu_1.p_z])
-d = d[(d[0]<3000) & (d[0]>-3000) & (d[1]<1000) & (d[1]>-1000)]
+d = d[(d[0] < 3000) & (d[0] > -3000) & (d[1] < 1000) & (d[1] > -1000)]
 plt.hexbin(d[0], d[1], cmap='viridis', mincnt=None, gridsize=200, bins='log')
 plt.plot(np.linspace(-1000, 1000), np.linspace(-1000, 1000), 'r')
 plt.colorbar()
@@ -238,7 +235,7 @@ plt.show()
 
 # %%
 d = pd.DataFrame(np.c_[est_nu_1.e, gen_nu_1.e])
-d = d[(d[0]<2000) & (d[0]>-0) & (d[1]<600) & (d[1]>-0)]
+d = d[(d[0] < 2000) & (d[0] > -0) & (d[1] < 600) & (d[1] > -0)]
 plt.hexbin(d[0], d[1], cmap='viridis', mincnt=None, gridsize=200, bins='log')
 plt.plot(np.linspace(-0, 600), np.linspace(-0, 600), 'r')
 plt.colorbar()

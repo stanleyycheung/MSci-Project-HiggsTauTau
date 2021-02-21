@@ -40,6 +40,7 @@ class AlphaCalculator:
         Changed back return type to original (19/01)
         Return type: alpha_1, alpha_2, p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2
         """
+        print('Running alphas')
         if self.load:
             binary_str = ''
             if self.binary:
@@ -145,6 +146,7 @@ class AlphaCalculator:
         return self.alpha_1, self.alpha_2, p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2
 
     def runAlphaGen(self):
+        print('Running alphas')
         if self.load:
             binary_str = ''
             if self.binary:

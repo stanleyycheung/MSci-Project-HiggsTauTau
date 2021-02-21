@@ -96,10 +96,10 @@ class ConfigChecker:
         # if gen, no config > 2.6
         # reco rho_rho config 2.8 = 2.7, 2.5 = 2.4 
         if gen:
-            if config_num > 2.5 and config_num < 3:
+            if config_num > 2.8 and config_num < 3:
                 print(f'Config number {config_num} is not accessible to gen level')
                 raise SystemExit
-        else:
+        elif self.channel == 'rho_rho':
             if config_num == 2.8:
                 print("~~~~~~~~~~~~~~~~~~~~~~~~~WARNING: SAME CONFIG AS 2.7~~~~~~~~~~~~~~~~~~~~~~~~~")
             elif config_num == 2.5:

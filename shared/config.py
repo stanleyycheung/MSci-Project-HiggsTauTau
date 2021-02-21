@@ -65,8 +65,8 @@ variables_a1_a1 = [
 ] + selectors_reco + met_reco + ip + sv_1 + sv_2 + particles_a1_a1
 
 
-variables_gen_rho_rho = particles_rho_rho + selectors_gen + met_gen + sv_1 + sv_2
+variables_gen_rho_rho = particles_rho_rho + selectors_gen + met_gen + sv_1 + sv_2 + ip
 
-variables_gen_rho_a1 = particles_rho_a1 + selectors_gen + met_gen + sv_1 + sv_2
+variables_gen_rho_a1 = particles_rho_a1 + selectors_gen + met_gen + sv_1 + sv_2 + ip
 
-variables_gen_a1_a1 = particles_a1_a1 + selectors_gen + met_gen + sv_1 + sv_2
+variables_gen_a1_a1 = particles_a1_a1 + selectors_gen + met_gen + sv_1 + sv_2 + ip

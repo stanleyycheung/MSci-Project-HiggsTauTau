@@ -50,7 +50,7 @@ class NeuralNetwork:
     def __init__(self,  channel, gen, binary=True, write_filename='NN_output', show_graph=False):
         print(f'Loaded in {channel}, binary={binary}, gen={gen}')
         self.addons_config_reco = {'neutrino': {'load_alpha':False, 'termination':1000, 'imputer_mode':'remove'}, 'met': {}, 'ip': {}, 'sv': {}}
-        self.addons_config_gen = {'neutrino': {'load_alpha':False, 'termination':1000, 'imputer_mode':'remove'}, 'met': {}, 'sv': {}}
+        self.addons_config_gen = {'neutrino': {'load_alpha':False, 'termination':1000, 'imputer_mode':'remove'}, 'met': {}, 'ip':{}, 'sv': {}}
         self.show_graph = show_graph
         self.channel = channel
         self.binary = binary
@@ -78,7 +78,7 @@ class NeuralNetwork:
             w_a = df.w_a
             w_b = df.w_b
             auc = self.evaluate(model, X_test, y_test, self.history, w_a, w_b)
-        self.write(self.gen, auc, self.history, self.addons_config_reco)
+        self.write(auc, self.history, self.addons_config_reco)
         
 
     def runMultiple(self, configs, read=True, from_hdf=True, epochs=50, batch_size=1024, patience=10):
@@ -352,7 +352,6 @@ class NeuralNetwork:
         return model
 
 def parser():
-    # TODO: epochs, batch_size, write_filename
     parser = argparse.ArgumentParser()
     parser.add_argument('channel', default='rho_rho', choices=['rho_rho', 'rho_a1', 'a1_a1'], help='which channel to load to')
     parser.add_argument('config_num', type=float, help='config num to run on')
