@@ -132,35 +132,27 @@ class Tuner:
             model = tuner.hypermodel.build(best_hps)
             return model, best_hps, None
         elif self.mode in {'hyperopt'}:
-            # in hyperopt territory
-            # space = {
-            #     'num_layers': hp.choice('num_layers', np.arange(1, 11)),
-            #     'batch_norm': hp.choice('batch_norm', [True, False]),
-            #     'dropout': hp.choice('dropout', [0, 0.1, 0.2, 0.3, 0.4, 0.5]),
-            #     'epochs': hp.choice('epochs', [50, 100, 200, 500]),
-            #     'batch_size': hp.choice('batch_size', [2**i for i in range(8, 19)]),
-            # }
             space_display = {
-                'num_layers': [2, 6, 1],
+                'nodes': [100, 600, 100],
+                'num_layers': [3, max(10, int(X_train.shape[1])/5) , 1],
                 'batch_norm': [True, False],
-                'dropout': [0, 0.4, 0.2],
-                'epochs': [20, 50, 10],
-                'batch_size': [8192, 16384, 65536, 131072],
+                'dropout': [0, 0.4, 0.05],
+                'epochs': [20, 70, 5],
+                'batch_size': [np.log(1000), np.log(100000)],
                 'learning_rate': [np.log(0.0001), np.log(0.01)],
-                # 'learning_rate': [0.0001, 0.01],
                 'activation': ['relu', 'lrelu', 'swish'],
                 'initializer_std': [0.001, 0.01, 0.1]
             }
             space = {
+                'nodes': hp.quniform('nodes', *space_display['nodes']),
                 'num_layers': hp.quniform('num_layers', *space_display['num_layers']),
                 'batch_norm': hp.choice('batch_norm', space_display['batch_norm']),
                 'dropout': hp.quniform('dropout', *space_display['dropout']),
                 'epochs': hp.quniform('epochs', *space_display['epochs']),
-                'batch_size': hp.choice('batch_size', space_display['batch_size']),
+                'batch_size': hp.loguniform('batch_size', *space_display['batch_size']),
                 'learning_rate': hp.loguniform('learning_rate', *space_display['learning_rate']),
                 'activation': hp.choice('activation', space_display['activation']),
                 'initializer_std': hp.choice('intializer_std', space_display['initializer_std'])
-                # maybe change batch_size to quniform, or qloguniform?
             }
             self.X_train, self.y_train, self.X_test, self.y_test = X_train, y_train, X_test, y_test
             trials = Trials()
@@ -173,6 +165,9 @@ class Tuner:
             return model, best_params, space_display
         else:
             raise ValueError('Tuning mode not valid')
+
+    def tuneXGB(self):
+        print(f'Tuning XGBoost using {self.mode}')
 
 
     def hyperModel(self, hp):
@@ -209,6 +204,7 @@ class Tuner:
 
     def hyperOptModelNN(self, params):
         params = {
+                'nodes': int(params['nodes']),
                 'num_layers': int(params['num_layers']),
                 'batch_norm': bool(params['batch_norm']),
                 'dropout': int(params['dropout']),
@@ -222,7 +218,7 @@ class Tuner:
         std = params['initializer_std']
         for _ in range(params['num_layers']):
             # model.add(tf.keras.layers.Dense(300, kernel_initializer='normal'))
-            model.add(tf.keras.layers.Dense(300, kernel_initializer=tf.keras.initializers.RandomNormal(stddev=std), bias_initializer='zeros'))
+            model.add(tf.keras.layers.Dense(params['nodes'], kernel_initializer=tf.keras.initializers.RandomNormal(stddev=std), bias_initializer='zeros'))
             if params['batch_norm']:
                 model.add(tf.keras.layers.BatchNormalization())
             if params['activation'] == 'relu':
@@ -246,6 +242,7 @@ class Tuner:
 
     def hyperOptObjNN(self, params):
         params = {
+                'nodes': int(params['nodes']),
                 'num_layers': int(params['num_layers']),
                 'batch_norm': bool(params['batch_norm']),
                 'dropout': int(params['dropout']),

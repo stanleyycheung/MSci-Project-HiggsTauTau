@@ -58,7 +58,7 @@ class DataLoader:
         self.channel = channel
         self.variables = variables
         self.gen = gen
-        self.smearing = True # !!! should be an input parameter! Possibly from command line?
+        self.smearing = False # !!! should be an input parameter! Possibly from command line?
 
     def loadRecoData(self, binary, addons=[]):
         """
@@ -256,9 +256,9 @@ class DataLoader:
         else:
             y = None
         if self.channel == 'rho_rho':
-            print('calling calculateRhoRhoData')
+            # print('calling calculateRhoRhoData')
             df_inputs_data = self.calculateRhoRhoData(df)
-            print('df_inputs[asdf]=', df_inputs_data['pi_E_1_br'][0])
+            # print('df_inputs[asdf]=', df_inputs_data['pi_E_1_br'][0])
         elif self.channel == 'rho_a1':
             df_inputs_data = self.calculateRhoA1Data(df)
         else:
@@ -283,7 +283,7 @@ class DataLoader:
             # hdf_file_name = './alpha_analysis/df_br'
             print(f'Saving df to {hdf_file_name}')
             df_inputs.to_hdf(hdf_file_name+'.h5', key='df')
-        print('df_inputs[asdf]=', df_inputs['pi_E_1_br'])
+        # print('df_inputs[asdf]=', df_inputs['pi_E_1_br'])
         return df_inputs
 
     def calculateRhoRhoData(self, df):
@@ -958,11 +958,9 @@ class DataLoader:
                 # df_inputs['p_z_nu_2'] = p_z_nu_2
                 if imputer_mode == 'remove':
                     # modifies the original df by removing events
-                    df_inputs = df
-                    #df_inputs, df = self.addonNeutrinos(df, df_inputs, binary, load_alpha, imputer_mode, termination=termination)
+                    df_inputs, df = self.addonNeutrinos(df, df_inputs, binary, load_alpha, imputer_mode, termination=termination)
                 else:
-                    df_inputs = df
-                    #df_inputs = self.addonNeutrinos(df, df_inputs, binary, load_alpha, imputer_mode, termination=termination)
+                    df_inputs = self.addonNeutrinos(df, df_inputs, binary, load_alpha, imputer_mode, termination=termination)
             if addon == 'ip':
                 print('Impact paramter loaded')
                 boost = self.createBoostAndRotationMatrices(df)

@@ -10,7 +10,6 @@ import numpy as np
 import datetime
 import config
 import argparse
-from utils import TensorBoardExtended
 seed_value = config.seed_value
 # 1. Set the `PYTHONHASHSEED` environment variable at a fixed value
 os.environ['PYTHONHASHSEED'] = str(seed_value)
@@ -243,17 +242,6 @@ class NeuralNetwork:
         if self.binary:
             log_dir += '_b'
         tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
-        # text_dict_to_log = {
-        #     'channel': str(self.channel),
-        #     'binary' : str(self.binary),
-        #     'gen' : str(self.gen),
-        #     'config_num': str(self.config_num),
-        #     'layers' : str(self.layers),
-        #     'epochs': self.epochs,
-        #     'batch_size': self.batch_size,
-        #     'model_str': self.model_str,
-        # }
-        # tensorboard_callback = TensorBoardExtended(text_dict_to_log=text_dict_to_log, log_dir=log_dir, histogram_freq=1)
         self.model.fit(X_train, y_train,
                        batch_size=batch_size,
                        epochs=epochs,

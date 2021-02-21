@@ -19,7 +19,8 @@ class ConfigLoader:
         self.df = df_inputs
         self.channel = channel
         self.gen = gen
-        self.smearing = True # !!! should be an input parameter
+        # self.smearing = True # !!! should be an input parameter
+        self.smearing = False
 
     def chooseConfigMap(self, config_num: int, binary: bool):
         """
