@@ -133,8 +133,8 @@ class ConfigLoader:
                     # adding all other additional info in .root file - no aco angles or y
                     base = np.c_[ip_1_transformed, ip_2_transformed, four_vectors, aco_angles_calc, y_s, m_s, self.df.metx_b, self.df.mety_b]
                     if self.channel == 'rho_rho':
-                        print('SAME AS CONFIG 2.7')
-                        return np.c_[base]
+                        raise ValueError('SAME AS CONFIG 2.7')
+                        # return np.c_[base]
                     elif self.channel == 'rho_a1':
                         sv_2_transformed = np.c_[self.df.sv_x_2_br, self.df.sv_y_2_br, self.df.sv_z_2_br]
                         return np.c_[base, sv_2_transformed]
@@ -192,8 +192,8 @@ class ConfigLoader:
                     sv_2_transformed = np.c_[self.df.sv_x_2_br, self.df.sv_y_2_br, self.df.sv_z_2_br]
                     return np.c_[base, sv_2_transformed, alpha_info]
                 else:
-                    print('SAME AS CONFIG 3.2')
-                    return np.c_[base, alpha_info]
+                    raise ValueError('SAME AS CONFIG 3.2')
+                    # return np.c_[base, alpha_info]
             elif config_num > 3.3:
                 if self.channel == 'rho_rho':
                     raise ValueError(f'CONFIG_NUM {config_num}>3.3 in rho_rho channel is not accessible')

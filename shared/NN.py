@@ -139,6 +139,7 @@ class NeuralNetwork:
             grid_best_score = None
         elif tuning_mode in {'hyperopt'}:
             self.model, best_params, param_grid = tuner.tune(X_train, y_train, X_test, y_test)
+            self.nodes = int(best_params['nodes'])
             self.layers = int(best_params['num_layers'])
             self.batch_norm = best_params['batch_norm']
             self.dropout = best_params['dropout']
@@ -147,7 +148,7 @@ class NeuralNetwork:
             self.learning_rate = best_params['learning_rate']
             self.activation = best_params['activation']
             self.initializer_std = best_params['initializer_std']
-            self.model_str = 'grid_model'
+            self.model_str = 'hyperopt_model'
             grid_best_score = None
         else:
             raise ValueError('Tuning mode not understood')
@@ -167,7 +168,7 @@ class NeuralNetwork:
             print(f'Writing HPs to {file}')
             time_str = datetime.datetime.now().strftime('%Y/%m/%d|%H:%M:%S')
             # message = f'{time_str},{auc},{self.config_num},{self.layers},{self.batch_norm},{self.dropout},{self.epochs},{self.batchsize},{tuning_mode},{grid_best_score},{param_grid}\n'
-            message = f'{time_str},{auc},{self.config_num},{self.layers},{self.batch_norm},{self.dropout},{self.epochs},{self.batchsize},{tuning_mode},{grid_best_score},{self.learning_rate},{self.activation},{self.initializer_std},{param_grid}\n'
+            message = f'{time_str},{auc},{self.config_num},{self.nodes},{self.layers},{self.batch_norm},{self.dropout},{self.epochs},{self.batchsize},{tuning_mode},{grid_best_score},{self.learning_rate},{self.activation},{self.initializer_std},{param_grid}\n'
             print(f"Message: {message}")
             f.write(message)
         model_save_str = f'./saved_models/{self.channel}/model_{config_num}'
