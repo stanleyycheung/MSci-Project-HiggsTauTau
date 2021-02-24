@@ -164,3 +164,4 @@ shared/core.*
 !shared/alpha_analysis/rho_rho/placeholder.txt
 !shared/alpha_analysis/rho_a1/placeholder.txt
 !shared/alpha_analysis/a1_a1/placeholder.txt
+shared/run_scripts/nohup.out

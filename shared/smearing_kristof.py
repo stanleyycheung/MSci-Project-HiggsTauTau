@@ -47,7 +47,6 @@ class NeuralNetwork:
     - By default, will load all addons
     """
     
-
     def __init__(self,  channel, gen, binary=True, write_filename='NN_output', show_graph=False):
         print(f'Loaded in {channel}, binary={binary}, gen={gen}')
         self.addons_config_reco = {'neutrino': {'load_alpha':False, 'termination':1000}, 'met': {}, 'ip': {}, 'sv': {}}

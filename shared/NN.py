@@ -235,7 +235,7 @@ class NeuralNetwork:
         if self.model is None:
             self.model = self.kristof_model(X_train.shape[1])
         self.history = tf.keras.callbacks.History()
-        early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=patience)
+        early_stop = tf.keras.callbacks.EarlyStopping(monitor='auc', patience=patience)
         if not self.gen:
             log_dir = f"logs/fit/{self.channel}_reco/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + f'_{self.config_num}_{self.layers}_{self.epochs}_{self.batch_size}_{self.model_str}'
         else:
@@ -278,7 +278,6 @@ class NeuralNetwork:
             f.write(f'{time_str},{auc},{self.config_num},{self.layers},{self.epochs},{actual_epochs},{self.batch_size},{self.binary},{self.model_str},{addons_loaded}\n')
         print('Finish writing')
         f.close()
-
 
     def evaluateBinary(self, model, X_test, y_test, history):
         config_str = self.createConfigStr()

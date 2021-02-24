@@ -78,6 +78,53 @@ class XGBoost(NN.NeuralNetwork):
         print('Writing...')
         self.write(self.gen, auc, self.addons_config_reco)
 
+    def runTuning(self, config_num, tuning_mode='hyperopt'):
+        """
+        INCOMPLETE AND UNTESTED
+        """
+        if not self.gen:
+            df = self.initialize(self.addons_config_reco, read=read, from_hdf=from_hdf)
+        else:
+            df = self.initialize(self.addons_config_gen, read=read, from_hdf=from_hdf)
+        X_train, X_test, y_train, y_test = self.configure(df, config_num)
+        print(f'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Tuning XGB on config {config_num}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+        tuner = Tuner(mode=tuning_mode)
+        if tuning_mode == 'hyperopt':
+            self.model, best_params, param_grid = tuner.tune(X_train, y_train, X_test, y_test)
+            self.nodes = int(best_params['nodes'])
+            self.layers = int(best_params['num_layers'])
+            self.batch_norm = best_params['batch_norm']
+            self.dropout = best_params['dropout']
+            self.epochs = int(best_params['epochs'])
+            self.batchsize = int(best_params['batch_size'])
+            self.learning_rate = best_params['learning_rate']
+            self.activation = best_params['activation']
+            self.initializer_std = best_params['initializer_std']
+            self.model_str = 'hyperopt_model'
+        else:
+            raise ValueError('Tuning mode not understood')
+        model = self.train(X_train, X_test, y_train, y_test, epochs=self.epochs, batch_size=self.batchsize, verbose=0)
+        if self.binary:
+            auc = self.evaluateBinary(model, X_test, y_test, self.history)
+        else:
+            w_a = df.w_a
+            w_b = df.w_b
+            auc = self.evaluate(model, X_test, y_test, self.history, w_a, w_b)
+        if not self.gen:
+            file = f'{self.write_dir}/tuning_reco_{self.channel}.txt'
+        else:
+            file = f'{self.write_dir}/tuning_gen_{self.channel}.txt'
+        self.model.save(f'{self.write_dir}/tuning_model_{self.channel}.h5')
+        with open(file, 'a+') as f:
+            print(f'Writing HPs to {file}')
+            time_str = datetime.datetime.now().strftime('%Y/%m/%d|%H:%M:%S')
+            # message = f'{time_str},{auc},{self.config_num},{self.layers},{self.batch_norm},{self.dropout},{self.epochs},{self.batchsize},{tuning_mode},{grid_best_score},{param_grid}\n'
+            message = f'{time_str},{auc},{self.config_num},{self.nodes},{self.layers},{self.batch_norm},{self.dropout},{self.epochs},{self.batchsize},{tuning_mode},{self.learning_rate},{self.activation},{self.initializer_std},{param_grid}\n'
+            print(f"Message: {message}")
+            f.write(message)
+        model_save_str = f'./saved_models/{self.channel}/model_{config_num}'
+        model.save_model(model_save_str)
+
     def createConfigStr(self):
         """almost copy pasted. Differences:
         erased some variables from config_str"""
@@ -91,7 +138,6 @@ class XGBoost(NN.NeuralNetwork):
     def write(self, auc, addons_config):
         """almost copy pasted. Differences:
         actual_epochs deleted
-        history is None, but it's not used
         f.write(...) erased epochs, batch size, etc."""
         if not addons_config:
             addons = []
@@ -144,15 +190,15 @@ def parser():
     parser.add_argument('-g', '--gen', action='store_true', default=False, help='if load gen data')
     parser.add_argument('-b', '--binary', action='store_false', default=True, help='if learn binary labels')
     parser.add_argument('-t', '--tuning', action='store_true', default=False, help='if tuning is run')
-    parser.add_argument('-tm', '--tuning_mode', help='choose tuning mode to tune on', default='random_sk')
+    parser.add_argument('-tm', '--tuning_mode', help='choose tuning mode to tune on', default='hyperopt')
     parser.add_argument('-r', '--read', action='store_false', default=True, help='if read NN input')
     parser.add_argument('-hdf', '--from_hdf', action='store_false', default=True, help='if read .root file from HDF5')
     parser.add_argument('-a', '--addons', nargs='*', default=None, help='load addons')
     parser.add_argument('-s', '--show_graph', action='store_true', default=False, help='if show graphs')
-    parser.add_argument('-e', '--epochs', type=int, default=50, help='epochs to train on')
-    parser.add_argument('-bs', '--batch_size', type=int, default=10000, help='batch size')
     parser.add_argument('-la', '--load_alpha', action='store_false', default=True, help='if load alpha')
     parser.add_argument('-ter', '--termination', type=int, default=1000, help='termination number for alpha')
+    parser.add_argument('-imp', '--imputer_mode', default='remove', choices=['pass', 'flag', 'bayesian_ridge', 'decision_tree', 'extra_trees', 'kn_reg', 'knn', 'mean', 'remove'], help='imputation mode for neutrino information')
+
     args = parser.parse_args()
     return args
 
@@ -164,7 +210,7 @@ if __name__ == '__main__':
         # use command line parser - comment out if not needed
         args = parser()
         channel = args.channel
-        config_num = args.config_num 
+        config_num = args.config_num / 10
         gen = args.gen
         binary = args.binary
         tuning = args.tuning
@@ -173,14 +219,16 @@ if __name__ == '__main__':
         from_hdf = args.from_hdf
         addons = args.addons
         show_graph = args.show_graph
-        epochs = args.epochs
-        batch_size = args.batch_size
         load_alpha = args.load_alpha
         termination = args.termination
+        imputer_mode = args.imputer_mode
 
-        print('checkpoint 0')
         XGB = XGBoost(channel=channel, gen=gen, binary=binary, write_filename='XGB_output', show_graph=show_graph)
-        print('checkpoint 0.5')
-        XGB.run(config_num, read=read, from_hdf=from_hdf)
+        if not tuning:
+            print('checkpoint 0')
+            print('checkpoint 0.5')
+            XGB.run(config_num, read=read, from_hdf=from_hdf)
+        else:
+            XGB.runTuning(config_num, tuning_mode=tuning_mode)
     else:
         pass

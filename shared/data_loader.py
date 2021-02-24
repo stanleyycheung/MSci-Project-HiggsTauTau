@@ -1,6 +1,5 @@
 import math
 import os
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -27,9 +26,7 @@ class DataLoader:
     - 'met'
     - 'ip'
     - 'sv'
-
     """
-
     reco_root_path = "./MVAFILE_AllHiggs_tt.root"
     gen_root_path = "./MVAFILE_GEN_AllHiggs_tt.root"
     reco_df_path = './df_tt'
@@ -42,13 +39,10 @@ class DataLoader:
         reco_root_path = "/vols/cms/shc3117/MVAFILE_AllHiggs_tt.root"
         # gen_root_path = "/vols/cms/shc3117/MVAFILE_GEN_AllHiggs_tt.root"
         gen_root_path = "/vols/cms/dw515/Offline/output/SM/master_gen_ntuple_1502/MVAFILE_tt.root"
-        smearing_root_path = '/vols/cms/dw515/Offline/output/SM/master_gen_ntuple_1502/MVAFILE_tt.root'
         reco_df_path = '/vols/cms/shc3117/df_tt'
         gen_df_path = '/vols/cms/shc3117/df_tt_gen'
-        smearing_df_path = '/vols/cms/shc3117/df_tt_smearing'
     input_df_save_dir_reco = './input_df_reco'
     input_df_save_dir_gen = './input_df_gen'
-    input_df_save_dir_smearing = './input_df_smearing'
 
     def __init__(self, variables, channel, gen):
         """
@@ -58,7 +52,7 @@ class DataLoader:
         self.channel = channel
         self.variables = variables
         self.gen = gen
-        self.smearing = False # !!! should be an input parameter! Possibly from command line?
+        # self.smearing = False # !!! should be an input parameter! Possibly from command line?
 
     def loadRecoData(self, binary, addons=[]):
         """
@@ -88,17 +82,6 @@ class DataLoader:
         df_inputs = pd.read_hdf(hdf_file_name+'.h5', 'df')
         return df_inputs
 
-    def loadSmearingData(self, binary, addons=[]):
-        print('Reading smearing df HDF5 file')
-        addons_loaded = ""
-        if addons:
-            addons_loaded = '_'+'_'.join(addons)
-        hdf_file_name = f'{DataLoader.input_df_save_dir_smearing}/input_{self.channel}{addons_loaded}'
-        if binary:
-            hdf_file_name += '_b'
-        df_inputs = pd.read_hdf(hdf_file_name+'.h5', 'df')
-        return df_inputs
-
     def createRecoData(self, binary, from_hdf=True, addons=[], addons_config={}):
         """
         Creates the input (reco) data for the NN either from .root file or a previously saved .h5 file
@@ -116,15 +99,6 @@ class DataLoader:
         df = self.readGenData(from_hdf=from_hdf)
         print('Cleaning data')
         df_clean, df_ps_clean, df_sm_clean = self.cleanGenData(df)
-        print('Creating input data')
-        df_inputs = self.createTrainTestData(df_clean, df_ps_clean, df_sm_clean, binary, True, addons, addons_config, save=True)
-        return df_inputs
-
-    def createSmearingData(self, binary, from_hdf=False, addons=[], addons_config={}):
-        print(f'Loading .root info with using HDF5 as {from_hdf}')
-        df = self.readSmearingData(from_hdf=from_hdf)
-        print('Cleaning data')
-        df_clean, df_ps_clean, df_sm_clean = self.cleanSmearingData(df)
         print('Creating input data')
         df_inputs = self.createTrainTestData(df_clean, df_ps_clean, df_sm_clean, binary, True, addons, addons_config, save=True)
         return df_inputs
@@ -155,25 +129,6 @@ class DataLoader:
             df = pd.read_hdf(f"{DataLoader.gen_df_path}_{self.channel}.h5", 'df')
         return df
 
-    def readSmearingData(self, from_hdf=False):
-        if not from_hdf:
-            tree_tt = uproot.open(DataLoader.smearing_root_path)["ntuple"]
-            #print('keys=', tree_tt.keys())
-            new_variables = []
-            keys = [x.decode('utf-8') for x in tree_tt.keys()]
-            #print(self.variables)
-            #print(keys)
-            for var in self.variables:
-                if var in keys:
-                    new_variables.append(var)
-            self.variables = new_variables
-            print('new variables=', new_variables)
-            df = tree_tt.pandas.df(self.variables)
-            df.to_hdf(f"{DataLoader.smearing_df_path}_{self.channel}.h5", 'df')
-        else:
-            df = pd.read_hdf(f"{DataLoader.smearing_df_path}_{self.channel}.h5", 'df')
-        return df
-
     def cleanGenData(self, df):
         """
         Selects correct channel for gen data
@@ -188,9 +143,9 @@ class DataLoader:
             raise ValueError('Incorrect channel inputted')
         df_clean = df_clean.dropna()
         df_clean = df_clean[(df_clean != 0).all(1)]
-        df_rho_ps = df_clean[(df_clean["rand"] < df_clean["wt_cp_ps"]/2)]
-        df_rho_sm = df_clean[(df_clean["rand"] < df_clean["wt_cp_sm"]/2)]
-        return df_clean, df_rho_ps, df_rho_sm
+        df_ps = df_clean[(df_clean["rand"] < df_clean["wt_cp_ps"]/2)]
+        df_sm = df_clean[(df_clean["rand"] < df_clean["wt_cp_sm"]/2)]
+        return df_clean, df_ps, df_sm
 
     def cleanRecoData(self, df):
         """
@@ -200,7 +155,7 @@ class DataLoader:
             # select only rho-rho events
             df_clean = df[(df['mva_dm_1'] == 1) & (df['mva_dm_2'] == 1) & (df["tau_decay_mode_1"] == 1) & (df["tau_decay_mode_2"] == 1)]
             # drop unnecessary labels
-            # df_clean = df_rho.drop(["mva_dm_1", "mva_dm_2", "tau_decay_mode_1", "tau_decay_mode_2", "wt_cp_sm", "wt_cp_ps", "wt_cp_mm", "rand"], axis=1).reset_index(drop=True)
+            # df_clean = df.drop(["mva_dm_1", "mva_dm_2", "tau_decay_mode_1", "tau_decay_mode_2", "wt_cp_sm", "wt_cp_ps", "wt_cp_mm", "rand"], axis=1).reset_index(drop=True)
         elif self.channel == 'rho_a1':
             df_clean = df[(df['mva_dm_1'] == 1) & (df['mva_dm_2'] == 10) & (df["tau_decay_mode_1"] == 1)]
         elif self.channel == 'a1_a1':
@@ -217,23 +172,6 @@ class DataLoader:
         df_ps = df_clean[(df_clean["rand"] < df_clean["wt_cp_ps"]/2)]
         df_sm = df_clean[(df_clean["rand"] < df_clean["wt_cp_sm"]/2)]
         return df_clean, df_ps, df_sm
-
-    def cleanSmearingData(self, df):
-        """exactly the same as cleanGenData"""
-        # if self.channel == 'rho_rho':
-        #     df_clean = df[(df['dm_1'] == 1) & (df['dm_2'] == 1)]
-        # elif self.channel == 'rho_a1':
-        #     df_clean = df[(df['dm_1'] == 1) & (df['dm_2'] == 10)]
-        # elif self.channel == 'a1_a1':
-        #     df_clean = df[(df['dm_1'] == 10) & (df['dm_2'] == 10)]
-        # else:
-        #     raise ValueError('Incorrect channel inputted')
-        # df_clean = df_clean.dropna()
-        # df_clean = df_clean.loc[~(df_clean == 0).all(axis=1)]
-        df_clean = df[(df['reco_dm_1'] == 1)]
-        df_rho_ps = df_clean[(df_clean["rand"] < df_clean["wt_cp_ps"]/2)]
-        df_rho_sm = df_clean[(df_clean["rand"] < df_clean["wt_cp_sm"]/2)]
-        return df_clean, df_rho_ps, df_rho_sm
 
     def augmentDfToBinary(self, df_ps, df_sm):
         y_sm = pd.DataFrame(np.ones(df_sm.shape[0]))
@@ -268,16 +206,16 @@ class DataLoader:
         if binary:
             df_inputs['y'] = y
         addons_loaded = ""
-        if addons and not self.smearing:
+        if addons:
             df_inputs = self.createAddons(addons, df, df_inputs, binary, addons_config)
             addons_loaded = '_'+'_'.join(addons)
         if save:
-            if not gen and not self.smearing:
+            if not gen:
                 hdf_file_name = f'{DataLoader.input_df_save_dir_reco}/input_{self.channel}{addons_loaded}'
-            elif not self.smearing:
+            else:
                 hdf_file_name = f'{DataLoader.input_df_save_dir_gen}/input_gen_{self.channel}{addons_loaded}'
-            if self.smearing:
-                hdf_file_name = f'{DataLoader.input_df_save_dir_smearing}/input_{self.channel}{addons_loaded}'
+            # if self.smearing:
+            #     hdf_file_name = f'{DataLoader.input_df_save_dir_smearing}/input_{self.channel}{addons_loaded}'
             if binary:
                 hdf_file_name += '_b'
             # hdf_file_name = './alpha_analysis/df_br'
@@ -365,14 +303,14 @@ class DataLoader:
             # 'pi0_pz_2': pi0_2[3],
         }
         # additional info from .root
-        if self.smearing:
-            df_inputs_data.update({
-                'reco_pi_E_1': df['reco_pi_E_1'],
-                'reco_pi_px_1': df['reco_pi_px_1'],
-                'reco_pi_py_1': df['reco_pi_py_1'],
-                'reco_pi_pz_1': df['reco_pi_pz_1'],
-            })
-            return df_inputs_data
+        # if self.smearing:
+        #     df_inputs_data.update({
+        #         'reco_pi_E_1': df['reco_pi_E_1'],
+        #         'reco_pi_px_1': df['reco_pi_px_1'],
+        #         'reco_pi_py_1': df['reco_pi_py_1'],
+        #         'reco_pi_pz_1': df['reco_pi_pz_1'],
+        #     })
+        #     return df_inputs_data
         if not self.gen:
             df_inputs_data.update({
                 'aco_angle_1': df['aco_angle_1'],
