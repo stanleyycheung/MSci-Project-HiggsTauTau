@@ -12,7 +12,7 @@ import config
 import argparse
 from utils import TensorBoardExtended
 import NN
-import xgboost as xgb
+import xgboost
 seed_value = config.seed_value
 # 1. Set the `PYTHONHASHSEED` environment variable at a fixed value
 os.environ['PYTHONHASHSEED'] = str(seed_value)
@@ -90,40 +90,39 @@ class XGBoost(NN.NeuralNetwork):
         print(f'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Tuning XGB on config {config_num}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
         tuner = Tuner(mode=tuning_mode)
         if tuning_mode == 'hyperopt':
-            self.model, best_params, param_grid = tuner.tune(X_train, y_train, X_test, y_test)
-            self.nodes = int(best_params['nodes'])
-            self.layers = int(best_params['num_layers'])
-            self.batch_norm = best_params['batch_norm']
-            self.dropout = best_params['dropout']
-            self.epochs = int(best_params['epochs'])
-            self.batchsize = int(best_params['batch_size'])
-            self.learning_rate = best_params['learning_rate']
-            self.activation = best_params['activation']
-            self.initializer_std = best_params['initializer_std']
-            self.model_str = 'hyperopt_model'
+            self.model, best_params, param_grid = tuner.tuneXGB(X_train, y_train, X_test, y_test)
+
+            self.learning_rate = float(best_params['learning_rate'])
+            self.max_depth = int(best_params['max_depth'])
+            self.min_child_weight = int(best_params['min_child_weight'])
+            self.gamma = float(best_params['gamma'])
+            self.subsample = float(best_params['subsample'])
+            self.colsample_bytree = float(best_params['colsample_bytree'])
+            self.reg_alpha = float(best_params['reg_alpha'])
+            self.model_str = 'hyperopt_XGB_model'
         else:
             raise ValueError('Tuning mode not understood')
-        model = self.train(X_train, X_test, y_train, y_test, epochs=self.epochs, batch_size=self.batchsize, verbose=0)
+        model = self.train(X_train, X_test, y_train, y_test, stopping_rounds=100, save=False, verbose=0)
         if self.binary:
-            auc = self.evaluateBinary(model, X_test, y_test, self.history)
+            auc = self.evaluateBinary(model, X_test, y_test, None)
         else:
             w_a = df.w_a
             w_b = df.w_b
-            auc = self.evaluate(model, X_test, y_test, self.history, w_a, w_b)
+            auc = self.evaluate(model, X_test, y_test, None, w_a, w_b)
         if not self.gen:
-            file = f'{self.write_dir}/tuning_reco_{self.channel}.txt'
+            file = f'{self.write_dir}/tuning_xgb_reco_{self.channel}.txt'
         else:
-            file = f'{self.write_dir}/tuning_gen_{self.channel}.txt'
-        self.model.save(f'{self.write_dir}/tuning_model_{self.channel}.h5')
+            file = f'{self.write_dir}/tuning_xgb_gen_{self.channel}.txt'
+        #self.model.save(f'{self.write_dir}/tuning_xgb_model_{self.channel}.h5')
         with open(file, 'a+') as f:
             print(f'Writing HPs to {file}')
             time_str = datetime.datetime.now().strftime('%Y/%m/%d|%H:%M:%S')
             # message = f'{time_str},{auc},{self.config_num},{self.layers},{self.batch_norm},{self.dropout},{self.epochs},{self.batchsize},{tuning_mode},{grid_best_score},{param_grid}\n'
-            message = f'{time_str},{auc},{self.config_num},{self.nodes},{self.layers},{self.batch_norm},{self.dropout},{self.epochs},{self.batchsize},{tuning_mode},{self.learning_rate},{self.activation},{self.initializer_std},{param_grid}\n'
+            message = f'{time_str},{auc},{self.config_num},{self.learning_rate},{self.max_depth},{self.min_child_weight},{self.gamma},{self.subsample},{self.colsample_bytree},{self.reg_alpha},{tuning_mode},{param_grid}\n'
             print(f"Message: {message}")
             f.write(message)
-        model_save_str = f'./saved_models/{self.channel}/model_{config_num}'
-        model.save_model(model_save_str)
+        model_save_str = f'./saved_models/{self.channel}/xgb_model_{config_num}'
+        self.model.save_model(model_save_str)
 
     def createConfigStr(self):
         """almost copy pasted. Differences:
@@ -179,7 +178,7 @@ class XGBoost(NN.NeuralNetwork):
             "subsample": 0.9,
             "seed": config.seed_value,
         }
-        xgb_clf = xgb.XGBClassifier(**xgb_params)
+        xgb_clf = xgboost.XGBClassifier(**xgb_params)
         return xgb_clf
 
 

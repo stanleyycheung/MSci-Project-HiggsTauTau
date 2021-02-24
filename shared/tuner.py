@@ -171,7 +171,7 @@ class Tuner:
     def tuneXGB(self, X_train, y_train, X_test, y_test):
         print(f'Tuning XGBoost using {self.mode}')
         space_display = {
-            'learning_rate': [0.05, 0.3],
+            'learning_rate': [0.05, 0.3, 0.05],
             'max_depth': [3, 10, 1],
             'min_child_weight': [1, 13, 2],
             'gamma': [0.0, 0.5, 0.1],
@@ -193,7 +193,8 @@ class Tuner:
         # tpe, annealing, random
         best = fmin(self.hyperOptObjXGB, space, algo=tpe.suggest, trials=trials, max_evals=60)  # the old value was max_evals=10
         best_params = hyperopt.space_eval(space, best)
-        model = self.hyperOptObjXGB(best_params)
+        # model = self.hyperOptObjXGB(best_params)
+        model = self.hyperOptModelXGB(best_params)
         # print(best_params)
         # print(trials.best_trial)
         return model, best_params, space_display
