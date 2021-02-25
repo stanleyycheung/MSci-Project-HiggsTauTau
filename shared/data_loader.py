@@ -885,6 +885,7 @@ class DataLoader:
                 load_alpha = addons_config['neutrino']['load_alpha']
                 termination = addons_config['neutrino']['termination']
                 imputer_mode = addons_config['neutrino']['imputer_mode']
+                save_alpha = addons_config['neutrino']['save_alpha']
                 # alpha_1, alpha_2, E_nu_1, E_nu_2, p_t_nu_1, p_t_nu_2, p_z_nu_1, p_z_nu_2 = self.addonNeutrinos(df, df_inputs, binary, load_alpha, termination=termination)
                 # df_inputs['alpha_1'] = alpha_1
                 # df_inputs['alpha_2'] = alpha_2
@@ -896,9 +897,9 @@ class DataLoader:
                 # df_inputs['p_z_nu_2'] = p_z_nu_2
                 if imputer_mode == 'remove':
                     # modifies the original df by removing events
-                    df_inputs, df = self.addonNeutrinos(df, df_inputs, binary, load_alpha, imputer_mode, termination=termination)
+                    df_inputs, df = self.addonNeutrinos(df, df_inputs, binary, load_alpha, imputer_mode, save_alpha, termination=termination)
                 else:
-                    df_inputs = self.addonNeutrinos(df, df_inputs, binary, load_alpha, imputer_mode, termination=termination)
+                    df_inputs = self.addonNeutrinos(df, df_inputs, binary, load_alpha, imputer_mode, save_alpha, termination=termination)
             if addon == 'ip':
                 print('Impact paramter loaded')
                 boost = self.createBoostAndRotationMatrices(df)
@@ -941,7 +942,7 @@ class DataLoader:
         mety_b = met_y.boost_particle(boost)[0]
         return metx_b, mety_b
 
-    def addonNeutrinos(self, df, df_inputs, binary, load_alpha, imputer_mode, termination=100):
+    def addonNeutrinos(self, df, df_inputs, binary, load_alpha, imputer_mode, save_alpha, termination=100):
         """
         Addon configuration for neutrino information
         TODO:
@@ -951,7 +952,7 @@ class DataLoader:
         """
         NR = NeutrinoReconstructor(binary, self.channel)
         if not self.gen:
-            df_inputs = NR.runAlphaReconstructor(df.reset_index(drop=True), df_inputs.reset_index(drop=True), load_alpha=load_alpha, termination=termination)
+            df_inputs = NR.runAlphaReconstructor(df.reset_index(drop=True), df_inputs.reset_index(drop=True), load_alpha=load_alpha, save_alpha=save_alpha, termination=termination)
         else:
             df_inputs = NR.runGenAlphaReconstructor(df.reset_index(drop=True), df_inputs.reset_index(drop=True), load_alpha=load_alpha)
         if imputer_mode == 'remove':

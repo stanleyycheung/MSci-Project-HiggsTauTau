@@ -19,7 +19,7 @@ class Evaluator:
         self.save_dir = save_dir
         self.config_str = config_str
 
-    def evaluate(self, X_test, y_test, history, show=True, **kwargs):
+    def evaluate(self, X_test, y_test, history, plot=True, show=True, **kwargs):
         # use test dataset for evaluation
         if self.binary:
             y_proba = self.model.predict(X_test)  # outputs two probabilties
@@ -34,11 +34,12 @@ class Evaluator:
             _, w_a_test, _, w_b_test = train_test_split(w_a, w_b, test_size=0.2, random_state=123456)
             auc, y_label_roc, y_pred_roc = self.customROCScore(y_pred_test, w_a_test, w_b_test)
             fpr, tpr, _ = roc_curve(y_label_roc, y_pred_roc, sample_weight=np.r_[w_a_test, w_b_test])
-        self.plotROCCurve(fpr, tpr, auc)
-        if history is not None:
-            self.plotLoss(history)
-        if show:
-            plt.show()
+        if plot:
+            self.plotROCCurve(fpr, tpr, auc)
+            if history is not None:
+                self.plotLoss(history)
+            if show:
+                plt.show()
         return auc
 
     def customROCScore(self, pred, w_a, w_b):

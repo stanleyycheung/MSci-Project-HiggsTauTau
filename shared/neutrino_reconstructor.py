@@ -405,7 +405,7 @@ class NeutrinoReconstructor:
         c = 2*(m**2+p**2*np.sin(theta)**2)
         return (a+b)/c, (a-b)/c
 
-    def runAlphaReconstructor(self, df_reco, df_br, load_alpha, termination=1000):
+    def runAlphaReconstructor(self, df_reco, df_br, load_alpha, save_alpha, termination=1000):
         """
         Calculates the alphas and reconstructs neutrino momenta
         df_reco - events straight from the .root file
@@ -420,7 +420,7 @@ class NeutrinoReconstructor:
         """
         AC = AlphaCalculator(self.channel, df_reco, df_br, self.binary, self.m_higgs,
                              self.m_tau, load=load_alpha, seed=self.seed, default_value=NeutrinoReconstructor.DEFAULT_VALUE)
-        alpha_1, alpha_2, p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2 = AC.runAlpha(termination=termination)
+        alpha_1, alpha_2, p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2 = AC.runAlpha(save_alpha, termination=termination)
         # alpha_1, alpha_2 = AC.runAlpha(termination=termination)
         # alpha_1, alpha_2 = AC.runAlphaOld(termination=termination)
         # p_z_nu_1 = alpha_1*(df_br.pi_pz_1_br + df_br.pi0_pz_1_br)
