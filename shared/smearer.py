@@ -18,9 +18,8 @@ class Smearer(DataLoader):
         smearing_df_path = ''
     # input_df_save_dir_smearing = './input_df_smearing'
 
-    def __init__(self, variables, channel, df_to_smear, features):
+    def __init__(self, variables, channel, features):
         super().__init__(variables, channel, True)
-        self.df_to_smear = df_to_smear
         # particles - list of features columns
         self.features_to_smear = {}
         for f in features:
@@ -101,7 +100,8 @@ class Smearer(DataLoader):
         return df_ps, df_sm
 
 
-    def createSmearedData(self, from_hdf=False):
+    def createSmearedData(self, df_to_smear, from_hdf=False):
+        df_to_smear_copy = df_to_smear.copy()
         print(f'(Smearer) Loading .root info with using HDF5 as {from_hdf}')
         df_gen_reco = self.readSmearingData(from_hdf=from_hdf)
         print('(Smearer) Cleaning data')
@@ -109,8 +109,9 @@ class Smearer(DataLoader):
         df_gen_reco_clean = self.cleanSmearingData(df_gen_reco)
         print('(Smearer) Creating smearing distribution')
         for base_feature in self.features_to_smear:
-            self.createSmearedDataForOneBaseFeature(df_gen_reco_clean, self.df_to_smear, base_feature, self.features_to_smear[base_feature])
-        return self.df_to_smear
+            r = self.createSmearedDataForOneBaseFeature(df_gen_reco_clean, df_to_smear_copy, base_feature, self.features_to_smear[base_feature])
+        print(f'Smeared: {self.features_to_smear}')
+        return df_to_smear_copy
 
     def createSmearedDataForOneBaseFeature(self, df_gen_reco, df, base_feature, features):
         """
@@ -192,6 +193,8 @@ class Smearer(DataLoader):
                 # print(f'2: {any(np.iscomplex(smeared_particle.p_x))}')
                 # print(f'3: {any(np.iscomplex(smeared_particle.p_y))}')
                 # print(f'4: {any(np.iscomplex(smeared_particle.p_z))}')
+                # print(df[E_label])
+                # print(smeared_particle.e)
                 df[E_label] = smeared_particle.e
                 df[x_label] = smeared_particle.p_x
                 df[y_label] = smeared_particle.p_y
@@ -209,17 +212,17 @@ class Smearer(DataLoader):
         random_from_cdf = bin_midpoints[value_bins]
         return random_from_cdf
 
-    def plotSmeared(self, from_hdf=True):
+    def plotSmeared(self, df_to_smear,  from_hdf=True):
         print(f'Loading .root info with using HDF5 as {from_hdf}')
         df_gen_reco = self.readSmearingData(from_hdf=from_hdf)
         print('Cleaning data')
         # df_clean, df_ps_clean, df_sm_clean = self.cleanSmearingData(df_gen_reco)
         df_gen_reco_clean = self.cleanSmearingData(df_gen_reco)
         print('Creating smearing distribution')
-        results_all = []
+        results = []
         for base_feature in self.features_to_smear:
-            results = self.createSmearedDataForOneBaseFeature(df_gen_reco_clean, self.df_to_smear, base_feature, self.features_to_smear[base_feature])
-            results_all.append(results)
+            r = self.createSmearedDataForOneBaseFeature(df_gen_reco_clean, df_to_smear, base_feature, self.features_to_smear[base_feature])
+            results.append(r)
         #     for label in results:
         #         plt.figure()
         #         plt.hist(label[0], label='original', alpha=0.5)
@@ -227,7 +230,8 @@ class Smearer(DataLoader):
         #         plt.legend()   
         # plt.show()
         # plot first particle graphs
-        return results_all
+        # return results_all
+
         plt.figure()
         d = pd.DataFrame(np.c_[results[0][0][0][0], results[0][0][0][1]])
         d = d[(d[0]<800) & (d[0]>-0) & (d[1]<800) & (d[1]>-0)]
@@ -236,6 +240,7 @@ class Smearer(DataLoader):
         plt.colorbar()
         plt.xlabel('pi_2_E')
         plt.ylabel('smeared_pi_2_E')
+        plt.savefig('./smearing/fig/pi_2_E_hexbin.PNG')
         plt.figure()
         d = pd.DataFrame(np.c_[results[0][0][1][0], results[0][0][1][1]])
         d = d[(d[0]<250) & (d[0]>-250) & (d[1]<250) & (d[1]>-250)]
@@ -243,12 +248,15 @@ class Smearer(DataLoader):
         plt.colorbar()
         plt.xlabel('pi_2_px')
         plt.ylabel('smeared_pi_2_px')
+        plt.savefig('./smearing/fig/pi_2_px_hexbin.PNG')
+        plt.figure()
         d = pd.DataFrame(np.c_[results[0][0][3][0], results[0][0][3][1]])
         d = d[(d[0]<300) & (d[0]>-300) & (d[1]<300) & (d[1]>-300)]
         plt.hexbin(d[0], d[1], cmap='viridis', mincnt=None, gridsize=200, bins='log')
         plt.colorbar()
         plt.xlabel('pi_2_pz')
         plt.ylabel('smeared_pi_2_pz')
+        plt.savefig('./smearing/fig/pi_2_pz_hexbin.PNG')
         plt.figure()
         d = pd.DataFrame(np.c_[results[1][0][0], results[1][0][1]])
         d = d[(d[0]<800) & (d[0]>-800) & (d[1]<800) & (d[1]>-800)]
@@ -256,31 +264,36 @@ class Smearer(DataLoader):
         plt.colorbar()
         plt.xlabel('met_x')
         plt.ylabel('smeared_met_x')
+        plt.savefig('./smearing/fig/metx_hexbin.PNG')
+        plt.figure()
         d = pd.DataFrame(np.c_[results[1][1][0], results[1][1][1]])
         d = d[(d[0]<800) & (d[0]>-800) & (d[1]<800) & (d[1]>-800)]
         plt.hexbin(d[0], d[1], cmap='viridis', mincnt=None, gridsize=200, bins='log')
         plt.colorbar()
         plt.xlabel('met_y')
         plt.ylabel('smeared_met_y')
+        plt.savefig('./smearing/fig/mety_hexbin.PNG')
         plt.show()
-        return results_all
+        return results
 
 if __name__ == '__main__':
     import config
     variables = config.variables_smearing_rho_rho
     channel = 'rho_rho'
-    gen = False
+    gen = True
     DL = DataLoader(variables, channel, gen)
     # df = DL.loadRecoData(binary=True, addons=['neutrino', 'met', 'ip', 'sv'])
     # df = DL.readRecoData(from_hdf=True)
     # df_clean, _, _ = DL.cleanRecoData(df)
     df_to_smear = DL.readGenData(from_hdf=True)
     df_to_smear_clean, _, _ = DL.cleanGenData(df_to_smear)
-    # particles = ['pi_2', 'pi0_2']
-    particles = ['pi_2', 'metx', 'mety', 'ip_1']
-    s = Smearer(variables, channel, df_to_smear_clean, particles)
+    particles = ['pi_2', 'metx', 'mety',]
+    # particles = ['pi_1']
+    s = Smearer(variables, channel, particles)
     # print(s.features_to_smear)
-    # df = s.createSmearedData(from_hdf=True)
-    results = s.plotSmeared(from_hdf=True)
+    df = s.createSmearedData(df_to_smear_clean, from_hdf=True)
+    # results = s.plotSmeared(from_hdf=True)
+    # df.to_hdf('./smearing/df_smeared_2.h5', 'df')
+    # df_to_smear_clean.to_hdf('./smearing/df_orig_2.h5', 'df')
     # print(df.head())
     # print(df.isna().sum())

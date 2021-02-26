@@ -129,7 +129,7 @@ class ConfigLoader:
                     # met + ip + config 1.6
                     return np.c_[ip_1_transformed, ip_2_transformed, four_vectors, aco_angles_calc, y_s, m_s, self.df.metx_b, self.df.mety_b]
                 if config_num == 2.8:
-                    # 1.6 + ip + sv
+                    # 1.6 + ip + sv + met
                     # adding all other additional info in .root file - no aco angles or y
                     base = np.c_[ip_1_transformed, ip_2_transformed, four_vectors, aco_angles_calc, y_s, m_s, self.df.metx_b, self.df.mety_b]
                     if self.channel == 'rho_rho':
