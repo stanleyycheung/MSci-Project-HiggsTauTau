@@ -2,6 +2,7 @@ from evaluator import Evaluator
 from data_loader import DataLoader
 from config_loader import ConfigLoader
 from config_checker import ConfigChecker
+from smearer import Smearer
 from tuner import Tuner
 import os
 import tensorflow as tf
@@ -48,8 +49,8 @@ class NeuralNetwork:
 
     def __init__(self,  channel, gen, binary=True, write_filename='NN_output', show_graph=False):
         print(f'Loaded in {channel}, binary={binary}, gen={gen}')
-        self.addons_config_reco = {'neutrino': {'load_alpha':False, 'termination':1000, 'imputer_mode':'remove'}, 'met': {}, 'ip': {}, 'sv': {}}
-        self.addons_config_gen = {'neutrino': {'load_alpha':False, 'termination':1000, 'imputer_mode':'remove'}, 'met': {}, 'ip':{}, 'sv': {}}
+        self.addons_config_reco = {'neutrino': {'load_alpha':False, 'termination':1000, 'imputer_mode':'remove', 'save_alpha':True,}, 'met': {}, 'ip': {}, 'sv': {}}
+        self.addons_config_gen = {'neutrino': {'load_alpha':False, 'termination':1000, 'imputer_mode':'remove', 'save_alpha':True,}, 'met': {}, 'ip':{}, 'sv': {}}
         self.show_graph = show_graph
         self.channel = channel
         self.binary = binary
@@ -97,7 +98,7 @@ class NeuralNetwork:
                 auc = self.evaluate(model, X_test, y_test, self.history, w_a, w_b)
             self.write(self.gen, auc, self.history, self.addons_config_reco)
 
-    def runTuning(self, config_num, tuning_mode='random_sk', addons_config={}, read=True, from_hdf=True):
+    def runTuning(self, config_num, tuning_mode='random_sk', read=True, from_hdf=True):
         if not self.gen:
             df = self.initialize(self.addons_config_reco, read=read, from_hdf=from_hdf)
         else:
@@ -175,6 +176,67 @@ class NeuralNetwork:
         model_save_str = f'./saved_models/{self.channel}/model_{config_num}'
         model.save(model_save_str)
 
+
+    def runWithSmearing(self, features, from_hdf=True):
+        """ 
+        Need to update smearing_hp.txt to get hyperparameter for tuning 
+        Trying for config 1.6 smearing first
+        """
+        if not self.gen:
+            print('CHANGING GEN TO TRUE - REQUIRED FOR SMEARING')
+            self.gen = True
+        print('SETTING SAVE_ALPHA TO FALSE')
+        self.addons_config_gen['neutrino']['save_alpha'] = False
+        self.addons_config_gen['neutrino']['load_alpha'] = True
+        df = self.initializeWithSmear(features, self.addons_config_gen, from_hdf=from_hdf)
+        # get config 3.9 model if not rho_rho, if rho_rho, get 3.2
+        with open('./NN_output/smearing_hp.txt', 'r') as fh:
+            num_list = [line for line in fh]
+        if self.channel == 'rho_rho':
+            config_num = 1.6
+            nn_arch = num_list[0].split(',')
+        elif self.channel == 'rho_a1':
+            config_num = 1.6
+            nn_arch = num_list[1].split(',')
+        else:
+            config_num = 1.6
+            nn_arch = num_list[2].split(',')
+        nodes = int(nn_arch[3])
+        num_layers = int(nn_arch[4])
+        batch_norm = bool(nn_arch[5])
+        dropout = float(nn_arch[6])
+        epochs = int(nn_arch[7])
+        batch_size = int(nn_arch[8])
+        learning_rate = float(nn_arch[11])
+        activation = str(nn_arch[12])
+        initializer_std = float(nn_arch[13])
+        params = {
+            'nodes': nodes,
+            'num_layers': num_layers,
+            'batch_norm': batch_norm,
+            'dropout': dropout,
+            'epochs': epochs,
+            'batch_size': batch_size,
+            'learning_rate': learning_rate,
+            'activation': activation,
+            'initializer_std': initializer_std,
+        }
+        print(f'Training with {params}')
+        tuner = Tuner()
+        self.model, _ = tuner.hyperOptModelNN(params)
+        X_train, X_test, y_train, y_test = self.configure(df, config_num)
+        # model = self.train(X_train, X_test, y_train, y_test, epochs=epochs, batch_size=batch_size)
+        model = self.train(X_train, X_test, y_train, y_test, epochs=50, batch_size=10000)
+        if self.binary:
+            auc = self.evaluateBinary(model, X_test, y_test, self.history, plot=False)
+        else:
+            w_a = df.w_a
+            w_b = df.w_b
+            auc = self.evaluate(model, X_test, y_test, self.history, w_a, w_b, plot=False)
+        print(auc)
+        
+        
+
     def initialize(self, addons_config={}, read=True, from_hdf=True):
         """
         Initialize NN by loading/ creating the input data for NN via DataLoader
@@ -190,22 +252,23 @@ class NeuralNetwork:
             addons = addons_config.keys()
         if not self.gen:
             if self.channel == 'rho_rho':
-                self.DL = DataLoader(config.variables_rho_rho, self.channel, self.gen)
+                variables = config.variables_rho_rho
             elif self.channel == 'rho_a1':
-                self.DL = DataLoader(config.variables_rho_a1, self.channel, self.gen)
+                variables = config.variables_rho_a1
             elif self.channel == 'a1_a1':
-                self.DL = DataLoader(config.variables_a1_a1, self.channel, self.gen)  
+                variables = config.variables_a1_a1
             else:
                 raise ValueError('Incorrect channel inputted')
         else:
             if self.channel == 'rho_rho':
-                self.DL = DataLoader(config.variables_gen_rho_rho, self.channel, self.gen)
+                variables = config.variables_gen_rho_rho
             elif self.channel == 'rho_a1':
-                self.DL = DataLoader(config.variables_gen_rho_a1, self.channel, self.gen)
+                variables = config.variables_gen_rho_a1
             elif self.channel == 'a1_a1':
-                self.DL = DataLoader(config.variables_gen_a1_a1, self.channel, self.gen)
+                variables = config.variables_gen_a1_a1
             else:
                 raise ValueError('Incorrect channel inputted')
+        self.DL = DataLoader(variables, self.channel, self.gen)
         CC = ConfigChecker(self.channel, self.binary, self.gen)
         CC.checkInitialize(self.DL, addons_config, read, from_hdf)
         if read:
@@ -221,6 +284,68 @@ class NeuralNetwork:
                 df = self.DL.createGenData(self.binary, from_hdf, addons, addons_config)
         return df
 
+    def initializeWithSmear(self, features, addons_config={}, from_hdf=True):
+        """ NO READ FUNCTION - ALWAYS CREATE SMEARING DIST """
+        if not addons_config:
+            addons = []
+        else:
+            addons = addons_config.keys()
+        if not self.gen:
+            if self.channel == 'rho_rho':
+                variables = config.variables_rho_rho
+                variables_smear = config.variables_smearing_rho_rho
+            elif self.channel == 'rho_a1':
+                variables = config.variables_rho_a1
+                variables_smear = config.variables_smearing_rho_a1
+            elif self.channel == 'a1_a1':
+                variables = config.variables_a1_a1
+                variables_smear = config.variables_smearing_a1_a1
+            else:
+                raise ValueError('Incorrect channel inputted')
+        else:
+            if self.channel == 'rho_rho':
+                variables = config.variables_gen_rho_rho
+                variables_smear = config.variables_smearing_rho_rho
+            elif self.channel == 'rho_a1':
+                variables = config.variables_gen_rho_a1
+                variables_smear = config.variables_smearing_rho_a1
+            elif self.channel == 'a1_a1':
+                variables = config.variables_gen_a1_a1
+                variables_smear = config.variables_smearing_a1_a1
+            else:
+                raise ValueError('Incorrect channel inputted')
+        self.DL = DataLoader(variables, self.channel, self.gen) 
+        CC = ConfigChecker(self.channel, self.binary, self.gen)
+        CC.checkInitialize(self.DL, addons_config, read, from_hdf)
+        print(f'Loading .root info with using HDF5 as {from_hdf}')
+        df_orig = self.DL.readGenData(from_hdf=from_hdf)
+        print('Cleaning data')
+        df_clean, df_ps_clean, df_sm_clean = self.DL.cleanGenData(df_orig)
+        # print(df_clean.pi_E_1)
+        SM = Smearer(variables_smear, self.channel, features)
+        df_smeared = SM.createSmearedData(df_clean, from_hdf=from_hdf)
+        # remove Nans
+        df_smeared = df_smeared.dropna()
+        df_ps_smeared, df_sm_smeared = SM.selectPSSMFromData(df_smeared)
+        addons = []
+        addons_config = {}
+        df_smeared_transformed = self.DL.createTrainTestData(df_smeared, df_ps_smeared, df_sm_smeared, binary, True, addons, addons_config, save=False)
+        df_orig_transformed = self.DL.createTrainTestData(df_clean, df_ps_clean, df_sm_clean, binary, True, addons, addons_config, save=False)
+        # deal with imaginary numbers from boosting
+        df_smeared_transformed = df_smeared_transformed.apply(np.real)
+        m_features = [x for x in df_smeared_transformed.columns if x.startswith('m')]
+        for m_feature in m_features:
+            df_smeared_transformed = df_smeared_transformed[df_smeared_transformed[m_feature]!=0]
+        # debugging part
+        # df.to_hdf('smearing/df_smeared.h5', 'df')
+        # df_smeared.to_hdf('./smearing/df_smeared.h5', 'df')
+        # df_clean.to_hdf('./smearing/df_orig.h5', 'df')
+        df_smeared_transformed.to_hdf('smearing/df_smeared_transformed.h5', 'df')
+        df_orig_transformed.to_hdf('smearing/df_orig_transformed.h5', 'df')
+        # exit()
+        return df_smeared_transformed
+        
+
     def configure(self, df, config_num):
         """
         Configures NN inputs - selects config_num and creates train/test split
@@ -234,6 +359,7 @@ class NeuralNetwork:
         self.epochs = epochs
         self.batch_size = batch_size
         if self.model is None:
+            print('Using Kristof model')
             self.model = self.kristof_model(X_train.shape[1])
         self.history = tf.keras.callbacks.History()
         early_stop = tf.keras.callbacks.EarlyStopping(monitor='auc', patience=patience)
@@ -254,10 +380,13 @@ class NeuralNetwork:
             self.model.save(f'./saved_models/{self.save_dir}/NN')
         return self.model
 
-    def evaluate(self, model, X_test, y_test, history, w_a, w_b):
-        config_str = self.createConfigStr()
-        E = Evaluator(model, self.binary, self.save_dir, config_str)
-        auc = E.evaluate(X_test, y_test, history, show=self.show_graph, w_a=w_a, w_b=w_b)
+    def evaluate(self, model, X_test, y_test, history, w_a, w_b, plot=True):
+        if plot:
+            config_str = self.createConfigStr()
+            E = Evaluator(model, self.binary, self.save_dir, config_str)
+        else:
+            E = Evaluator(model, self.binary, self.save_dir, None)
+        auc = E.evaluate(X_test, y_test, history, plot, show=self.show_graph, w_a=w_a, w_b=w_b)
         return auc
 
     def write(self, auc, history, addons_config):
@@ -280,10 +409,13 @@ class NeuralNetwork:
         print('Finish writing')
         f.close()
 
-    def evaluateBinary(self, model, X_test, y_test, history):
-        config_str = self.createConfigStr()
-        E = Evaluator(model, self.binary, self.save_dir, config_str)
-        auc = E.evaluate(X_test, y_test, history, show=self.show_graph)
+    def evaluateBinary(self, model, X_test, y_test, history, plot=True):
+        if plot:
+            config_str = self.createConfigStr()
+            E = Evaluator(model, self.binary, self.save_dir, config_str)
+        else:
+            E = Evaluator(model, self.binary, self.save_dir, None)
+        auc = E.evaluate(X_test, y_test, history, plot, show=self.show_graph)
         return auc
 
     def createConfigStr(self):
@@ -341,17 +473,19 @@ class NeuralNetwork:
         return model
 
 def parser():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description='Run NN')
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('-t', '--tuning', action='store_true', default=False, help='if tuning is run')
+    group.add_argument('-s', '--smearing', action='store_true', default=False, help='if run with smearing')
     parser.add_argument('channel', default='rho_rho', choices=['rho_rho', 'rho_a1', 'a1_a1'], help='which channel to load to')
     parser.add_argument('config_num', type=float, help='config num to run on')
     parser.add_argument('-g', '--gen', action='store_true', default=False, help='if load gen data')
     parser.add_argument('-b', '--binary', action='store_false', default=True, help='if learn binary labels')
-    parser.add_argument('-t', '--tuning', action='store_true', default=False, help='if tuning is run')
     parser.add_argument('-tm', '--tuning_mode', help='choose tuning mode to tune on', default='hyperopt')
     parser.add_argument('-r', '--read', action='store_false', default=True, help='if read NN input')
     parser.add_argument('-hdf', '--from_hdf', action='store_false', default=True, help='if read .root file from HDF5')
     parser.add_argument('-a', '--addons', nargs='*', default=None, help='load addons')
-    parser.add_argument('-s', '--show_graph', action='store_true', default=False, help='if show graphs')
+    parser.add_argument('-sh', '--show_graph', action='store_true', default=False, help='if show graphs')
     parser.add_argument('-e', '--epochs', type=int, default=50, help='epochs to train on')
     parser.add_argument('-bs', '--batch_size', type=int, default=10000, help='batch size')
     parser.add_argument('-la', '--load_alpha', action='store_false', default=True, help='if load alpha')
@@ -369,11 +503,12 @@ if __name__ == '__main__':
         use_parser = True
         if use_parser:
             args = parser()
+            tuning = args.tuning
+            smearing = args.smearing
             channel = args.channel
             config_num = args.config_num / 10
             gen = args.gen
             binary = args.binary
-            tuning = args.tuning
             tuning_mode = args.tuning_mode
             read = args.read
             from_hdf = args.from_hdf
@@ -395,10 +530,15 @@ if __name__ == '__main__':
                 NN.addons_config_gen['neutrino']['termination'] = termination
                 NN.addons_config_gen['neutrino']['imputer_mode'] = imputer_mode
                 print(f'Using addons config: {NN.addons_config_gen}')
-            if not tuning:
-                NN.run(config_num, read=read, from_hdf=from_hdf, epochs=epochs, batch_size=batch_size)
-            else:
+            if tuning:
                 NN.runTuning(config_num, tuning_mode=tuning_mode)
+            elif smearing:
+                # features = ['pi_1', 'pi_2']
+                features = ['pi_1']
+                NN.runWithSmearing(features, from_hdf=from_hdf)
+            else:
+                NN.run(config_num, read=read, from_hdf=from_hdf, epochs=epochs, batch_size=batch_size)
+            
         else:
             NN = NeuralNetwork(channel='rho_rho', gen=True, binary=True, write_filename='NN_output', show_graph=False)
             # NN.initialize(addons_config={'neutrino': {'load_alpha':False, 'termination':1000}}, read=False, from_hdf=True)

@@ -31,7 +31,7 @@ class AlphaCalculator:
         self.df = df.drop(["mva_dm_1", "mva_dm_2", "tau_decay_mode_1", "tau_decay_mode_2",
                            "wt_cp_sm", "wt_cp_ps", "wt_cp_mm", "rand"], axis=1).reset_index(drop=True)
 
-    def runAlpha(self, termination=1000):
+    def runAlpha(self, save_alpha, termination=1000):
         """
         Runs alpha calculation, and automatically saves them
         -- Return type: alpha_1, alpha_2, p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2 --
@@ -137,12 +137,13 @@ class AlphaCalculator:
             # if i%10000 == 0:
             #     print(f'getting alpha for {i}, rejection: {rejection}/{self.df.shape[0]}')
         print(f'Total rejection: {rejection}/{self.df.shape[0]}')
-        print('Saving alpha')
-        binary_str = ''
-        if self.binary:
-            binary_str += "_b"
-        np.save(f'{AlphaCalculator.alpha_save_dir}/{self.channel}/alpha_1_reco_{termination}'+binary_str+".npy", self.alpha_1, allow_pickle=True)
-        np.save(f'{AlphaCalculator.alpha_save_dir}/{self.channel}/alpha_2_reco_{termination}'+binary_str+".npy", self.alpha_2, allow_pickle=True)
+        if save_alpha:
+            print('Saving alpha')
+            binary_str = ''
+            if self.binary:
+                binary_str += "_b"
+            np.save(f'{AlphaCalculator.alpha_save_dir}/{self.channel}/alpha_1_reco_{termination}'+binary_str+".npy", self.alpha_1, allow_pickle=True)
+            np.save(f'{AlphaCalculator.alpha_save_dir}/{self.channel}/alpha_2_reco_{termination}'+binary_str+".npy", self.alpha_2, allow_pickle=True)
         return self.alpha_1, self.alpha_2, p_z_nu_1, E_nu_1, p_z_nu_2, E_nu_2
 
     def runAlphaGen(self):
