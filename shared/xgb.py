@@ -76,7 +76,8 @@ class XGBoost(NN.NeuralNetwork):
             w_b = df.w_b
             auc = self.evaluate(model, X_test, y_test, None, w_a, w_b)
         print('Writing...')
-        self.write(self.gen, auc, self.addons_config_reco)
+        # self.write(self.gen, auc, self.addons_config_reco) # !!! this crashed the code so I changed it 26 Feb
+        self.write(auc, self.addons_config_reco)
 
     def runTuning(self, config_num, tuning_mode='hyperopt'):
         """

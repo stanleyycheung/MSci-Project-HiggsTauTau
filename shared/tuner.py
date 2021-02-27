@@ -79,6 +79,15 @@ class Tuner:
                     epochs=[50, 100],
                     batch_size=[2**i for i in range(8, 19, 2)],
                     # batch_size= [2**i for i in range(10, 19)]
+
+                    # !!! Kristof's edit on 25 Feb trying to fix random_sk
+                    learning_rate=[1e-4, 1e-3, 1e-2],
+                    #activation=['relu', 'lrelu', 'swish'],
+                    #initializer_std=[1e-3, 1e-2, 1e-1],
+                    #nodes=[],
+                    activation=['relu'],
+                    initializer_std=[1e-2],
+                    nodes=[300],
                 )
                 # layers = np.array([2,3]).tolist()
                 # batch_norms = [True, False]
@@ -93,7 +102,8 @@ class Tuner:
                 #     batch_size=batch_sizes
                 # )
 
-                grid = RandomizedSearchCV(estimator=model, param_distributions=param_grid, verbose=10, scoring='roc_auc', random_state=seed_value, n_iter=10, cv=2)  # the old value was n_iter=20
+                # !!! to get it running quickly, I've drastically reduced n_iter
+                grid = RandomizedSearchCV(estimator=model, param_distributions=param_grid, verbose=10, scoring='roc_auc', random_state=seed_value, n_iter=5, cv=2)  # the old value was n_iter=20
             grid_result = grid.fit(X_train, y_train)
             model_grid = self.gridModel(layers=grid_result.best_params_['layers'], batch_norm=grid_result.best_params_['batch_norm'], dropout=grid_result.best_params_['dropout'])
             return model_grid, grid_result, param_grid
@@ -138,12 +148,15 @@ class Tuner:
                 'nodes': [100, 600, 100],
                 'num_layers': [3, max(10, int(X_train.shape[1])/5), 1],
                 'batch_norm': [True, False],
-                'dropout': [0, 0.4, 0.05],
-                'epochs': [20, 70, 5],
+                'dropout': [0, 0.4, 0.05], # smaller param grid
+                #'dropout': [0, 0.4, 0.1],
+                'epochs': [20, 70, 5], # smaller param grid
+                #'epochs': [20, 70, 10],
                 'batch_size': [np.log(1000), np.log(100000)],
                 'learning_rate': [np.log(0.0001), np.log(0.01)],
                 'activation': ['relu', 'lrelu', 'swish'],
-                'initializer_std': [0.001, 0.01, 0.1]
+                'initializer_std': [0.001, 0.01, 0.1] # smaller param grid
+                #'initializer_std': [0.01]
             }
             space = {
                 'nodes': hp.quniform('nodes', *space_display['nodes']),
@@ -215,7 +228,8 @@ class Tuner:
         self.model_str = "hyper_model"
         return self.model
 
-    def gridModel(self, layers=2, batch_norm=False, dropout=None):
+    # !!! Kristof's edit on 25 Feb trying to fix the random_sk with the extra hyperparameters
+    def gridModel(self, layers=2, batch_norm=False, dropout=None, learning_rate=0.001, activation='relu', initializer_std=0.01, nodes=300):
         self.model = tf.keras.models.Sequential()
         self.layers = layers
         for _ in range(layers):
@@ -227,7 +241,8 @@ class Tuner:
                 self.model.add(tf.keras.layers.Dropout(dropout))
         self.model.add(tf.keras.layers.Dense(1, activation="sigmoid"))
         metrics = ['AUC', 'accuracy']
-        self.model.compile(loss='binary_crossentropy', optimizer='adam', metrics=metrics)
+        opt = tf.keras.optimizers.Adam(learning_rate=learning_rate)
+        self.model.compile(loss='binary_crossentropy', optimizer=opt, metrics=metrics)
         self.model_str = "grid_model"
         return self.model
 
