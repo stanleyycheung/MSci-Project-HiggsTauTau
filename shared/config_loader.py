@@ -19,8 +19,6 @@ class ConfigLoader:
         self.df = df_inputs
         self.channel = channel
         self.gen = gen
-        # self.smearing = True # !!! should be an input parameter
-        self.smearing = False
 
     def chooseConfigMap(self, config_num: int, binary: bool):
         """
@@ -43,9 +41,6 @@ class ConfigLoader:
             pi0_1_transformed = np.c_[self.df.pi0_E_1_br, self.df.pi0_px_1_br, self.df.pi0_py_1_br, self.df.pi0_pz_1_br]
             pi0_2_transformed = np.c_[self.df.pi0_E_2_br, self.df.pi0_px_2_br, self.df.pi0_py_2_br, self.df.pi0_pz_2_br]
             four_vectors = np.c_[pi0_1_transformed, pi0_2_transformed, pi_1_transformed, pi_2_transformed]
-            if self.smearing:
-                pi_1_smeared = np.c_[self.df.reco_pi_E_1, self.df.reco_pi_px_1, self.df.reco_pi_py_1, self.df.reco_pi_pz_1 ]
-                four_vectors = np.c_[pi0_1_transformed, pi0_2_transformed, pi_1_smeared, pi_2_transformed]
             aco_angles_calc = np.c_[self.df.aco_angle_1_calc]
             y_s = np.c_[self.df.y_rho_1, self.df.y_rho_2]
             m_s = np.c_[self.df.m_rho_1**2, self.df.m_rho_2**2]
@@ -133,8 +128,9 @@ class ConfigLoader:
                     # adding all other additional info in .root file - no aco angles or y
                     base = np.c_[ip_1_transformed, ip_2_transformed, four_vectors, aco_angles_calc, y_s, m_s, self.df.metx_b, self.df.mety_b]
                     if self.channel == 'rho_rho':
-                        raise ValueError('SAME AS CONFIG 2.7')
-                        # return np.c_[base]
+                        # raise ValueError('SAME AS CONFIG 2.7')
+                        print('SAME AS CONFIG 2.7')
+                        return np.c_[base]
                     elif self.channel == 'rho_a1':
                         sv_2_transformed = np.c_[self.df.sv_x_2_br, self.df.sv_y_2_br, self.df.sv_z_2_br]
                         return np.c_[base, sv_2_transformed]

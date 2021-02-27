@@ -176,7 +176,7 @@ class NeuralNetwork:
         model.save(model_save_str)
 
 
-    def runWithSmearing(self, features, from_hdf=True):
+    def runWithSmearing(self, features: list, from_hdf=True):
         """ 
         Need to update smearing_hp.txt to get hyperparameter for tuning 
         Trying for config 1.6 smearing first
@@ -200,6 +200,7 @@ class NeuralNetwork:
         else:
             config_num = 1.6
             nn_arch = num_list[2].split(',')
+        optimal_auc = float(nn_arch[1])
         nodes = int(nn_arch[3])
         num_layers = int(nn_arch[4])
         batch_norm = bool(nn_arch[5])
@@ -224,17 +225,28 @@ class NeuralNetwork:
         tuner = Tuner()
         self.model, _ = tuner.hyperOptModelNN(params)
         X_train, X_test, y_train, y_test = self.configure(df, config_num)
-        # model = self.train(X_train, X_test, y_train, y_test, epochs=epochs, batch_size=batch_size)
-        model = self.train(X_train, X_test, y_train, y_test, epochs=50, batch_size=10000)
+        model = self.train(X_train, X_test, y_train, y_test, epochs=epochs, batch_size=batch_size)
+        # model = self.train(X_train, X_test, y_train, y_test, epochs=50, batch_size=10000)
         if self.binary:
             auc = self.evaluateBinary(model, X_test, y_test, self.history, plot=False)
         else:
             w_a = df.w_a
             w_b = df.w_b
             auc = self.evaluate(model, X_test, y_test, self.history, w_a, w_b, plot=False)
-        print(auc)
+        return auc, optimal_auc
         
-        
+    def runSingleSmearAnalysis(self, features_list, from_hdf=True):
+        """
+        for kristof
+        stick with 1.6
+        - feature 'pi_1' flag
+        """
+        for feature in features_list:
+            auc, optimal_auc = self.runWithSmearing([feature], from_hdf=from_hdf)
+            degredation_auc = optimal_auc - auc
+        # write to some file
+        # plotting bar chart
+
 
     def initialize(self, addons_config={}, read=True, from_hdf=True):
         """
@@ -344,7 +356,6 @@ class NeuralNetwork:
         # exit()
         return df_smeared_transformed
         
-
     def configure(self, df, config_num):
         """
         Configures NN inputs - selects config_num and creates train/test split
