@@ -1,12 +1,10 @@
 import math
 import os
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import uproot
 from pylorentz import Momentum4
-
 from neutrino_reconstructor import NeutrinoReconstructor
 
 
@@ -25,11 +23,9 @@ class DataLoader:
     Possible addons currently:
     - 'neutrino'
     - 'met'
-
-    Note:
-    - Hardcoded gen level variables
+    - 'ip'
+    - 'sv'
     """
-
     reco_root_path = "./MVAFILE_AllHiggs_tt.root"
     gen_root_path = "./MVAFILE_GEN_AllHiggs_tt.root"
     reco_df_path = './df_tt'
@@ -40,91 +36,96 @@ class DataLoader:
     if os.path.exists('/home/hep/shc3117/'):
         print('Running on Imperial HEP LX machines')
         reco_root_path = "/vols/cms/shc3117/MVAFILE_AllHiggs_tt.root"
-        gen_root_path = "/vols/cms/shc3117/MVAFILE_GEN_AllHiggs_tt.root"
+        # gen_root_path = "/vols/cms/shc3117/MVAFILE_GEN_AllHiggs_tt.root"
+        gen_root_path = "/vols/cms/dw515/Offline/output/SM/master_gen_ntuple_1502/MVAFILE_tt.root"
         reco_df_path = '/vols/cms/shc3117/df_tt'
         gen_df_path = '/vols/cms/shc3117/df_tt_gen'
     input_df_save_dir_reco = './input_df_reco'
     input_df_save_dir_gen = './input_df_gen'
 
-    def __init__(self, variables, channel):
+    def __init__(self, variables, channel, gen):
         """
         DataLoader should be near stateless, exceptions of the channel and variables needed to load
         Other instance variables should only deal with load/save directories
         """
         self.channel = channel
         self.variables = variables
+        self.gen = gen
+        # self.smearing = False # !!! should be an input parameter! Possibly from command line?
 
     def loadRecoData(self, binary, addons=[]):
         """
-        Loads the BR df directly from pickle - no need to read from .root, boost and rotate events
+        Loads the BR df directly from HDF5 - no need to read from .root, boost and rotate events
         """
-        print('Reading reco df pkl file')
+        print('Reading reco df HDF5 file')
         addons_loaded = ""
         if addons:
             addons_loaded = '_'+'_'.join(addons)
-        pickle_file_name = f'{DataLoader.input_df_save_dir_reco}/input_{self.channel}{addons_loaded}'
+        hdf_file_name = f'{DataLoader.input_df_save_dir_reco}/input_{self.channel}{addons_loaded}'
         if binary:
-            pickle_file_name += '_b'
-        df_inputs = pd.read_pickle(pickle_file_name+'.pkl')
+            hdf_file_name += '_b'
+        df_inputs = pd.read_hdf(hdf_file_name+'.h5', 'df')
         return df_inputs
 
-    def loadGenData(self, binary):
+    def loadGenData(self, binary, addons=[]):
         """
-        Loads the BR df (gen) directly from pickle - no need to read from .root, boost and rotate events
+        Loads the BR df (gen) directly from HDF5 - no need to read from .root, boost and rotate events
         """
-        print('Reading gen df pkl file')
-        pickle_file_name = f'{DataLoader.input_df_save_dir_gen}/input_gen_{self.channel}'
+        print('Reading gen df HDF5 file')
+        addons_loaded = ""
+        if addons:
+            addons_loaded = '_'+'_'.join(addons)
+        hdf_file_name = f'{DataLoader.input_df_save_dir_gen}/input_gen_{self.channel}{addons_loaded}'
         if binary:
-            pickle_file_name += '_b'
-        df_inputs = pd.read_pickle(pickle_file_name+'.pkl')
+            hdf_file_name += '_b'
+        df_inputs = pd.read_hdf(hdf_file_name+'.h5', 'df')
         return df_inputs
 
-    def createRecoData(self, binary, from_pickle=True, addons=[], addons_config={}):
+    def createRecoData(self, binary, from_hdf=True, addons=[], addons_config={}):
         """
-        Creates the input (reco) data for the NN either from .root file or a previously saved .pkl file
+        Creates the input (reco) data for the NN either from .root file or a previously saved .h5 file
         """
-        print(f'Loading .root info with using pickle as {from_pickle}')
-        df = self.readRecoData(from_pickle=from_pickle)
+        print(f'Loading .root info with using HDF5 as {from_hdf}')
+        df = self.readRecoData(from_hdf=from_hdf)
         print('Cleaning data')
         df_clean, df_ps_clean, df_sm_clean = self.cleanRecoData(df)
         print('Creating input data')
         df_inputs = self.createTrainTestData(df_clean, df_ps_clean, df_sm_clean, binary, False, addons, addons_config, save=True)
         return df_inputs
 
-    def createGenData(self, binary, from_pickle=False):
-        print(f'Loading .root info with using pickle as {from_pickle}')
-        df = self.readGenData(from_pickle=from_pickle)
+    def createGenData(self, binary, from_hdf=False, addons=[], addons_config={}):
+        print(f'Loading .root info with using HDF5 as {from_hdf}')
+        df = self.readGenData(from_hdf=from_hdf)
         print('Cleaning data')
         df_clean, df_ps_clean, df_sm_clean = self.cleanGenData(df)
         print('Creating input data')
-        df_inputs = self.createTrainTestData(df_clean, df_ps_clean, df_sm_clean, binary, True, addons=None, addons_config=None, save=True)
+        df_inputs = self.createTrainTestData(df_clean, df_ps_clean, df_sm_clean, binary, True, addons, addons_config, save=True)
         return df_inputs
-
-
-    def readRecoData(self, from_pickle=False):
+        
+    def readRecoData(self, from_hdf=False):
         """
-        Reads the reco root file, can save contents into .pkl for fast read/write abilities
+        Reads the reco root file, can save contents into .h5 for fast read/write abilities
         """
-        if not from_pickle:
+        if not from_hdf:
             tree_tt = uproot.open(DataLoader.reco_root_path)["ntuple"]
             # tree_et = uproot.open("/eos/user/s/stcheung/SWAN_projects/Masters_CP/MVAFILE_AllHiggs_et.root")["ntuple"]
             # tree_mt = uproot.open("/eos/user/s/stcheung/SWAN_projects/Masters_CP/MVAFILE_AllHiggs_mt.root")["ntuple"]
             df = tree_tt.pandas.df(self.variables)
-            df.to_pickle(f"{DataLoader.reco_df_path}_{self.channel}.pkl")
+            df.to_hdf(f"{DataLoader.reco_df_path}_{self.channel}.h5", 'df')
         else:
-            df = pd.read_pickle(f"{DataLoader.reco_df_path}_{self.channel}.pkl")
+            df = pd.read_hdf(f"{DataLoader.reco_df_path}_{self.channel}.h5", 'df')
         return df
 
-    def readGenData(self, from_pickle=False):
+    def readGenData(self, from_hdf=False):
         """
-        Reads the gen root file, can save contents into .pkl for fast read/write abilities
+        Reads the gen root file, can save contents into .h5 for fast read/write abilities
         """
-        if not from_pickle:
+        if not from_hdf:
             tree_tt = uproot.open(DataLoader.gen_root_path)["ntuple"]
             df = tree_tt.pandas.df(self.variables)
-            df.to_pickle(f"{DataLoader.gen_df_path}_{self.channel}.pkl")
+            df.to_hdf(f"{DataLoader.gen_df_path}_{self.channel}.h5", 'df')
         else:
-            df = pd.read_pickle(f"{DataLoader.gen_df_path}_{self.channel}.pkl")
+            df = pd.read_hdf(f"{DataLoader.gen_df_path}_{self.channel}.h5", 'df')
         return df
 
     def cleanGenData(self, df):
@@ -139,36 +140,37 @@ class DataLoader:
             df_clean = df[(df['dm_1'] == 10) & (df['dm_2'] == 10)]
         else:
             raise ValueError('Incorrect channel inputted')
-        df_clean = df_clean.loc[~(df_clean==0).all(axis=1)]
-        df_rho_ps = df_clean[(df_clean["rand"] < df_clean["wt_cp_ps"]/2)]
-        df_rho_sm = df_clean[(df_clean["rand"] < df_clean["wt_cp_sm"]/2)]
-        return df_clean, df_rho_ps, df_rho_sm
+        df_clean = df_clean.dropna()
+        df_clean = df_clean[(df_clean != 0).all(1)]
+        df_ps = df_clean[(df_clean["rand"] < df_clean["wt_cp_ps"]/2)]
+        df_sm = df_clean[(df_clean["rand"] < df_clean["wt_cp_sm"]/2)]
+        return df_clean, df_ps, df_sm
 
     def cleanRecoData(self, df):
         """
         Selects correct channel for reco data, whilst seperating sm/ps distributions as well
-        TODO: remove 0s in events
         """
         if self.channel == 'rho_rho':
             # select only rho-rho events
             df_clean = df[(df['mva_dm_1'] == 1) & (df['mva_dm_2'] == 1) & (df["tau_decay_mode_1"] == 1) & (df["tau_decay_mode_2"] == 1)]
             # drop unnecessary labels
-            # df_clean = df_rho.drop(["mva_dm_1", "mva_dm_2", "tau_decay_mode_1", "tau_decay_mode_2", "wt_cp_sm", "wt_cp_ps", "wt_cp_mm", "rand"], axis=1).reset_index(drop=True)
+            # df_clean = df.drop(["mva_dm_1", "mva_dm_2", "tau_decay_mode_1", "tau_decay_mode_2", "wt_cp_sm", "wt_cp_ps", "wt_cp_mm", "rand"], axis=1).reset_index(drop=True)
         elif self.channel == 'rho_a1':
             df_clean = df[(df['mva_dm_1'] == 1) & (df['mva_dm_2'] == 10) & (df["tau_decay_mode_1"] == 1)]
         elif self.channel == 'a1_a1':
             df_clean = df[(df['mva_dm_1'] == 10) & (df['mva_dm_2'] == 10)]
             # removing events with 0s in them
-            df_clean = df_clean.loc[~(df_clean['pi_px_1'] == 0)] 
+            # df_clean = df_clean.loc[~(df_clean['pi_px_1'] == 0)]
         else:
             raise ValueError('Incorrect channel inputted')
         # removing all 0s in df
         # df.loc[(df!=0).any(1)]
         # select ps and sm data
+        df_clean = df_clean.dropna()
         df_clean = df_clean[(df_clean != 0).all(1)]
-        df_rho_ps = df_clean[(df_clean["rand"] < df_clean["wt_cp_ps"]/2)]
-        df_rho_sm = df_clean[(df_clean["rand"] < df_clean["wt_cp_sm"]/2)]
-        return df_clean, df_rho_ps, df_rho_sm
+        df_ps = df_clean[(df_clean["rand"] < df_clean["wt_cp_ps"]/2)]
+        df_sm = df_clean[(df_clean["rand"] < df_clean["wt_cp_sm"]/2)]
+        return df_clean, df_ps, df_sm
 
     def augmentDfToBinary(self, df_ps, df_sm):
         y_sm = pd.DataFrame(np.ones(df_sm.shape[0]))
@@ -191,28 +193,34 @@ class DataLoader:
         else:
             y = None
         if self.channel == 'rho_rho':
-            df_inputs_data, boost = self.calculateRhoRhoData(df)
+            # print('calling calculateRhoRhoData')
+            df_inputs_data = self.calculateRhoRhoData(df)
+            # print('df_inputs[asdf]=', df_inputs_data['pi_E_1_br'][0])
         elif self.channel == 'rho_a1':
-            df_inputs_data, boost = self.calculateRhoA1Data(df)
+            df_inputs_data = self.calculateRhoA1Data(df)
         else:
             # no need to check here as checked in cleanRecoData
-            df_inputs_data, boost = self.calculateA1A1Data(df)
+            df_inputs_data = self.calculateA1A1Data(df)
         df_inputs = pd.DataFrame(df_inputs_data)
         if binary:
             df_inputs['y'] = y
         addons_loaded = ""
         if addons:
-            df_inputs = self.createAddons(addons, df, df_inputs, binary, addons_config, boost=boost)
+            df_inputs = self.createAddons(addons, df, df_inputs, binary, addons_config)
             addons_loaded = '_'+'_'.join(addons)
         if save:
             if not gen:
-                pickle_file_name = f'{DataLoader.input_df_save_dir_reco}/input_{self.channel}{addons_loaded}'
+                hdf_file_name = f'{DataLoader.input_df_save_dir_reco}/input_{self.channel}{addons_loaded}'
             else:
-                pickle_file_name = f'{DataLoader.input_df_save_dir_gen}/input_gen_{self.channel}'
+                hdf_file_name = f'{DataLoader.input_df_save_dir_gen}/input_gen_{self.channel}{addons_loaded}'
+            # if self.smearing:
+            #     hdf_file_name = f'{DataLoader.input_df_save_dir_smearing}/input_{self.channel}{addons_loaded}'
             if binary:
-                pickle_file_name += '_b'
-            print(f'Saving df to {pickle_file_name}')
-            df_inputs.to_pickle(pickle_file_name+'.pkl')
+                hdf_file_name += '_b'
+            # hdf_file_name = './alpha_analysis/df_br'
+            print(f'Saving df to {hdf_file_name}')
+            df_inputs.to_hdf(hdf_file_name+'.h5', key='df')
+        # print('df_inputs[asdf]=', df_inputs['pi_E_1_br'])
         return df_inputs
 
     def calculateRhoRhoData(self, df):
@@ -262,18 +270,71 @@ class DataLoader:
             'rho_px_2_br': rho_2_boosted_rot[:, 0],
             'rho_py_2_br': rho_2_boosted_rot[:, 1],
             'rho_pz_2_br': rho_2_boosted_rot[:, 2],
-            # 'aco_angle_1': df['aco_angle_1'],
             'aco_angle_1_calc': aco_angle_1,
-            # 'y_1_1': df['y_1_1'],
-            # 'y_1_2': df['y_1_2'],
             'y_rho_1': y_rho_1,
             'y_rho_2': y_rho_2,
             'w_a': df.wt_cp_sm,
             'w_b': df.wt_cp_ps,
             'm_rho_1': rho_1.m,
             'm_rho_2': rho_2.m,
+            # for alpha error graphs
+            # "gen_nu_p_1": df.gen_nu_p_1,
+            # "gen_nu_phi_1": df.gen_nu_phi_1,
+            # "gen_nu_eta_1": df.gen_nu_eta_1,
+            # "gen_nu_p_2": df.gen_nu_p_2,
+            # "gen_nu_phi_2": df.gen_nu_phi_2,
+            # "gen_nu_eta_2": df.gen_nu_eta_2,
+            # 'pi_E_1': pi_1[0],
+            # 'pi_px_1': pi_1[1],
+            # 'pi_py_1': pi_1[2],
+            # 'pi_pz_1': pi_1[3],
+            # 'pi_E_2': pi_2[0],
+            # 'pi_px_2': pi_2[1],
+            # 'pi_py_2': pi_2[2],
+            # 'pi_pz_2': pi_2[3],
+            # 'pi0_E_1': pi0_1[0],
+            # 'pi0_px_1': pi0_1[1],
+            # 'pi0_py_1': pi0_1[2],
+            # 'pi0_pz_1': pi0_1[3],
+            # 'pi0_E_2': pi0_2[0],
+            # 'pi0_px_2': pi0_2[1],
+            # 'pi0_py_2': pi0_2[2],
+            # 'pi0_pz_2': pi0_2[3],
         }
-        return df_inputs_data, boost
+        # additional info from .root
+        # if self.smearing:
+        #     df_inputs_data.update({
+        #         'reco_pi_E_1': df['reco_pi_E_1'],
+        #         'reco_pi_px_1': df['reco_pi_px_1'],
+        #         'reco_pi_py_1': df['reco_pi_py_1'],
+        #         'reco_pi_pz_1': df['reco_pi_pz_1'],
+        #     })
+        #     return df_inputs_data
+        if not self.gen:
+            df_inputs_data.update({
+                'aco_angle_1': df['aco_angle_1'],
+                'aco_angle_5': df['aco_angle_5'],
+                'aco_angle_6': df['aco_angle_6'],
+                'aco_angle_7': df['aco_angle_7'],
+                'y_1_1': df['y_1_1'],
+                'y_1_2': df['y_1_2'],
+                'ip_x_1': df['ip_x_1'],
+                'ip_y_1': df['ip_y_1'],
+                'ip_z_1': df['ip_z_1'],
+                'ip_x_2': df['ip_x_2'],
+                'ip_y_2': df['ip_y_2'],
+                'ip_z_2': df['ip_z_2'],
+            })
+        else:
+            df_inputs_data.update({
+                'sv_x_1': df['sv_x_1'],
+                'sv_y_1': df['sv_y_1'],
+                'sv_z_1': df['sv_z_1'],
+                'sv_x_2': df['sv_x_2'],
+                'sv_y_2': df['sv_y_2'],
+                'sv_z_2': df['sv_z_2'],
+            })
+        return df_inputs_data
 
     def rotateVectors(self, **kwargs):
         """
@@ -286,11 +347,11 @@ class DataLoader:
             pi_2_boosted = kwargs['pi_2']
             pi0_1_boosted = kwargs['pi0_1']
             pi0_2_boosted = kwargs['pi0_2']
-            rotationMatrices = self.rotationMatrixVectorised((pi_1_boosted + pi0_1_boosted)[1:].T, np.tile(np.array([0, 0, 1]), (pi_1_boosted.e.shape[0], 1)))
-            pi_1_boosted_rot = np.einsum('ij,ikj->ik', pi_1_boosted[1:].T, rotationMatrices)
-            pi0_1_boosted_rot = np.einsum('ij,ikj->ik', pi0_1_boosted[1:].T, rotationMatrices)
-            pi_2_boosted_rot = np.einsum('ij,ikj->ik', pi_2_boosted[1:].T, rotationMatrices)
-            pi0_2_boosted_rot = np.einsum('ij,ikj->ik', pi0_2_boosted[1:].T, rotationMatrices)
+            self.rotationMatrices = self.rotationMatrixVectorised((pi_1_boosted + pi0_1_boosted)[1:].T, np.tile(np.array([0, 0, 1]), (pi_1_boosted.e.shape[0], 1)))
+            pi_1_boosted_rot = np.einsum('ij,ikj->ik', pi_1_boosted[1:].T, self.rotationMatrices)
+            pi0_1_boosted_rot = np.einsum('ij,ikj->ik', pi0_1_boosted[1:].T, self.rotationMatrices)
+            pi_2_boosted_rot = np.einsum('ij,ikj->ik', pi_2_boosted[1:].T, self.rotationMatrices)
+            pi0_2_boosted_rot = np.einsum('ij,ikj->ik', pi0_2_boosted[1:].T, self.rotationMatrices)
             return pi_1_boosted_rot, pi0_1_boosted_rot, pi_2_boosted_rot, pi0_2_boosted_rot
         elif self.channel == 'rho_a1':
             # rho is aligned to +ve z
@@ -299,12 +360,12 @@ class DataLoader:
             pi_2_boosted = kwargs['pi_2']
             pi2_2_boosted = kwargs['pi2_2']
             pi3_2_boosted = kwargs['pi3_2']
-            rotationMatrices = self.rotationMatrixVectorised((pi_1_boosted + pi0_1_boosted)[1:].T, np.tile(np.array([0, 0, 1]), (pi_1_boosted.e.shape[0], 1)))
-            pi_1_boosted_rot = np.einsum('ij,ikj->ik', pi_1_boosted[1:].T, rotationMatrices)
-            pi0_1_boosted_rot = np.einsum('ij,ikj->ik', pi0_1_boosted[1:].T, rotationMatrices)
-            pi_2_boosted_rot = np.einsum('ij,ikj->ik', pi_2_boosted[1:].T, rotationMatrices)
-            pi2_2_boosted_rot = np.einsum('ij,ikj->ik', pi2_2_boosted[1:].T, rotationMatrices)
-            pi3_2_boosted_rot = np.einsum('ij,ikj->ik', pi3_2_boosted[1:].T, rotationMatrices)
+            self.rotationMatrices = self.rotationMatrixVectorised((pi_1_boosted + pi0_1_boosted)[1:].T, np.tile(np.array([0, 0, 1]), (pi_1_boosted.e.shape[0], 1)))
+            pi_1_boosted_rot = np.einsum('ij,ikj->ik', pi_1_boosted[1:].T, self.rotationMatrices)
+            pi0_1_boosted_rot = np.einsum('ij,ikj->ik', pi0_1_boosted[1:].T, self.rotationMatrices)
+            pi_2_boosted_rot = np.einsum('ij,ikj->ik', pi_2_boosted[1:].T, self.rotationMatrices)
+            pi2_2_boosted_rot = np.einsum('ij,ikj->ik', pi2_2_boosted[1:].T, self.rotationMatrices)
+            pi3_2_boosted_rot = np.einsum('ij,ikj->ik', pi3_2_boosted[1:].T, self.rotationMatrices)
             return pi_1_boosted_rot, pi0_1_boosted_rot, pi_2_boosted_rot, pi2_2_boosted_rot, pi3_2_boosted_rot
         elif self.channel == 'a1_a1':
             pi_1_boosted = kwargs['pi_1']
@@ -313,13 +374,13 @@ class DataLoader:
             pi_2_boosted = kwargs['pi_2']
             pi2_2_boosted = kwargs['pi2_2']
             pi3_2_boosted = kwargs['pi3_2']
-            rotationMatrices = self.rotationMatrixVectorised((pi_1_boosted+pi2_1_boosted+pi3_1_boosted)[1:].T, np.tile(np.array([0, 0, 1]), (pi_1_boosted.e.shape[0], 1)))
-            pi_1_boosted_rot = np.einsum('ij,ikj->ik', pi_1_boosted[1:].T, rotationMatrices)
-            pi2_1_boosted_rot = np.einsum('ij,ikj->ik', pi2_1_boosted[1:].T, rotationMatrices)
-            pi3_1_boosted_rot = np.einsum('ij,ikj->ik', pi3_1_boosted[1:].T, rotationMatrices)
-            pi_2_boosted_rot = np.einsum('ij,ikj->ik', pi_2_boosted[1:].T, rotationMatrices)
-            pi2_2_boosted_rot = np.einsum('ij,ikj->ik', pi2_2_boosted[1:].T, rotationMatrices)
-            pi3_2_boosted_rot = np.einsum('ij,ikj->ik', pi3_2_boosted[1:].T, rotationMatrices)
+            self.rotationMatrices = self.rotationMatrixVectorised((pi_1_boosted+pi2_1_boosted+pi3_1_boosted)[1:].T, np.tile(np.array([0, 0, 1]), (pi_1_boosted.e.shape[0], 1)))
+            pi_1_boosted_rot = np.einsum('ij,ikj->ik', pi_1_boosted[1:].T, self.rotationMatrices)
+            pi2_1_boosted_rot = np.einsum('ij,ikj->ik', pi2_1_boosted[1:].T, self.rotationMatrices)
+            pi3_1_boosted_rot = np.einsum('ij,ikj->ik', pi3_1_boosted[1:].T, self.rotationMatrices)
+            pi_2_boosted_rot = np.einsum('ij,ikj->ik', pi_2_boosted[1:].T, self.rotationMatrices)
+            pi2_2_boosted_rot = np.einsum('ij,ikj->ik', pi2_2_boosted[1:].T, self.rotationMatrices)
+            pi3_2_boosted_rot = np.einsum('ij,ikj->ik', pi3_2_boosted[1:].T, self.rotationMatrices)
             return pi_1_boosted_rot, pi2_1_boosted_rot, pi3_1_boosted_rot, pi_2_boosted_rot, pi2_2_boosted_rot, pi3_2_boosted_rot
         else:
             raise ValueError('Channel input not understood')
@@ -351,7 +412,7 @@ class DataLoader:
             zmf = pi_1 + pi_2 + pi0_1 + pi0_2
             aco_angle_1 = self.getAcoAnglesForOneRF(pi0_1, pi0_2, pi_1, pi_2, zmf, y_rho_1, y_rho_2)
             # should be no nans so can delete next 2 lines?
-            print('number of nans using perp calculation:', np.sum(np.isnan(aco_angle_1)))
+            # print('number of nans using perp calculation:', np.sum(np.isnan(aco_angle_1)))
             aco_angle_1[np.isnan(aco_angle_1)] = np.pi
             return aco_angle_1
         elif self.channel == 'rho_a1':
@@ -594,16 +655,14 @@ class DataLoader:
             'rho02_px_2_br': rho02_2_boosted_rot[:, 0],
             'rho02_py_2_br': rho02_2_boosted_rot[:, 1],
             'rho02_pz_2_br': rho02_2_boosted_rot[:, 2],
-            'a1_2_E_br': a1_2_boosted[0],
-            'a1_2_px_br': a1_2_boosted_rot[:, 0],
-            'a1_2_py_br': a1_2_boosted_rot[:, 1],
-            'a1_2_pz_br': a1_2_boosted_rot[:, 2],
+            'a1_E_2_br': a1_2_boosted[0],
+            'a1_px_2_br': a1_2_boosted_rot[:, 0],
+            'a1_py_2_br': a1_2_boosted_rot[:, 1],
+            'a1_pz_2_br': a1_2_boosted_rot[:, 2],
             'aco_angle_1_calc': aco_angle_1,
             'aco_angle_2_calc': aco_angle_2,
             'aco_angle_3_calc': aco_angle_3,
             'aco_angle_4_calc': aco_angle_4,
-            # 'y_1_1': df['y_1_1'],
-            # 'y_1_2': df['y_1_2'],
             "y_rho_1": y_rho_1,
             "y_rho0_2": y_rho0_2,
             "y_rho02_2": y_rho02_2,
@@ -616,7 +675,38 @@ class DataLoader:
             'm_rho02_2': rho02_2.m,
             'm_a1_2': a1_2.m,
         }
-        return df_inputs_data, boost
+        if not self.gen:
+            df_inputs_data.update({
+                # additional info from .root
+                'aco_angle_1': df['aco_angle_1'],
+                'aco_angle_2': df['aco_angle_2'],
+                'aco_angle_3': df['aco_angle_3'],
+                'aco_angle_4': df['aco_angle_4'],
+                'y_1_1': df['y_1_1'],
+                'y_1_2': df['y_1_2'],
+                'y_2_2': df['y_2_2'],
+                'y_3_2': df['y_3_2'],
+                'y_4_2': df['y_4_2'],
+                'ip_x_1': df['ip_x_1'],
+                'ip_y_1': df['ip_y_1'],
+                'ip_z_1': df['ip_z_1'],
+                'ip_x_2': df['ip_x_2'],
+                'ip_y_2': df['ip_y_2'],
+                'ip_z_2': df['ip_z_2'],
+                'sv_x_2': df['sv_x_2'],
+                'sv_y_2': df['sv_y_2'],
+                'sv_z_2': df['sv_z_2'],
+            })
+        else:
+            df_inputs_data.update({
+                'sv_x_1': df['sv_x_1'],
+                'sv_y_1': df['sv_y_1'],
+                'sv_z_1': df['sv_z_1'],
+                'sv_x_2': df['sv_x_2'],
+                'sv_y_2': df['sv_y_2'],
+                'sv_z_2': df['sv_z_2'],
+            })
+        return df_inputs_data
 
     def calculateA1A1Data(self, df):
         pi_1 = Momentum4(df['pi_E_1'], df["pi_px_1"], df["pi_py_1"], df["pi_pz_1"])
@@ -697,14 +787,14 @@ class DataLoader:
             'rho02_px_2_br': rho02_2_boosted_rot[:, 0],
             'rho02_py_2_br': rho02_2_boosted_rot[:, 1],
             'rho02_pz_2_br': rho02_2_boosted_rot[:, 2],
-            'a1_1_E_br': a1_1_boosted[0],
-            'a1_1_px_br': a1_1_boosted_rot[:, 0],
-            'a1_1_py_br': a1_1_boosted_rot[:, 1],
-            'a1_1_pz_br': a1_1_boosted_rot[:, 2],
-            'a1_2_E_br': a1_2_boosted[0],
-            'a1_2_px_br': a1_2_boosted_rot[:, 0],
-            'a1_2_py_br': a1_2_boosted_rot[:, 1],
-            'a1_2_pz_br': a1_2_boosted_rot[:, 2],
+            'a1_E_1_br': a1_1_boosted[0],
+            'a1_px_1_br': a1_1_boosted_rot[:, 0],
+            'a1_py_1_br': a1_1_boosted_rot[:, 1],
+            'a1_pz_1_br': a1_1_boosted_rot[:, 2],
+            'a1_E_2_br': a1_2_boosted[0],
+            'a1_px_2_br': a1_2_boosted_rot[:, 0],
+            'a1_py_2_br': a1_2_boosted_rot[:, 1],
+            'a1_pz_2_br': a1_2_boosted_rot[:, 2],
             'aco_angle_1_calc': aco_angle_1,
             'aco_angle_2_calc': aco_angle_2,
             'aco_angle_3_calc': aco_angle_3,
@@ -721,8 +811,6 @@ class DataLoader:
             'aco_angle_14_calc': aco_angle_14,
             'aco_angle_15_calc': aco_angle_15,
             'aco_angle_16_calc': aco_angle_16,
-            # 'y_1_1': df['y_1_1'],
-            # 'y_1_2': df['y_1_2'],
             "y_rho0_1": y_rho0_1,
             "y_rho02_1": y_rho02_1,
             "y_rho_2": y_rho_2,
@@ -739,30 +827,64 @@ class DataLoader:
             'm_rho02_2': rho02_2.m,
             'm_a1_1': a1_1.m,
             'm_a1_1': a1_2.m,
+            # additional info from .root
         }
-        return df_inputs_data, boost
+        if not self.gen:
+            df_inputs_data.update({
+                'aco_angle_1': df['aco_angle_1'],
+                'aco_angle_2': df['aco_angle_2'],
+                'aco_angle_3': df['aco_angle_3'],
+                'aco_angle_4': df['aco_angle_4'],
+                'y_1_1': df['y_1_1'],
+                'y_1_2': df['y_1_2'],
+                'y_2_2': df['y_2_2'],
+                'y_3_2': df['y_3_2'],
+                'y_4_2': df['y_4_2'],
+                'ip_x_1': df['ip_x_1'],
+                'ip_y_1': df['ip_y_1'],
+                'ip_z_1': df['ip_z_1'],
+                'ip_x_2': df['ip_x_2'],
+                'ip_y_2': df['ip_y_2'],
+                'ip_z_2': df['ip_z_2'],
+                'sv_x_1': df['sv_x_1'],
+                'sv_y_1': df['sv_y_1'],
+                'sv_z_1': df['sv_z_1'],
+                'sv_x_2': df['sv_x_2'],
+                'sv_y_2': df['sv_y_2'],
+                'sv_z_2': df['sv_z_2'],
+                'pv_angle': df['pv_angle'],
+            })
+        else:
+            df_inputs_data.update({
+                'sv_x_1': df['sv_x_1'],
+                'sv_y_1': df['sv_y_1'],
+                'sv_z_1': df['sv_z_1'],
+                'sv_x_2': df['sv_x_2'],
+                'sv_y_2': df['sv_y_2'],
+                'sv_z_2': df['sv_z_2'],
+            })
+        return df_inputs_data
 
-    def createAddons(self, addons, df, df_inputs, binary, addons_config={}, **kwargs):
+    def createAddons(self, addons, df, df_inputs, binary, addons_config={}):
         """
-        If you want to create more addon features, put the necessary arguments through kwargs, 
+        If you want to create more addon features, put the necessary arguments through kwargs,
         unpack them at the start of this function, and add an if case to your needs
         TODO: need to catch incorrectly loaded kwargs
         Return: df_inputs (modified)
         """
-        boost = None
-        if kwargs:
-            boost = kwargs["boost"]
         for addon in addons:
-            if addon == 'met' and boost is not None:
+            if addon == 'met':
                 print('Addon MET loaded')
-                E_miss, E_miss_x, E_miss_y = self.addonMET(df, boost)
-                df_inputs['E_miss'] = E_miss
-                df_inputs['E_miss_x'] = E_miss_x
-                df_inputs['E_miss_y'] = E_miss_y
+                boost = self.createBoostAndRotationMatrices(df)
+                metx_b, mety_b = self.addonMET(df, boost)
+                df_inputs['metx_b'] = metx_b
+                df_inputs['mety_b'] = mety_b
             if addon == 'neutrino':
                 print('Addon neutrino loaded')
                 load_alpha = addons_config['neutrino']['load_alpha']
                 termination = addons_config['neutrino']['termination']
+                imputer_mode = addons_config['neutrino']['imputer_mode']
+                save_alpha = addons_config['neutrino']['save_alpha']
                 # alpha_1, alpha_2, E_nu_1, E_nu_2, p_t_nu_1, p_t_nu_2, p_z_nu_1, p_z_nu_2 = self.addonNeutrinos(df, df_inputs, binary, load_alpha, termination=termination)
                 # df_inputs['alpha_1'] = alpha_1
                 # df_inputs['alpha_2'] = alpha_2
@@ -772,7 +894,39 @@ class DataLoader:
                 # df_inputs['p_t_nu_2'] = p_t_nu_2
                 # df_inputs['p_z_nu_1'] = p_z_nu_1
                 # df_inputs['p_z_nu_2'] = p_z_nu_2
-                df_inputs = self.addonNeutrinos(df, df_inputs, binary, load_alpha, termination=termination)
+                if imputer_mode == 'remove':
+                    # modifies the original df by removing events
+                    df_inputs, df = self.addonNeutrinos(df, df_inputs, binary, load_alpha, imputer_mode, save_alpha, termination=termination)
+                else:
+                    df_inputs = self.addonNeutrinos(df, df_inputs, binary, load_alpha, imputer_mode, save_alpha, termination=termination)
+            if addon == 'ip':
+                print('Impact paramter loaded')
+                boost = self.createBoostAndRotationMatrices(df)
+                ip_1_boosted_rot, ip_2_boosted_rot = self.addonIP(df, boost)
+                df_inputs['ip_x_1_br'] = ip_1_boosted_rot[:, 0]
+                df_inputs['ip_y_1_br'] = ip_1_boosted_rot[:, 1]
+                df_inputs['ip_z_1_br'] = ip_1_boosted_rot[:, 2]
+                df_inputs['ip_x_2_br'] = ip_2_boosted_rot[:, 0]
+                df_inputs['ip_y_2_br'] = ip_2_boosted_rot[:, 1]
+                df_inputs['ip_z_2_br'] = ip_2_boosted_rot[:, 2]
+            if addon == 'sv':
+                boost = self.createBoostAndRotationMatrices(df)
+                if self.channel == 'a1_a1' or self.gen:
+                    sv_1_boosted_rot, sv_2_boosted_rot = self.addonSV(df, boost)
+                    df_inputs['sv_x_1_br'] = sv_1_boosted_rot[:, 0]
+                    df_inputs['sv_y_1_br'] = sv_1_boosted_rot[:, 1]
+                    df_inputs['sv_z_1_br'] = sv_1_boosted_rot[:, 2]
+                    df_inputs['sv_x_2_br'] = sv_2_boosted_rot[:, 0]
+                    df_inputs['sv_y_2_br'] = sv_2_boosted_rot[:, 1]
+                    df_inputs['sv_z_2_br'] = sv_2_boosted_rot[:, 2]
+                elif self.channel == 'rho_a1':
+                    sv_2_boosted_rot = self.addonSV(df, boost)
+                    df_inputs['sv_x_2_br'] = sv_2_boosted_rot[:, 0]
+                    df_inputs['sv_y_2_br'] = sv_2_boosted_rot[:, 1]
+                    df_inputs['sv_z_2_br'] = sv_2_boosted_rot[:, 2]
+                else:
+                    print('WARNING (createAddons): No SV on rho_rho channel!')
+
         return df_inputs
 
     def addonMET(self, df, boost):
@@ -782,14 +936,12 @@ class DataLoader:
         N = len(df['metx'])
         met_x = Momentum4(df['metx'], np.zeros(N), np.zeros(N), np.zeros(N))
         met_y = Momentum4(df['mety'], np.zeros(N), np.zeros(N), np.zeros(N))
-        met = Momentum4(df['met'], np.zeros(N), np.zeros(N), np.zeros(N))
-        # boost MET - E_miss is already boosted into the hadronic rest frame
-        E_miss = met_x.boost_particle(boost)[0]
-        E_miss_x = met_y.boost_particle(boost)[0]
-        E_miss_y = met.boost_particle(boost)[0]
-        return E_miss, E_miss_x, E_miss_y
+        # boost MET
+        metx_b = met_x.boost_particle(boost)[0]
+        mety_b = met_y.boost_particle(boost)[0]
+        return metx_b, mety_b
 
-    def addonNeutrinos(self, df, df_inputs, binary, load_alpha, termination=100):
+    def addonNeutrinos(self, df, df_inputs, binary, load_alpha, imputer_mode, save_alpha, termination=100):
         """
         Addon configuration for neutrino information
         TODO:
@@ -797,8 +949,94 @@ class DataLoader:
         -- Returns: alpha_1, alpha_2, E_nu_1, E_nu_2, p_t_nu_1, p_t_nu_2, p_z_nu_1, p_z_nu_2 --
         Returns: df_inputs (modified)
         """
-        NR = NeutrinoReconstructor(binary=binary)
-        return NR.runAlphaReconstructor(df.reset_index(drop=False), df_inputs.reset_index(drop=False), load_alpha=load_alpha, termination=termination)
+        NR = NeutrinoReconstructor(binary, self.channel)
+        if not self.gen:
+            df_inputs = NR.runAlphaReconstructor(df.reset_index(drop=True), df_inputs.reset_index(drop=True), load_alpha=load_alpha, save_alpha=save_alpha, termination=termination)
+        else:
+            df_inputs = NR.runGenAlphaReconstructor(df.reset_index(drop=True), df_inputs.reset_index(drop=True), load_alpha=load_alpha)
+        if imputer_mode == 'remove':
+            df_inputs_imputed, df = NR.dealWithMissingData(df_inputs, imputer_mode, df=df)
+            return df_inputs_imputed, df
+        # return df_inputs_imputed
+        df_inputs_imputed = NR.dealWithMissingData(df_inputs, imputer_mode)
+        return df_inputs_imputed
+
+    def addonIP(self, df, boost):
+        N = len(df.ip_x_1)
+        ip_1 = Momentum4(np.zeros(N), df.ip_x_1, df.ip_y_1, df.ip_z_1)
+        ip_2 = Momentum4(np.zeros(N), df.ip_x_2, df.ip_y_2, df.ip_z_2)
+        ip_1_boosted = ip_1.boost_particle(boost)
+        ip_2_boosted = ip_2.boost_particle(boost)
+        ip_1_boosted_rot = np.einsum('ij,ikj->ik', ip_1_boosted[1:].T, self.rotationMatrices)
+        ip_2_boosted_rot = np.einsum('ij,ikj->ik', ip_2_boosted[1:].T, self.rotationMatrices)
+
+        return ip_1_boosted_rot, ip_2_boosted_rot
+
+    def addonSV(self, df, boost):
+        """
+        Do not call on rho_rho channel
+        """
+        N = len(df.sv_x_2)
+        if self.channel == 'a1_a1' or self.gen:
+            sv_1 = Momentum4(np.zeros(N), df.sv_x_1, df.sv_y_1, df.sv_z_1)
+            sv_2 = Momentum4(np.zeros(N), df.sv_x_2, df.sv_y_2, df.sv_z_2)
+            sv_1_boosted = sv_1.boost_particle(boost)
+            sv_2_boosted = sv_2.boost_particle(boost)
+            sv_1_boosted_rot = np.einsum('ij,ikj->ik', sv_1_boosted[1:].T, self.rotationMatrices)
+            sv_2_boosted_rot = np.einsum('ij,ikj->ik', sv_2_boosted[1:].T, self.rotationMatrices)
+            return sv_1_boosted_rot, sv_2_boosted_rot
+        elif self.channel == 'rho_a1':
+            sv_2 = Momentum4(np.zeros(N), df.sv_x_2, df.sv_y_2, df.sv_z_2)
+            sv_2_boosted = sv_2.boost_particle(boost)
+            sv_2_boosted_rot = np.einsum('ij,ikj->ik', sv_2_boosted[1:].T, self.rotationMatrices)
+            return sv_2_boosted_rot
+        else:
+            raise ValueError('No SV on rho_rho channel/ Channel not understood')
+
+    def createBoostAndRotationMatrices(self, df):
+        if self.channel == 'rho_rho':
+            pi_1 = Momentum4(df['pi_E_1'], df["pi_px_1"], df["pi_py_1"], df["pi_pz_1"])
+            pi_2 = Momentum4(df['pi_E_2'], df["pi_px_2"], df["pi_py_2"], df["pi_pz_2"])
+            pi0_1 = Momentum4(df['pi0_E_1'], df["pi0_px_1"], df["pi0_py_1"], df["pi0_pz_1"])
+            pi0_2 = Momentum4(df['pi0_E_2'], df["pi0_px_2"], df["pi0_py_2"], df["pi0_pz_2"])
+            rho_1 = pi_1 + pi0_1
+            rho_2 = pi_2 + pi0_2
+            rest_frame = rho_1 + rho_2
+            boost = Momentum4(rest_frame[0], -rest_frame[1], -rest_frame[2], -rest_frame[3])
+            pi_1_boosted = pi_1.boost_particle(boost)
+            pi0_1_boosted = pi0_1.boost_particle(boost)
+            self.rotationMatrices = self.rotationMatrixVectorised((pi_1_boosted + pi0_1_boosted)[1:].T, np.tile(np.array([0, 0, 1]), (pi_1_boosted.e.shape[0], 1)))
+            return boost
+        elif self.channel == 'rho_a1':
+            pi_1 = Momentum4(df['pi_E_1'], df["pi_px_1"], df["pi_py_1"], df["pi_pz_1"])
+            pi_2 = Momentum4(df['pi_E_2'], df["pi_px_2"], df["pi_py_2"], df["pi_pz_2"])
+            pi0_1 = Momentum4(df['pi0_E_1'], df["pi0_px_1"], df["pi0_py_1"], df["pi0_pz_1"])
+            pi2_2 = Momentum4(df['pi2_E_2'], df["pi2_px_2"], df["pi2_py_2"], df["pi2_pz_2"])
+            pi3_2 = Momentum4(df['pi3_E_2'], df["pi3_px_2"], df["pi3_py_2"], df["pi3_pz_2"])
+            rho_1 = pi_1 + pi0_1  # charged rho
+            a1_2 = pi_2 + pi2_2 + pi3_2
+            rest_frame = rho_1 + a1_2
+            boost = Momentum4(rest_frame[0], -rest_frame[1], -rest_frame[2], -rest_frame[3])
+            pi_1_boosted = pi_1.boost_particle(boost)
+            pi0_1_boosted = pi0_1.boost_particle(boost)
+            self.rotationMatrices = self.rotationMatrixVectorised((pi_1_boosted + pi0_1_boosted)[1:].T, np.tile(np.array([0, 0, 1]), (pi_1_boosted.e.shape[0], 1)))
+            return boost
+        elif self.channel == 'a1_a1':
+            pi_1 = Momentum4(df['pi_E_1'], df["pi_px_1"], df["pi_py_1"], df["pi_pz_1"])
+            pi2_1 = Momentum4(df['pi2_E_1'], df["pi2_px_1"], df["pi2_py_1"], df["pi2_pz_1"])
+            pi3_1 = Momentum4(df['pi3_E_1'], df["pi3_px_1"], df["pi3_py_1"], df["pi3_pz_1"])
+            pi_2 = Momentum4(df['pi_E_2'], df["pi_px_2"], df["pi_py_2"], df["pi_pz_2"])
+            pi2_2 = Momentum4(df['pi2_E_2'], df["pi2_px_2"], df["pi2_py_2"], df["pi2_pz_2"])
+            pi3_2 = Momentum4(df['pi3_E_2'], df["pi3_px_2"], df["pi3_py_2"], df["pi3_pz_2"])
+            rest_frame = pi_1 + pi2_1 + pi3_1 + pi_2 + pi2_2 + pi3_2
+            boost = Momentum4(rest_frame[0], -rest_frame[1], -rest_frame[2], -rest_frame[3])
+            pi_1_boosted = pi_1.boost_particle(boost)
+            pi2_1_boosted = pi2_1.boost_particle(boost)
+            pi3_1_boosted = pi3_1.boost_particle(boost)
+            self.rotationMatrices = self.rotationMatrixVectorised((pi_1_boosted+pi2_1_boosted+pi3_1_boosted)[1:].T, np.tile(np.array([0, 0, 1]), (pi_1_boosted.e.shape[0], 1)))
+            return boost
+        else:
+            raise ValueError('Channel not understood')
 
     def rotation_matrix_from_vectors(self, vec1, vec2):
         """ Find the rotation matrix that aligns vec1 to vec2

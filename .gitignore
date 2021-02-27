@@ -155,3 +155,13 @@ shared/saved_models/
 *.sh
 *.sh.*
 !shared/requirements.txt
+!shared/run_scripts/reco/*
+!shared/run_scripts/gen/*
+shared/run_scripts/reco/*.sh.*
+shared/run_scripts/gen/*.sh.*
+shared/core.*
+*.h5
+!shared/alpha_analysis/rho_rho/placeholder.txt
+!shared/alpha_analysis/rho_a1/placeholder.txt
+!shared/alpha_analysis/a1_a1/placeholder.txt
+shared/run_scripts/nohup.out

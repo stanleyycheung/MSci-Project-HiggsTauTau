@@ -2,6 +2,7 @@ import scipy.stats as sps
 import numpy as np
 from collections import Counter
 import matplotlib.pyplot as plt
+import tensorflow as tf
 
 # plt.rcParams.update({'font.size': 14, "figure.figsize": (10,6)})
 
@@ -39,10 +40,12 @@ def profileplot(x, y, xlabel='', ylabel='', bins=100, mode=0):
         p = np.poly1d(fit)
         print(f"Fit params: {fit[0]}, {fit[1]}")
         print(f"Diag of cov: {cov[0][0]} , {cov[1][1]}")
-        plt.plot(bin_centers, p(bin_centers))
+        plt.plot(bin_centers, p(bin_centers), label=f'gradient:{fit[0]:.2f}\nintercept:{fit[1]:.3f}')
+        return fit, cov
     plt.grid()
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
+    plt.legend()
     plt.tight_layout()
     
 
@@ -58,3 +61,37 @@ def profileplot_plain(x, y, xlabel='', ylabel='', bins=100, plot_range=None):
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.tight_layout()
+
+
+
+class TensorBoardExtended(tf.keras.callbacks.TensorBoard):
+    """
+    Extended Tensorboard log that allows to add text
+
+    By default logs:
+    - host
+    - gpus available
+
+    Parameters
+    -------------
+    text_dict_to_log : dict
+        Dictionary with key, value string that will be logged with Tensorboard
+    kwargs : dict
+        All the other parameters that are fed to Tensorboard
+    """
+    def __init__(self, text_dict_to_log=None, **kwargs):
+        super().__init__(**kwargs)
+        self.text_dict_to_log = text_dict_to_log
+
+    def on_train_begin(self, logs=None):
+        # pylint: disable= E1101
+        super().on_train_begin(logs=logs)
+
+        try:
+            writer = self._get_writer('train')
+        except AttributeError: # this is due to differences between tf21, 22 and 23
+            writer = self._train_writer
+
+        with writer.as_default():
+            for key, value in self.text_dict_to_log.items():
+                tf.summary.text(key, tf.convert_to_tensor(value), step=0)

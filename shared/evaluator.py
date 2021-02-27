@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import roc_curve, roc_auc_score
 from sklearn.model_selection import train_test_split
-
+import datetime
 
 class Evaluator:
     """
@@ -19,7 +19,7 @@ class Evaluator:
         self.save_dir = save_dir
         self.config_str = config_str
 
-    def evaluate(self, X_test, y_test, history, show=True, **kwargs):
+    def evaluate(self, X_test, y_test, history, plot=True, show=True, **kwargs):
         # use test dataset for evaluation
         if self.binary:
             y_proba = self.model.predict(X_test)  # outputs two probabilties
@@ -34,10 +34,16 @@ class Evaluator:
             _, w_a_test, _, w_b_test = train_test_split(w_a, w_b, test_size=0.2, random_state=123456)
             auc, y_label_roc, y_pred_roc = self.customROCScore(y_pred_test, w_a_test, w_b_test)
             fpr, tpr, _ = roc_curve(y_label_roc, y_pred_roc, sample_weight=np.r_[w_a_test, w_b_test])
-        self.plotROCCurve(fpr, tpr, auc)
-        self.plotLoss(history)
-        if show:
-            plt.show()
+        if plot:
+            self.plotROCCurve(fpr, tpr, auc)
+            try:
+                self.plotFeatureImportance()
+            except:
+                pass
+            if history is not None:
+                self.plotLoss(history)
+            if show:
+                plt.show()
         return auc
 
     def customROCScore(self, pred, w_a, w_b):
@@ -59,7 +65,7 @@ class Evaluator:
         plt.xlabel("Epochs"), plt.ylabel("Loss")
         # plt.yscale("log")
         plt.legend()
-        plt.savefig(f'./{self.save_dir}/fig/loss_{self.config_str}')
+        plt.savefig(f'./{self.save_dir}/fig/{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}_loss_{self.config_str}.PNG')
 
     def plotROCCurve(self, fpr, tpr, auc):
         #  define a function to plot the ROC curves - just makes the roc_curve look nicer than the default
@@ -73,4 +79,25 @@ class Evaluator:
         ax.plot(lims, lims, 'k--')
         ax.set_xlim(lims)
         ax.set_ylim(lims)
-        plt.savefig(f'{self.save_dir}/fig/ROC_curve_{self.config_str}.PNG')
+        plt.savefig(f'{self.save_dir}/fig/{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}_ROC_curve_{self.config_str}.PNG')
+
+    def plotFeatureImportance(self):
+        print(self.model.feature_importances_)
+        plt.figure()
+        plt.bar(range(len(self.model.feature_importances_)), self.model.feature_importances_)
+        
+        labels = ['pi0_E_1', 'pi0_px_1', 'pi0_py_1', 'pi0_pz_1', 'pi0_E_2', 'pi0_px_2', 'pi0_py_2', 'pi0_pz_2', \
+        'pi_E_1', 'pi_px_1', 'pi_py_1', 'pi_pz_1','pi_E_2', 'pi_px_2', 'pi_py_2', 'pi_pz_2', \
+        'aco_angle_1', 'y_rho_1', 'y_rho_2', 'm_rho_1**2', 'm_rho_2**2']
+        x = np.arange(len(labels))  # the label locations
+        #ax = plt.gca()
+        plt.xticks(x, labels, rotation='vertical')
+        # ax.set_xticklabels(labels)
+        #plt.margins(0.6)
+        plt.subplots_adjust(bottom=0.3)
+        
+        plt.ylabel('Feature importance')
+        plt.title('Feature importance from XGBoost')
+        plt.savefig(f'{self.save_dir}/fig/{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}_feature_importance_{self.config_str}.PNG', transparent=True)
+        #plt.savefig(f'{self.save_dir}/fig/importances_plot.PNG', transparent=True)
+        print('plotted feature importance')
