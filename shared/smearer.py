@@ -22,6 +22,10 @@ class Smearer(DataLoader):
         super().__init__(variables, channel, True)
         # particles - list of features columns
         self.features_to_smear = {}
+        self.pi_mass = {
+            'pi': 0.13957,
+            'pi0': 0.135,
+        }
         for f in features:
             if f.startswith('ip') or f.startswith('sv') or f.startswith('pi'):
                 if f.startswith('ip'):
@@ -128,25 +132,26 @@ class Smearer(DataLoader):
                 if feature == 'metx':
                     metx_dist = (df_gen_reco['reco_metx'] - df_gen_reco['metx'])/df_gen_reco['metx']
                     metx_sample = self.inverseTransformSampling(metx_dist, df.shape[0])
-                    smeared_metx = df['metx'] + metx_sample
+                    smeared_metx = df['metx']*(1 + metx_sample)
                     smeared_met.append((df['metx'], smeared_metx))
                     df['metx'] = smeared_metx
                 elif feature == 'mety':
                     mety_dist = (df_gen_reco['reco_mety'] - df_gen_reco['mety'])/df_gen_reco['mety']
                     mety_sample = self.inverseTransformSampling(mety_dist, df.shape[0])
-                    smeared_mety = df['mety'] + mety_sample
+                    smeared_mety = df['mety']*(1 + mety_sample)
                     smeared_met.append((df['mety'], smeared_mety))
                     df['mety'] = smeared_mety
             return np.array(smeared_met)
         elif base_feature == 'ip' or base_feature == 'sv':
+            # don't smear p_t -> only smear phi and eta
             reco_vertex = Momentum4(np.zeros(df.shape[0]), df_gen_reco['reco_'+base_feature+'_x_1'], df_gen_reco['reco_'+base_feature+'_y_1'], df_gen_reco['reco_'+base_feature+'_z_1'])
             gen_vertex = Momentum4(np.zeros(df.shape[0]),  df_gen_reco[base_feature+'_x_1'], df_gen_reco[base_feature+'_y_1'], df_gen_reco[base_feature+'_z_1'])
             eta_dist = reco_vertex.eta - gen_vertex.eta
             phi_dist = reco_vertex.phi - gen_vertex.phi
-            p_t_dist = reco_vertex.p_t - gen_vertex.p_t
+            # p_t_dist = reco_vertex.p_t - gen_vertex.p_t
             eta_dist_sample = self.inverseTransformSampling(eta_dist, df.shape[0])
             phi_dist_sample = self.inverseTransformSampling(phi_dist, df.shape[0])
-            p_t_dist_sample = self.inverseTransformSampling(p_t_dist, df.shape[0])
+            # p_t_dist_sample = self.inverseTransformSampling(p_t_dist, df.shape[0])
             smeared_vertices = []
             for feature in features:
                 label_parts = feature.split('_')
@@ -156,8 +161,9 @@ class Smearer(DataLoader):
                 vertex = Momentum4(np.zeros(df.shape[0]), df[x_label], df[y_label], df[z_label])
                 smeared_eta = vertex.eta + eta_dist_sample
                 smeared_phi = vertex.phi + phi_dist_sample
-                smeared_p_t = vertex.p_t + p_t_dist_sample
-                smeared_vertex = Momentum4.e_eta_phi_pt(np.zeros(df.shape[0]), smeared_eta, smeared_phi, smeared_p_t)
+                # smeared_p_t = vertex.p_t + p_t_dist_sample
+                # smeared_vertex = Momentum4.e_eta_phi_pt(np.zeros(df.shape[0]), smeared_eta, smeared_phi, smeared_p_t)
+                smeared_vertex = Momentum4.e_eta_phi_pt(np.zeros(df.shape[0]), smeared_eta, smeared_phi, vertex.p_t)
                 smeared_vertex_list = np.array([(df[x_label], smeared_vertex.p_x), (df[y_label], smeared_vertex.p_y), (df[z_label], smeared_vertex.p_z)])
                 df[x_label] = smeared_vertex.p_x
                 df[y_label] = smeared_vertex.p_y
@@ -165,16 +171,19 @@ class Smearer(DataLoader):
                 smeared_vertices.append(smeared_vertex_list)
             return np.array(smeared_vertex)
         else:
+            # smearing particle
+            # 1) smear energy
+            # 2) fix mass and recompute p_t
+            # 3) smear phi, eta to get direction
+            particle_mass = self.pi_mass[base_feature]
             reco_particle = Momentum4(df_gen_reco['reco_'+base_feature+'_E_1'], df_gen_reco['reco_'+base_feature+'_px_1'], df_gen_reco['reco_'+base_feature+'_py_1'], df_gen_reco['reco_'+base_feature+'_pz_1'])
             gen_particle = Momentum4(df_gen_reco[base_feature+'_E_1'], df_gen_reco[base_feature+'_px_1'], df_gen_reco[base_feature+'_py_1'], df_gen_reco[base_feature+'_pz_1'])
             e_dist = (reco_particle.e - gen_particle.e)/gen_particle.e
             eta_dist = reco_particle.eta - gen_particle.eta
             phi_dist = reco_particle.phi - gen_particle.phi
-            p_t_dist = reco_particle.p_t - gen_particle.p_t
             e_dist_sample = self.inverseTransformSampling(e_dist, df.shape[0])
             eta_dist_sample = self.inverseTransformSampling(eta_dist, df.shape[0])
             phi_dist_sample = self.inverseTransformSampling(phi_dist, df.shape[0])
-            p_t_dist_sample = self.inverseTransformSampling(p_t_dist, df.shape[0])
             smeared_particles = []
             for feature in features:
                 label_parts = feature.split('_')
@@ -186,7 +195,8 @@ class Smearer(DataLoader):
                 smeared_e = particle.e*(1+e_dist_sample)
                 smeared_eta = particle.eta + eta_dist_sample
                 smeared_phi = particle.phi + phi_dist_sample
-                smeared_p_t = particle.p_t + p_t_dist_sample
+                smeared_p_mag = np.sqrt(smeared_e**2 - particle_mass**2)
+                smeared_p_t = smeared_p_mag/np.cosh(smeared_eta)
                 smeared_particle = Momentum4.e_eta_phi_pt(smeared_e, smeared_eta, smeared_phi, smeared_p_t)
                 smeared_particles_list = np.array([(df[E_label], smeared_particle.e), (df[x_label], smeared_particle.p_x), (df[y_label], smeared_particle.p_y), (df[z_label], smeared_particle.p_z)])
                 # print(f'1: {any(np.iscomplex(smeared_particle.e))}')
@@ -258,6 +268,7 @@ class Smearer(DataLoader):
         plt.ylabel('smeared_pi_2_pz')
         plt.savefig('./smearing/fig/pi_2_pz_hexbin.PNG')
         plt.figure()
+        
         d = pd.DataFrame(np.c_[results[1][0][0], results[1][0][1]])
         d = d[(d[0]<800) & (d[0]>-800) & (d[1]<800) & (d[1]>-800)]
         plt.hexbin(d[0], d[1], cmap='viridis', mincnt=None, gridsize=200, bins='log')
@@ -291,8 +302,8 @@ if __name__ == '__main__':
     # particles = ['pi_1']
     s = Smearer(variables, channel, particles)
     # print(s.features_to_smear)
-    df = s.createSmearedData(df_to_smear_clean, from_hdf=True)
-    # results = s.plotSmeared(from_hdf=True)
+    # df = s.createSmearedData(df_to_smear_clean, from_hdf=True)
+    results = s.plotSmeared(df_to_smear, from_hdf=True)
     # df.to_hdf('./smearing/df_smeared_2.h5', 'df')
     # df_to_smear_clean.to_hdf('./smearing/df_orig_2.h5', 'df')
     # print(df.head())
