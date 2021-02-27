@@ -116,6 +116,7 @@ class NeuralNetwork:
             self.learning_rate = grid_result.best_params_['learning_rate']
             self.activation = grid_result.best_params_['activation']
             self.initializer_std = grid_result.best_params_['initializer_std']
+            self.nodes = grid_result.best_params_['nodes'] # !!! Kristof's edit on 25 Feb trying to fix the random_sk with the extra hyperparameters
             self.model_str = 'grid_model'
             grid_best_score = grid_result.best_score_
             self.model = tuner.gridModel(layers=self.layers, batch_norm=self.batch_norm, dropout=self.dropout)
