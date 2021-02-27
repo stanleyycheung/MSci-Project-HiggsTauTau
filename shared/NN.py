@@ -222,7 +222,7 @@ class NeuralNetwork:
         }
         print(f'Training with {params}')
         tuner = Tuner()
-        # self.model, _ = tuner.hyperOptModelNN(params)
+        self.model, _ = tuner.hyperOptModelNN(params)
         X_train, X_test, y_train, y_test = self.configure(df, config_num)
         # model = self.train(X_train, X_test, y_train, y_test, epochs=epochs, batch_size=batch_size)
         model = self.train(X_train, X_test, y_train, y_test, epochs=50, batch_size=10000)
@@ -323,11 +323,13 @@ class NeuralNetwork:
         # print(df_clean.pi_E_1)
         SM = Smearer(variables_smear, self.channel, features)
         df_smeared = SM.createSmearedData(df_clean, from_hdf=from_hdf)
+        # remove Nans
+        df_smeared = df_smeared.dropna()
         df_ps_smeared, df_sm_smeared = SM.selectPSSMFromData(df_smeared)
         addons = []
         addons_config = {}
         df_smeared_transformed = self.DL.createTrainTestData(df_smeared, df_ps_smeared, df_sm_smeared, binary, True, addons, addons_config, save=False)
-        # df_orig_transformed = self.DL.createTrainTestData(df_clean, df_ps_clean, df_sm_clean, binary, True, addons, addons_config, save=False)
+        df_orig_transformed = self.DL.createTrainTestData(df_clean, df_ps_clean, df_sm_clean, binary, True, addons, addons_config, save=False)
         # deal with imaginary numbers from boosting
         df_smeared_transformed = df_smeared_transformed.apply(np.real)
         m_features = [x for x in df_smeared_transformed.columns if x.startswith('m')]
@@ -337,8 +339,8 @@ class NeuralNetwork:
         # df.to_hdf('smearing/df_smeared.h5', 'df')
         # df_smeared.to_hdf('./smearing/df_smeared.h5', 'df')
         # df_clean.to_hdf('./smearing/df_orig.h5', 'df')
-        # df_smeared_transformed.to_hdf('smearing/df_smeared_transformed.h5', 'df')
-        # df_orig_transformed.to_hdf('smearing/df_orig_transformed.h5', 'df')
+        df_smeared_transformed.to_hdf('smearing/df_smeared_transformed.h5', 'df')
+        df_orig_transformed.to_hdf('smearing/df_orig_transformed.h5', 'df')
         # exit()
         return df_smeared_transformed
         
