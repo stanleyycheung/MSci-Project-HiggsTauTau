@@ -192,7 +192,9 @@ class ConfigLoader:
                     # return np.c_[base, alpha_info]
             elif config_num > 3.3:
                 if self.channel == 'rho_rho':
-                    raise ValueError(f'CONFIG_NUM {config_num}>3.3 in rho_rho channel is not accessible')
+                    print(f'CONFIG_NUM {config_num}>3.3 in rho_rho channel is not accessible')
+                    print('RETURNING 3.2 INSTEAD)')
+                    return np.c_[base, alpha_info]
                 nu_phi = np.c_[self.df.nu_phi_1_1, self.df.nu_phi_1_2, self.df.nu_phi_2_1, self.df.nu_phi_2_2]
                 tau_phi = np.c_[self.df.tau_phi_1_1, self.df.tau_phi_1_2, self.df.tau_phi_2_1, self.df.tau_phi_2_2]
                 tau_vec = np.c_[self.df.tau_E_1_1, self.df.tau_px_1_1, self.df.tau_py_1_1, self.df.tau_pz_1_1,

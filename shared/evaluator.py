@@ -23,7 +23,6 @@ class Evaluator:
         # use test dataset for evaluation
         if self.binary:
             y_proba = self.model.predict(X_test)  # outputs two probabilties
-            # print(y_proba)
             auc = roc_auc_score(y_test, y_proba)
             fpr, tpr, _ = roc_curve(y_test, y_proba)
         else:

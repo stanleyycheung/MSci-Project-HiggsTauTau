@@ -177,7 +177,7 @@ class NeuralNetwork:
         model.save(model_save_str)
 
 
-    def runWithSmearing(self, features: list, from_hdf=True):
+    def runWithSmearing(self, config_num, features: list, from_hdf=True):
         """ 
         Need to update smearing_hp.txt to get hyperparameter for tuning 
         Trying for config 1.6 smearing first
@@ -193,13 +193,10 @@ class NeuralNetwork:
         with open('./NN_output/smearing_hp.txt', 'r') as fh:
             num_list = [line for line in fh]
         if self.channel == 'rho_rho':
-            config_num = 1.6
             nn_arch = num_list[0].split(',')
         elif self.channel == 'rho_a1':
-            config_num = 1.6
             nn_arch = num_list[1].split(',')
         else:
-            config_num = 1.6
             nn_arch = num_list[2].split(',')
         optimal_auc = float(nn_arch[1])
         nodes = int(nn_arch[3])
@@ -242,15 +239,17 @@ class NeuralNetwork:
         stick with 1.6
         - feature 'pi_1' flag
         """
-        for feature in features_list:
-            auc, optimal_auc = self.runWithSmearing([feature], from_hdf=from_hdf)
+        config_num = 1.6
+        f = open(self.save_dir + '/' + self.channel + '_' + str(config_num) +  '_smearing_aucs.txt', 'a')
+        for feature in tqdm(features_list):
+            # auc, optimal_auc = self.runWithSmearing(1.6, [feature], from_hdf=from_hdf)
+            auc, optimal_auc = self.runWithSmearing(config_num, [feature], from_hdf=from_hdf)
             degradation_auc = optimal_auc - auc
-        # write to some file
-        f = open(self.save_dir + '/' + self.channel + '_' + str(self.config_num) +  '_smearing_aucs.txt', 'a')
-        f.write('-'.join(features_list) + ',' + str(degradation_auc) + ',' + str(optimal_auc) + '\n')
+            # write to some file
+            print(feature + ',' + str(degradation_auc) + ',' + str(optimal_auc) + '\n')
+            f.write(feature + ',' + str(degradation_auc) + ',' + str(optimal_auc) + '\n')
         f.close()
         # plotting bar chart
-
 
     def initialize(self, addons_config={}, read=True, from_hdf=True):
         """
@@ -359,7 +358,7 @@ class NeuralNetwork:
         # df_orig_transformed.to_hdf('smearing/df_orig_transformed.h5', 'df')
         # exit()
         return df_smeared_transformed
-        
+
     def configure(self, df, config_num):
         """
         Configures NN inputs - selects config_num and creates train/test split
@@ -547,9 +546,9 @@ if __name__ == '__main__':
             if tuning:
                 NN.runTuning(config_num, tuning_mode=tuning_mode)
             elif smearing:
-                # features = ['pi_1', 'pi_2']
-                #features = ['pi_1']
-                features = ['mety']
+                features = ['pi_1', 'pi0_1']
+                # features = ['pi_1']
+                # features = ['mety']
                 NN.runSingleSmearAnalysis(features, from_hdf=from_hdf)
                 # NN.runWithSmearing(features, from_hdf=from_hdf) # !!! commented out to run my smearing instead
             else:
