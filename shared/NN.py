@@ -244,8 +244,11 @@ class NeuralNetwork:
         """
         for feature in features_list:
             auc, optimal_auc = self.runWithSmearing([feature], from_hdf=from_hdf)
-            degredation_auc = optimal_auc - auc
+            degradation_auc = optimal_auc - auc
         # write to some file
+        f = open(self.save_dir + '/' + self.channel + '_smearing_aucs.txt', 'a')
+        f.write('-'.join(features_list) + ',' + str(degradation_auc) + ',' + str(optimal_auc) + '\n')
+        f.close()
         # plotting bar chart
 
 
@@ -545,8 +548,10 @@ if __name__ == '__main__':
                 NN.runTuning(config_num, tuning_mode=tuning_mode)
             elif smearing:
                 # features = ['pi_1', 'pi_2']
-                features = ['pi_1']
-                NN.runWithSmearing(features, from_hdf=from_hdf)
+                #features = ['pi_1']
+                features = ['mety']
+                NN.runSingleSmearAnalysis(features, from_hdf=from_hdf)
+                # NN.runWithSmearing(features, from_hdf=from_hdf) # !!! commented out to run my smearing instead
             else:
                 NN.run(config_num, read=read, from_hdf=from_hdf, epochs=epochs, batch_size=batch_size)
             

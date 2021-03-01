@@ -40,8 +40,8 @@ print("GPU list: ", tf.config.list_physical_devices('GPU'))
 class XGBoost(NN.NeuralNetwork):
     def __init__(self, channel, gen, binary=True, write_filename='NN_output', show_graph=False):
         print(f'Loaded in {channel}, binary={binary}, gen={gen}')
-        self.addons_config_reco = {'neutrino': {'load_alpha':False, 'termination':1000}, 'met': {}, 'ip': {}, 'sv': {}}
-        self.addons_config_gen = {'neutrino': {'load_alpha':False, 'termination':1000}, 'sv': {}}
+        self.addons_config_reco = {'neutrino': {'load_alpha':False, 'termination':1000, 'imputer_mode':'remove', 'save_alpha':True,}, 'met': {}, 'ip': {}, 'sv': {}}
+        self.addons_config_gen = {'neutrino': {'load_alpha':False, 'termination':1000, 'imputer_mode':'remove', 'save_alpha':True,}, 'met': {}, 'ip':{}, 'sv': {}}
         self.show_graph = show_graph
         self.channel = channel
         self.binary = binary
