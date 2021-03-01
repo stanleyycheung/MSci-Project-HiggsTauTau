@@ -45,8 +45,8 @@ class SmearingOptimizer:
         print('(SmearerOpt) Cleaning data')
         self.df_gen_reco_clean = self.cleanSmearingData(df_gen_reco)
         if self.channel == 'rho_rho':
-            # possible_features = ['pi_1', 'pi0_1', 'pi_2', 'pi0_2', 'metx', 'mety', 'ip_1', 'ip_2', 'sv_1', 'sv_2']
-            possible_features = ['pi_1', 'pi0_1']
+            possible_features = ['pi_1', 'pi0_1', 'pi_2', 'pi0_2', 'metx', 'mety', 'ip_1', 'ip_2', 'sv_1', 'sv_2']
+            # possible_features = ['pi_1', 'pi0_1']
         elif self.channel == 'rho_a1':
             possible_features = ['pi_1', 'pi0_1', 'pi_2', 'pi2_2', 'pi3_2', 'metx', 'mety', 'ip_1', 'ip_2', 'sv_1', 'sv_2']
         else:
