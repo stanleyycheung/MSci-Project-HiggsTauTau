@@ -342,7 +342,7 @@ class NeuralNetwork:
         addons = []
         addons_config = {}
         df_smeared_transformed = self.DL.createTrainTestData(df_smeared, df_ps_smeared, df_sm_smeared, binary, True, addons, addons_config, save=False)
-        df_orig_transformed = self.DL.createTrainTestData(df_clean, df_ps_clean, df_sm_clean, binary, True, addons, addons_config, save=False)
+        # df_orig_transformed = self.DL.createTrainTestData(df_clean, df_ps_clean, df_sm_clean, binary, True, addons, addons_config, save=False)
         # deal with imaginary numbers from boosting
         df_smeared_transformed = df_smeared_transformed.apply(np.real)
         m_features = [x for x in df_smeared_transformed.columns if x.startswith('m')]
@@ -352,8 +352,8 @@ class NeuralNetwork:
         # df.to_hdf('smearing/df_smeared.h5', 'df')
         # df_smeared.to_hdf('./smearing/df_smeared.h5', 'df')
         # df_clean.to_hdf('./smearing/df_orig.h5', 'df')
-        df_smeared_transformed.to_hdf('smearing/df_smeared_transformed.h5', 'df')
-        df_orig_transformed.to_hdf('smearing/df_orig_transformed.h5', 'df')
+        # df_smeared_transformed.to_hdf('smearing/df_smeared_transformed.h5', 'df')
+        # df_orig_transformed.to_hdf('smearing/df_orig_transformed.h5', 'df')
         # exit()
         return df_smeared_transformed
         
