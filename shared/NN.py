@@ -246,7 +246,7 @@ class NeuralNetwork:
             auc, optimal_auc = self.runWithSmearing([feature], from_hdf=from_hdf)
             degradation_auc = optimal_auc - auc
         # write to some file
-        f = open(self.save_dir + '/' + self.channel + '_smearing_aucs.txt', 'a')
+        f = open(self.save_dir + '/' + self.channel + '_' + str(self.config_num) +  '_smearing_aucs.txt', 'a')
         f.write('-'.join(features_list) + ',' + str(degradation_auc) + ',' + str(optimal_auc) + '\n')
         f.close()
         # plotting bar chart
