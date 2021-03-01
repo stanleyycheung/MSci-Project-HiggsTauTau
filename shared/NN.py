@@ -11,6 +11,7 @@ import numpy as np
 import datetime
 import config
 import argparse
+from tqdm import tqdm
 seed_value = config.seed_value
 # 1. Set the `PYTHONHASHSEED` environment variable at a fixed value
 os.environ['PYTHONHASHSEED'] = str(seed_value)
