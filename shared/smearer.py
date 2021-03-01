@@ -27,6 +27,7 @@ class Smearer(DataLoader):
             'pi0': 0.135,
         }
         for f in features:
+            f = str(f)
             if f.startswith('ip') or f.startswith('sv') or f.startswith('pi'):
                 if f.startswith('ip'):
                     base_feature = 'ip'

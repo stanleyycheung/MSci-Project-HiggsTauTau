@@ -345,7 +345,7 @@ class NeuralNetwork:
         addons = []
         addons_config = {}
         df_smeared_transformed = self.DL.createTrainTestData(df_smeared, df_ps_smeared, df_sm_smeared, binary, True, addons, addons_config, save=False)
-        df_orig_transformed = self.DL.createTrainTestData(df_clean, df_ps_clean, df_sm_clean, binary, True, addons, addons_config, save=False)
+        # df_orig_transformed = self.DL.createTrainTestData(df_clean, df_ps_clean, df_sm_clean, binary, True, addons, addons_config, save=False)
         # deal with imaginary numbers from boosting
         df_smeared_transformed = df_smeared_transformed.apply(np.real)
         m_features = [x for x in df_smeared_transformed.columns if x.startswith('m')]
@@ -355,8 +355,8 @@ class NeuralNetwork:
         # df.to_hdf('smearing/df_smeared.h5', 'df')
         # df_smeared.to_hdf('./smearing/df_smeared.h5', 'df')
         # df_clean.to_hdf('./smearing/df_orig.h5', 'df')
-        df_smeared_transformed.to_hdf('smearing/df_smeared_transformed.h5', 'df')
-        df_orig_transformed.to_hdf('smearing/df_orig_transformed.h5', 'df')
+        # df_smeared_transformed.to_hdf('smearing/df_smeared_transformed.h5', 'df')
+        # df_orig_transformed.to_hdf('smearing/df_orig_transformed.h5', 'df')
         # exit()
         return df_smeared_transformed
         
@@ -568,8 +568,8 @@ if __name__ == '__main__':
             # NN.runTuning(3, tuning_mode='random_kt')
 
     else:  # if we are on Kristof's computer
-        # NN = NeuralNetwork(channel='rho_rho', binary=True, write_filename='NN_output', show_graph=False)
-        NN = NeuralNetwork(channel='rho_a1', gen=False, binary=True, write_filename='NN_output', show_graph=False)
+        NN = NeuralNetwork(channel='rho_rho', gen=False, binary=True, write_filename='NN_output', show_graph=False)
+        # NN = NeuralNetwork(channel='rho_a1', gen=False, binary=True, write_filename='NN_output', show_graph=False)
         # NN = NeuralNetwork(channel='a1_a1', binary=True, write_filename='NN_output', show_graph=False)
         # NN.run(2, read=True, from_hdf=True, epochs=10, batch_size=10000)
         NN.run(1, read=False, from_hdf=False, epochs=10, batch_size=10000)
@@ -578,6 +578,6 @@ if __name__ == '__main__':
         #     NN.run(1, read=False, from_hdf=False, epochs=10, batch_size=10000)
         #     print()
         #     print()
-        #     print('ITERATION', _, 'done')
+        #     print('ITERATION', i, 'done')
         #     print()
         #     print()
