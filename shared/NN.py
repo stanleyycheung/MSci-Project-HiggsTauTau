@@ -191,7 +191,7 @@ class NeuralNetwork:
         self.addons_config_gen['neutrino']['load_alpha'] = False
         df = self.initializeWithSmear(features, self.addons_config_gen, from_hdf=from_hdf)
         # get config 3.9 model if not rho_rho, if rho_rho, get 3.2
-        with open('./NN_output/smearing_hp.txt', 'r') as fh:
+        with open(f'./NN_output/smearing_hp_{config_num}.txt', 'r') as fh:
             num_list = [line for line in fh]
         if self.channel == 'rho_rho':
             nn_arch = num_list[0].split(',')
@@ -247,7 +247,8 @@ class NeuralNetwork:
             auc, optimal_auc = self.runWithSmearing(config_num, [feature], from_hdf=from_hdf)
             degradation_auc = optimal_auc - auc
             # write to some file
-            print(feature + ',' + str(degradation_auc) + ',' + str(optimal_auc) + '\n')
+            # print(feature + ',' + str(degradation_auc) + ',' + str(auc) + ',' + str(optimal_auc) + '\n')
+            # f.write(feature + ',' + str(degradation_auc) + ',' + str(auc) + ',' + str(optimal_auc) + '\n')
             f.write(feature + ',' + str(degradation_auc) + ',' + str(optimal_auc) + '\n')
         f.close()
         # plotting bar chart
@@ -548,13 +549,13 @@ if __name__ == '__main__':
                 NN.runTuning(config_num, tuning_mode=tuning_mode)
             elif smearing:
                 # features = ['pi_1', 'pi0_1', 'pi_2', 'pi0_2']
-                # features = ['pi_1', 'pi0_1', 'pi_2', 'pi2_2', 'pi3_2']
+                features = ['pi_1', 'pi0_1', 'pi_2', 'pi2_2', 'pi3_2']
                 # features = ['pi_1', 'pi2_1', 'pi3_1', 'pi_2', 'pi2_2', 'pi3_2']
+                # features = ['metx', 'mety', 'ip_1', 'ip_2', 'sv_1', 'sv_2']
                 # features = ['metx', 'mety']
                 # features = ['ip_1', 'ip_2']
-                features = ['sv_1', 'sv_2']
-                # features = ['pi_1']
-                # features = ['mety']
+                # features = ['sv_1', 'sv_2']
+                # features = ['pi_1', 'pi0_1', 'pi_2', 'pi2_2', 'pi3_2', 'metx', 'mety', 'ip_1', 'ip_2', 'sv_1', 'sv_2']
                 NN.runSingleSmearAnalysis(features, from_hdf=from_hdf)
                 # NN.runWithSmearing(features, from_hdf=from_hdf) # !!! commented out to run my smearing instead
             else:
