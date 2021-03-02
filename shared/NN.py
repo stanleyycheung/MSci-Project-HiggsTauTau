@@ -246,13 +246,16 @@ class NeuralNetwork:
             # auc, optimal_auc = self.runWithSmearing(1.6, [feature], from_hdf=from_hdf)
             if isinstance(feature, list):
                 auc, optimal_auc = self.runWithSmearing(config_num, feature, from_hdf=from_hdf)
+                degradation_auc = optimal_auc - auc
+                f.write('-'.join(feature) + ',' + str(degradation_auc) + ',' + str(optimal_auc) + '\n')
             else:
                 auc, optimal_auc = self.runWithSmearing(config_num, [feature], from_hdf=from_hdf)
-            degradation_auc = optimal_auc - auc
+                degradation_auc = optimal_auc - auc
+                f.write(feature + ',' + str(degradation_auc) + ',' + str(optimal_auc) + '\n')
             # write to some file
             # print(feature + ',' + str(degradation_auc) + ',' + str(auc) + ',' + str(optimal_auc) + '\n')
             # f.write(feature + ',' + str(degradation_auc) + ',' + str(auc) + ',' + str(optimal_auc) + '\n')
-            f.write(feature + ',' + str(degradation_auc) + ',' + str(optimal_auc) + '\n')
+            
         f.close()
         # plotting bar chart
 
