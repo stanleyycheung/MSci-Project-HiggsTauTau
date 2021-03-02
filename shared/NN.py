@@ -252,6 +252,15 @@ class NeuralNetwork:
         f.close()
         # plotting bar chart
 
+    def runSmearAnalysis(self, features_list, from_hdf=True):
+        config_num = 1.6
+        f = open(self.save_dir + '/' + self.channel + '_' + str(config_num) +  '_smearing_aucs.txt', 'a')
+        auc, optimal_auc = self.runWithSmearing(config_num, features_list, from_hdf=from_hdf)
+        degradation_auc = optimal_auc - auc
+        print('-'.join(features_list) + ',' + str(degradation_auc) + ',' + str(optimal_auc) + '\n')
+        f.write('-'.join(features_list) + ',' + str(degradation_auc) + ',' + str(optimal_auc) + '\n')
+        f.close()
+
     def initialize(self, addons_config={}, read=True, from_hdf=True):
         """
         Initialize NN by loading/ creating the input data for NN via DataLoader
@@ -547,15 +556,18 @@ if __name__ == '__main__':
             if tuning:
                 NN.runTuning(config_num, tuning_mode=tuning_mode)
             elif smearing:
-<<<<<<< HEAD
-                # features = ['pi_1', 'pi_2']
-                features = ['pi0_1']
-                #features = ['mety']
-=======
-                features = ['pi_1', 'pi0_1']
+                # features = ['pi_1', 'pi0_1']
                 # features = ['pi_1']
                 # features = ['mety']
->>>>>>> 517219250793077f9fc0b12615b280a43184ef67
+                # features = ['pi_1', 'pi0_1', 'pi_2', 'pi2_2'] # first run for rhoa1
+                # features = ['pi3_2', 'metx', 'mety', 'ip_1'] # second run for rhoa1
+                # features = ['ip_2', 'sv_1', 'sv_2'] # third run for rhoa1
+                # features = ['sv_2'] # for extra run for rhoa1
+
+                # features = ['pi_1', 'pi2_1', 'pi3_1', 'pi_2'] # first run for a1a1
+                # features = ['pi2_2', 'pi3_2', 'metx', 'mety'] # second run for a1a1
+                features = ['ip_1', 'ip_2', 'sv_1', 'sv_2'] # third run for a1a1
+
                 NN.runSingleSmearAnalysis(features, from_hdf=from_hdf)
                 # NN.runWithSmearing(features, from_hdf=from_hdf) # !!! commented out to run my smearing instead
             else:
