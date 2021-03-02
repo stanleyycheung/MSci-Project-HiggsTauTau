@@ -35,6 +35,9 @@ class Smearer(DataLoader):
                     if self.channel == 'rho_rho':
                         print("SMEARER: NO SV IN RHO_RHO CHANNEL")
                         continue
+                    if self.channel == 'rho_a1' and '1' in f:
+                        print("SMEARER: NO SV_1 IN RHO_RHO CHANNEL")
+                        continue
                     base_feature = 'sv'
                 elif f.startswith('pi0'):
                     base_feature = 'pi0'
@@ -43,9 +46,6 @@ class Smearer(DataLoader):
                 if base_feature not in self.features_to_smear:
                     self.features_to_smear[base_feature] = set()
                 if '1' in f:
-                    if self.channel == 'rho_a1':
-                        print("SMEARER: NO SV_1 IN RHO_RHO CHANNEL")
-                        continue
                     self.features_to_smear[base_feature].add(base_feature+'_1')
                 elif '2' in f:
                     self.features_to_smear[base_feature].add(base_feature+'_2')
