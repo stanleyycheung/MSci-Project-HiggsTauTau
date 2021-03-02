@@ -188,7 +188,7 @@ class NeuralNetwork:
             self.gen = True
         print('SETTING SAVE_ALPHA TO FALSE')
         self.addons_config_gen['neutrino']['save_alpha'] = False
-        self.addons_config_gen['neutrino']['load_alpha'] = True
+        self.addons_config_gen['neutrino']['load_alpha'] = False
         df = self.initializeWithSmear(features, self.addons_config_gen, from_hdf=from_hdf)
         # get config 3.9 model if not rho_rho, if rho_rho, get 3.2
         with open('./NN_output/smearing_hp.txt', 'r') as fh:
@@ -240,7 +240,7 @@ class NeuralNetwork:
         stick with 1.6
         - feature 'pi_1' flag
         """
-        config_num = 1.6
+        config_num = 3.6
         f = open(self.save_dir + '/' + self.channel + '_' + str(config_num) +  '_smearing_aucs.txt', 'a')
         for feature in tqdm(features_list):
             # auc, optimal_auc = self.runWithSmearing(1.6, [feature], from_hdf=from_hdf)
@@ -342,8 +342,8 @@ class NeuralNetwork:
         # remove Nans
         df_smeared = df_smeared.dropna()
         df_ps_smeared, df_sm_smeared = SM.selectPSSMFromData(df_smeared)
-        addons = []
-        addons_config = {}
+        # addons = []
+        # addons_config = {}
         df_smeared_transformed = self.DL.createTrainTestData(df_smeared, df_ps_smeared, df_sm_smeared, binary, True, addons, addons_config, save=False)
         # df_orig_transformed = self.DL.createTrainTestData(df_clean, df_ps_clean, df_sm_clean, binary, True, addons, addons_config, save=False)
         # deal with imaginary numbers from boosting
@@ -547,7 +547,12 @@ if __name__ == '__main__':
             if tuning:
                 NN.runTuning(config_num, tuning_mode=tuning_mode)
             elif smearing:
-                features = ['pi_1', 'pi0_1']
+                # features = ['pi_1', 'pi0_1', 'pi_2', 'pi0_2']
+                # features = ['pi_1', 'pi0_1', 'pi_2', 'pi2_2', 'pi3_2']
+                # features = ['pi_1', 'pi2_1', 'pi3_1', 'pi_2', 'pi2_2', 'pi3_2']
+                # features = ['metx', 'mety']
+                # features = ['ip_1', 'ip_2']
+                features = ['sv_1', 'sv_2']
                 # features = ['pi_1']
                 # features = ['mety']
                 NN.runSingleSmearAnalysis(features, from_hdf=from_hdf)
