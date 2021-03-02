@@ -191,7 +191,7 @@ class NeuralNetwork:
         self.addons_config_gen['neutrino']['load_alpha'] = False
         df = self.initializeWithSmear(features, self.addons_config_gen, from_hdf=from_hdf)
         # get config 3.9 model if not rho_rho, if rho_rho, get 3.2
-        with open('./NN_output/smearing_hp.txt', 'r') as fh:
+        with open(f'./NN_output/smearing_hp_{config_num}.txt', 'r') as fh:
             num_list = [line for line in fh]
         if self.channel == 'rho_rho':
             nn_arch = num_list[0].split(',')
@@ -247,7 +247,8 @@ class NeuralNetwork:
             auc, optimal_auc = self.runWithSmearing(config_num, [feature], from_hdf=from_hdf)
             degradation_auc = optimal_auc - auc
             # write to some file
-            print(feature + ',' + str(degradation_auc) + ',' + str(optimal_auc) + '\n')
+            # print(feature + ',' + str(degradation_auc) + ',' + str(auc) + ',' + str(optimal_auc) + '\n')
+            # f.write(feature + ',' + str(degradation_auc) + ',' + str(auc) + ',' + str(optimal_auc) + '\n')
             f.write(feature + ',' + str(degradation_auc) + ',' + str(optimal_auc) + '\n')
         f.close()
         # plotting bar chart

@@ -70,8 +70,12 @@ class ConfigLoader:
             m_s = np.c_[self.df.m_rho0_2**2, self.df.m_rho02_2**2, self.df.m_rho0_2**2, self.df.m_rho02_2**2, self.df.m_a1_1**2, self.df.m_a1_1**2]
         else:
             raise Exception('Channel not understood!')
-
-        if config_num < 2:
+        if config_num < 1:
+            if config_num == 0.1 and self.channel == 'a1_a1':
+                return np.c_[self.df.pv_angle]
+            else:
+                raise Exception('Config_num not understood!')
+        elif config_num < 2:
             if config_num == 1.1:
                 return np.c_[aco_angles_calc]
             elif config_num == 1.2:
