@@ -26,10 +26,5 @@ x = np.arange(len(variables))
 plt.xticks(x, variables, rotation='vertical')
 plt.subplots_adjust(bottom=0.15)
 plt.ylabel('Degradation of AUC')
-<<<<<<< HEAD
-plt.title('Degradation of AUCs due to smearing rho-rho channel (config 1.6)')
-plt.savefig('degradations_rhorho_1.6.png')
-=======
 plt.title(f'Degradation of AUCs due to smearing, {channel}, {config_num}')
 plt.savefig(f'degradations_{channel}_{config_num}.png')
->>>>>>> 67a6b5fbcafdd947d7b5f3c3ba5f2c36dc520f60
