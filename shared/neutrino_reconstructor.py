@@ -192,7 +192,8 @@ class NeutrinoReconstructor:
             idx1 = max_theta < theta
             theta_f = theta
             theta_f[idx1] = max_theta[idx1]
-            return theta_f, sv_norm
+            # return theta_f, sv_norm
+            return theta_f, a1_p_norm
         
         if self.channel == 'rho_rho':
             print("No estimated tau/neutrino information in this channel!")
@@ -219,10 +220,13 @@ class NeutrinoReconstructor:
             a1_2 = pi_2 + pi3_2 + pi2_2
             a1_2 = pi_2 + pi3_2 + pi2_2
             sv_2 = np.c_[df['sv_x_2'], df['sv_y_2'], df['sv_z_2']]
-            theta_f_2, sv_norm_2 = getPhiTauForOne(a1_2, sv_2)
+            theta_f_2, a1_p_norm = getPhiTauForOne(a1_2, sv_2)
             sol_2 = self.ANSolution(a1_2.m, a1_2.p, theta_f_2)
-            tau_p_2_1 = sol_2[0][:, None]*sv_norm_2
-            tau_p_2_2 = sol_2[1][:, None]*sv_norm_2
+            # tau_p_2_1 = sol_2[0][:, None]*sv_norm_2
+            # tau_p_2_2 = sol_2[1][:, None]*sv_norm_2
+            tau_p_dir_2 = np.cos(theta_f_2)*a1_p_norm + np.sin(theta_f_2)*a1_p_norm
+            tau_p_2_1 = sol_2[0][:, None]*tau_p_dir_2
+            tau_p_2_2 = sol_2[1][:, None]*tau_p_dir_2
             E_tau_2_1 = np.sqrt(np.linalg.norm(tau_p_2_1, axis=1)**2 + self.m_tau**2)
             E_tau_2_2 = np.sqrt(np.linalg.norm(tau_p_2_2, axis=1)**2 + self.m_tau**2)
             tau_sol_2_1 = Momentum4(E_tau_2_1, *tau_p_2_1.T)
@@ -589,23 +593,26 @@ if __name__ == '__main__':
     channel = 'rho_rho'
     NR = NeutrinoReconstructor(binary=True, channel=channel)
     if not gen:
-        addons_config_reco = {'neutrino': {'load_alpha': False, 'termination': 1000}, 'met': {}, 'ip': {}, 'sv': {}}
+        addons_config_reco = {'neutrino': {'load_alpha':False, 'termination':1000, 'imputer_mode':'pass', 'save_alpha':True,}, 'met': {}, 'ip':{}, 'sv': {}}
         addons = addons_config_reco.keys()
         DL = DataLoader(config.variables_rho_rho, channel, gen)
         df, df_ps, df_sm = DL.cleanRecoData(DL.readRecoData(from_hdf=True))
         # df_br = DL.loadRecoData(True, addons).reset_index(drop=True)
-        df_br = pd.read_hdf('./alpha_analysis/df_br.h5', df)
+        # df_br = DL.createRecoData(binary=True, from_hdf=True, addons=addons, addons_config=addons_config_reco)
+        # df_br.to_hdf('./alpha_analysis/df_br.h5', 'df')
+        df_br = pd.read_hdf('./alpha_analysis/df_br.h5', 'df')
     else:
-        addons_config_gen = {'neutrino': {'load_alpha': False, 'termination': 1000}, 'sv': {}}
+        addons_config_gen = {'neutrino': {'load_alpha':False, 'termination':1000, 'imputer_mode':'remove', 'save_alpha':True,}, 'met': {}, 'ip':{}, 'sv': {}}
         addons = addons_config_gen.keys()
         DL = DataLoader(config.variables_gen_rho_rho, channel, gen)
         df, df_ps, df_sm = DL.cleanGenData(DL.readGenData(from_hdf=True))
         df_br = DL.loadGenData(True, addons).reset_index(drop=True)
     df_b, _ = DL.augmentDfToBinary(df_ps, df_sm)
-    df_br = NR.runAlphaReconstructor(df_b.reset_index(drop=True), df_br, load_alpha=True, termination=1000)
-    print(df_br.columns)
-    # df_br_imputed = NR.dealWithMissingData(df_br, mode='extra_trees')
-    # print(df_br_imputed.head())
+    df_br = NR.runAlphaReconstructor(df_b.reset_index(drop=True), df_br, load_alpha=True, termination=1000, save_alpha=False)
+    # print(df_br.columns)
+    df_br_imputed = NR.dealWithMissingData(df_br, mode='bayesian_ridge')
+    print(df_br_imputed.head())
+    print(df_br_imputed.columns)
     # NR = NeutrinoReconstructor(binary=False, channel='rho_rho')
     # # NR.testRunAlphaReconstructor()
     # variables_rho_rho = [
