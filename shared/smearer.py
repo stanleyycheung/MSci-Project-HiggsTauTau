@@ -24,6 +24,8 @@ class Smearer(DataLoader):
         self.features_to_smear = {}
         self.pi_mass = {
             'pi': 0.13957,
+            'pi2': 0.13957,
+            'pi3': 0.13957,
             'pi0': 0.135,
         }
         for f in features:
@@ -45,9 +47,19 @@ class Smearer(DataLoader):
                     base_feature = 'pi'
                 if base_feature not in self.features_to_smear:
                     self.features_to_smear[base_feature] = set()
-                if '1' in f:
+                if f.startswith('pi2'):
+                    if '_1' in f:
+                        self.features_to_smear[base_feature].add('pi2_1')
+                    elif '_2' in f:
+                        self.features_to_smear[base_feature].add('pi2_2')
+                elif f.startswith('pi3'):
+                    if '_1' in f:
+                        self.features_to_smear[base_feature].add('pi3_1')
+                    elif '_2' in f:
+                        self.features_to_smear[base_feature].add('pi3_2')
+                elif '_1' in f:
                     self.features_to_smear[base_feature].add(base_feature+'_1')
-                elif '2' in f:
+                elif '_2' in f:
                     self.features_to_smear[base_feature].add(base_feature+'_2')
                 else:
                     raise ValueError('Feature direction not found')
@@ -64,7 +76,7 @@ class Smearer(DataLoader):
                     self.features_to_smear[base_feature].add('mety')
                 else:
                     raise ValueError('Feature met not understood')
-                
+        # print(self.features_to_smear)
     def readSmearingData(self, from_hdf=False):
         if not from_hdf:
             tree_tt = uproot.open(Smearer.smearing_root_path)["ntuple"]
@@ -161,7 +173,11 @@ class Smearer(DataLoader):
         elif base_feature == 'ip' or base_feature == 'sv':
             # don't smear p_t -> only smear phi and eta
             reco_vertex = Momentum4(np.zeros(df.shape[0]), df_gen_reco['reco_'+base_feature+'_x_1'], df_gen_reco['reco_'+base_feature+'_y_1'], df_gen_reco['reco_'+base_feature+'_z_1'])
-            gen_vertex = Momentum4(np.zeros(df.shape[0]),  df_gen_reco[base_feature+'_x_1'], df_gen_reco[base_feature+'_y_1'], df_gen_reco[base_feature+'_z_1'])
+            if '1' in base_feature:
+                gen_vertex = Momentum4(np.zeros(df.shape[0]),  df_gen_reco[base_feature+'_x_1'], df_gen_reco[base_feature+'_y_1'], df_gen_reco[base_feature+'_z_1'])
+            else:
+                gen_vertex = Momentum4(np.zeros(df.shape[0]),  df_gen_reco[base_feature+'_x_2'], df_gen_reco[base_feature+'_y_2'], df_gen_reco[base_feature+'_z_2'])
+
             eta_dist = reco_vertex.eta - gen_vertex.eta
             phi_dist = reco_vertex.phi - gen_vertex.phi
             # p_t_dist = reco_vertex.p_t - gen_vertex.p_t
@@ -358,8 +374,8 @@ class Smearer(DataLoader):
 
 if __name__ == '__main__':
     import config
-    variables = config.variables_smearing_rho_rho
-    channel = 'rho_rho'
+    variables = config.variables_smearing_rho_a1
+    channel = 'rho_a1'
     gen = True
     DL = DataLoader(variables, channel, gen)
     # df = DL.loadRecoData(binary=True, addons=['neutrino', 'met', 'ip', 'sv'])
@@ -369,7 +385,8 @@ if __name__ == '__main__':
     df_to_smear_clean, _, _ = DL.cleanGenData(df_to_smear)
     # particles = ['pi_2', 'metx', 'mety',]
     # particles = ['metx', 'mety']
-    particles = ['ip_1', 'sv_1']
+    particles = ['sv_1', 'sv_2']
+    # particles = ['pi_2', 'pi2_2', 'pi3_2', 'pi_1', 'pi2_1', 'pi3_1']
     # particles = ['pi_1']
     s = Smearer(variables, channel, particles)
     # print(s.features_to_smear)
