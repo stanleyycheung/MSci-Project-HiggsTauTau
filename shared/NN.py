@@ -253,7 +253,7 @@ class NeuralNetwork:
                 degradation_auc = optimal_auc - auc
                 f.write(feature + ',' + str(degradation_auc) + ',' + str(optimal_auc) + '\n')
             # write to some file
-            # print(feature + ',' + str(degradation_auc) + ',' + str(auc) + ',' + str(optimal_auc) + '\n')
+            print(feature + ',' + str(degradation_auc) + ',' + str(auc) + ',' + str(optimal_auc) + '\n')
             # f.write(feature + ',' + str(degradation_auc) + ',' + str(auc) + ',' + str(optimal_auc) + '\n')
             
         f.close()
@@ -571,7 +571,9 @@ if __name__ == '__main__':
                 # features = ['pi3_2', 'metx', 'mety', 'ip_1'] # second run for rhoa1
                 # features = ['ip_2', 'sv_1', 'sv_2'] # third run for rhoa1
                 # features = ['sv_1', 'sv_2'] # for extra run for rhoa1
-                features = [['pi_1', 'pi_2'], ['pi0_1', 'pi0_2']]
+                # features = [['pi_1', 'pi_2'], ['pi0_1', 'pi0_2']]
+                features = [['pi_1', 'pi_2', 'pi2_2', 'pi3_2']]
+                # features = [['metx', 'mety'], ['ip_1', 'ip_2'], ['sv_1', 'sv_2']]
                 # features = ['pi_1', 'pi2_1', 'pi3_1', 'pi_2'] # first run for a1a1
                 # features = ['pi2_2', 'pi3_2', 'metx', 'mety'] # second run for a1a1
                 # features = ['ip_1', 'ip_2', 'sv_1', 'sv_2'] # third run for a1a1
