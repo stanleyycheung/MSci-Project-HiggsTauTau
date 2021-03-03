@@ -28,6 +28,11 @@ class Smearer(DataLoader):
             'pi3': 0.13957,
             'pi0': 0.135,
         }
+        self.reco_events = {
+            'rho_rho': 949753,
+            'rho_a1': 507946,
+            'a1_a1': 315135,
+        }
         for f in features:
             f = str(f)
             if f.startswith('ip') or f.startswith('sv') or f.startswith('pi'):
@@ -117,7 +122,7 @@ class Smearer(DataLoader):
         return df_ps, df_sm
 
 
-    def createSmearedData(self, df_to_smear, from_hdf=False, plot=False):
+    def createSmearedData(self, df_to_smear, from_hdf=False, plot=False, sample=False):
         df_to_smear_copy = df_to_smear.copy()
         print(f'(Smearer) Loading .root info with using HDF5 as {from_hdf}')
         df_gen_reco = self.readSmearingData(from_hdf=from_hdf)
@@ -128,7 +133,10 @@ class Smearer(DataLoader):
         for base_feature in self.features_to_smear:
             self.createSmearedDataForOneBaseFeature(df_gen_reco_clean, df_to_smear_copy, base_feature, self.features_to_smear[base_feature], plot=plot)
         print(f'Smeared: {self.features_to_smear}')
-        return df_to_smear_copy
+        if not sample:
+            return df_to_smear_copy
+        else:
+            return df_to_smear_copy.sample(n=self.reco_events[self.channel], random_state=config.seed_value)
 
     def createSmearedDataForOneBaseFeature(self, df_gen_reco, df, base_feature, features, plot=False):
         """
@@ -390,7 +398,8 @@ if __name__ == '__main__':
     # particles = ['pi_1']
     s = Smearer(variables, channel, particles)
     # print(s.features_to_smear)
-    df = s.createSmearedData(df_to_smear_clean, from_hdf=True, plot=True)
+    df = s.createSmearedData(df_to_smear_clean, from_hdf=True, plot=True, sample=True)
+    print(df.shape)
     # results = s.plotSmeared(df_to_smear_clean, from_hdf=True)
     # df.to_hdf('./smearing/df_smeared_2.h5', 'df')
     # df_to_smear_clean.to_hdf('./smearing/df_orig_2.h5', 'df')

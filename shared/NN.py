@@ -178,7 +178,7 @@ class NeuralNetwork:
         model.save(model_save_str)
 
 
-    def runWithSmearing(self, config_num, features: list, from_hdf=True):
+    def runWithSmearing(self, config_num, features: list, from_hdf=True, sample=False):
         """ 
         Need to update smearing_hp.txt to get hyperparameter for tuning 
         Trying for config 1.6 smearing first
@@ -189,7 +189,7 @@ class NeuralNetwork:
         print('SETTING SAVE_ALPHA TO FALSE')
         self.addons_config_gen['neutrino']['save_alpha'] = False
         self.addons_config_gen['neutrino']['load_alpha'] = False
-        df = self.initializeWithSmear(features, self.addons_config_gen, from_hdf=from_hdf)
+        df = self.initializeWithSmear(features, self.addons_config_gen, from_hdf=from_hdf, sample=sample)
         # get config 3.9 model if not rho_rho, if rho_rho, get 3.2
         with open(f'./NN_output/smearing_hp_{config_num}.txt', 'r') as fh:
             num_list = [line for line in fh]
@@ -314,7 +314,7 @@ class NeuralNetwork:
                 df = self.DL.createGenData(self.binary, from_hdf, addons, addons_config)
         return df
 
-    def initializeWithSmear(self, features, addons_config={}, from_hdf=True):
+    def initializeWithSmear(self, features, addons_config={}, from_hdf=True, sample=True):
         """ NO READ FUNCTION - ALWAYS CREATE SMEARING DIST """
         if not addons_config:
             addons = []
@@ -353,7 +353,7 @@ class NeuralNetwork:
         df_clean, df_ps_clean, df_sm_clean = self.DL.cleanGenData(df_orig)
         # print(df_clean.pi_E_1)
         SM = Smearer(variables_smear, self.channel, features)
-        df_smeared = SM.createSmearedData(df_clean, from_hdf=from_hdf)
+        df_smeared = SM.createSmearedData(df_clean, from_hdf=from_hdf, sample=sample)
         # remove Nans
         df_smeared = df_smeared.dropna()
         df_ps_smeared, df_sm_smeared = SM.selectPSSMFromData(df_smeared)
@@ -564,10 +564,15 @@ if __name__ == '__main__':
             elif smearing:
 
                 # features = [['pi_1', 'pi0_1', 'pi_2', 'pi2_2', 'pi3_2', 'metx', 'mety', 'ip_1', 'ip_2', 'sv_1', 'sv_2']]
+                # features = [['pi_1', 'pi2_1', 'pi3_1', 'pi_2', 'pi2_2', 'pi3_2', 'metx', 'mety', 'ip_1', 'ip_2', 'sv_1', 'sv_2']]
+                # features = ['pi0_1']
                 # features = ['pi_1', 'pi0_1', 'pi_2', 'pi2_2'] # first run for rhoa1
                 # features = ['pi3_2', 'metx', 'mety', 'ip_1'] # second run for rhoa1
                 # features = ['ip_2', 'sv_1', 'sv_2'] # third run for rhoa1
-                # features = ['sv_1', 'sv_2'] # for extra run for rhoa1
+                # features = [['sv_1', 'sv_2']] # for extra run for rhoa1
+                # features = [['pi_1', 'pi_2'], ['pi0_1', 'pi0_2']]
+                # features = [['pi_1', 'pi_2', 'pi2_2', 'pi3_2']]
+                # features = [['metx', 'mety'], ['ip_1', 'ip_2'], ['sv_1', 'sv_2']]
                 # features = ['pi_1', 'pi2_1', 'pi3_1', 'pi_2'] # first run for a1a1
                 # features = ['pi2_2', 'pi3_2', 'metx', 'mety'] # second run for a1a1
                 # features = ['ip_1', 'ip_2', 'sv_1', 'sv_2'] # third run for a1a1
