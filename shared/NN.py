@@ -248,14 +248,13 @@ class NeuralNetwork:
                 auc, optimal_auc = self.runWithSmearing(config_num, feature, from_hdf=from_hdf)
                 degradation_auc = optimal_auc - auc
                 f.write('-'.join(feature) + ',' + str(degradation_auc) + ',' + str(optimal_auc) + '\n')
+                print('-'.join(feature) + ',' + str(degradation_auc) + ',' + str(auc) + ',' + str(optimal_auc) + '\n')
+
             else:
                 auc, optimal_auc = self.runWithSmearing(config_num, [feature], from_hdf=from_hdf)
                 degradation_auc = optimal_auc - auc
                 f.write(feature + ',' + str(degradation_auc) + ',' + str(optimal_auc) + '\n')
-            # write to some file
-            print(feature + ',' + str(degradation_auc) + ',' + str(auc) + ',' + str(optimal_auc) + '\n')
-            # f.write(feature + ',' + str(degradation_auc) + ',' + str(auc) + ',' + str(optimal_auc) + '\n')
-            
+                print(feature + ',' + str(degradation_auc) + ',' + str(auc) + ',' + str(optimal_auc) + '\n')            
         f.close()
         # plotting bar chart
 
@@ -564,15 +563,13 @@ if __name__ == '__main__':
                 NN.runTuning(config_num, tuning_mode=tuning_mode)
             elif smearing:
 
-                # features = ['pi_1', 'pi_2', 'metx', 'mety', 'ip_1', 'ip_2', 'sv_1', 'sv_2'] # for rhorho
-                # features = ['pi_1', 'pi0_1', 'pi_2', 'pi2_2', 'pi3_2', 'metx', 'mety', 'ip_1', 'ip_2', 'sv_1', 'sv_2'] # for rhoa1
-
+                features = [['pi_1', 'pi0_1', 'pi_2', 'pi2_2', 'pi3_2', 'metx', 'mety', 'ip_1', 'ip_2', 'sv_1', 'sv_2']]
                 # features = ['pi_1', 'pi0_1', 'pi_2', 'pi2_2'] # first run for rhoa1
                 # features = ['pi3_2', 'metx', 'mety', 'ip_1'] # second run for rhoa1
                 # features = ['ip_2', 'sv_1', 'sv_2'] # third run for rhoa1
                 # features = ['sv_1', 'sv_2'] # for extra run for rhoa1
                 # features = [['pi_1', 'pi_2'], ['pi0_1', 'pi0_2']]
-                features = [['pi_1', 'pi_2', 'pi2_2', 'pi3_2']]
+                # features = [['pi_1', 'pi_2', 'pi2_2', 'pi3_2']]
                 # features = [['metx', 'mety'], ['ip_1', 'ip_2'], ['sv_1', 'sv_2']]
                 # features = ['pi_1', 'pi2_1', 'pi3_1', 'pi_2'] # first run for a1a1
                 # features = ['pi2_2', 'pi3_2', 'metx', 'mety'] # second run for a1a1
