@@ -240,7 +240,7 @@ class NeuralNetwork:
         stick with 1.6
         - feature 'pi_1' flag
         """
-        config_num = 3.6
+        config_num = 1.6
         f = open(self.save_dir + '/' + self.channel + '_' + str(config_num) +  '_smearing_aucs.txt', 'a')
         for feature in tqdm(features_list):
             # auc, optimal_auc = self.runWithSmearing(1.6, [feature], from_hdf=from_hdf)
@@ -575,7 +575,8 @@ if __name__ == '__main__':
                 # features = ['pi2_2', 'pi3_2', 'metx', 'mety'] # second run for a1a1
                 # features = ['ip_1', 'ip_2', 'sv_1', 'sv_2'] # third run for a1a1
 
-                features = [['pi_1', 'pi_2'], ['pi0_1', 'pi0_2']] # for rho-rho groups
+                # features = [['pi_1', 'pi_2', 'pi0_1', 'pi0_2']] # for rho-rho groups
+                features = [['pi_1', 'pi_2', 'pi2_2', 'pi3_2'], ['pi0_1']] # for rho-a1 groups
 
                 NN.runSingleSmearAnalysis(features, from_hdf=from_hdf)
                 # NN.runSmearAnalysis(features, from_hdf=from_hdf)
