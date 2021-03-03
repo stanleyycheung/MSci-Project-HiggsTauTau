@@ -563,7 +563,7 @@ if __name__ == '__main__':
                 NN.runTuning(config_num, tuning_mode=tuning_mode)
             elif smearing:
 
-                features = [['pi_1', 'pi0_1', 'pi_2', 'pi2_2', 'pi3_2', 'metx', 'mety', 'ip_1', 'ip_2', 'sv_1', 'sv_2']]
+                # features = [['pi_1', 'pi0_1', 'pi_2', 'pi2_2', 'pi3_2', 'metx', 'mety', 'ip_1', 'ip_2', 'sv_1', 'sv_2']]
                 # features = ['pi_1', 'pi0_1', 'pi_2', 'pi2_2'] # first run for rhoa1
                 # features = ['pi3_2', 'metx', 'mety', 'ip_1'] # second run for rhoa1
                 # features = ['ip_2', 'sv_1', 'sv_2'] # third run for rhoa1
@@ -573,7 +573,8 @@ if __name__ == '__main__':
                 # features = ['ip_1', 'ip_2', 'sv_1', 'sv_2'] # third run for a1a1
 
                 # features = [['pi_1', 'pi_2', 'pi0_1', 'pi0_2']] # for rho-rho groups
-                features = [['pi_1', 'pi_2', 'pi2_2', 'pi3_2'], ['pi0_1']] # for rho-a1 groups
+                # features = [['pi_1', 'pi_2', 'pi2_2', 'pi3_2', 'pi0_1']] # for rho-a1 groups
+                features = [['pi_1', 'pi2_1', 'pi3_1', 'pi_2', 'pi2_2', 'pi3_2']] # for a1-a1 groups
 
                 NN.runSingleSmearAnalysis(features, from_hdf=from_hdf)
                 # NN.runSmearAnalysis(features, from_hdf=from_hdf)
