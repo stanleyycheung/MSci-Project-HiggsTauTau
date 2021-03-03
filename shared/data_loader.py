@@ -81,14 +81,14 @@ class DataLoader:
         df_inputs = pd.read_hdf(hdf_file_name+'.h5', 'df')
         return df_inputs
 
-    def createRecoData(self, binary, from_hdf=True, addons=[], addons_config={}):
+    def createRecoData(self, binary, from_hdf=True, addons=[], addons_config={}, strict=False):
         """
         Creates the input (reco) data for the NN either from .root file or a previously saved .h5 file
         """
         print(f'Loading .root info with using HDF5 as {from_hdf}')
         df = self.readRecoData(from_hdf=from_hdf)
         print('Cleaning data')
-        df_clean, df_ps_clean, df_sm_clean = self.cleanRecoData(df)
+        df_clean, df_ps_clean, df_sm_clean = self.cleanRecoData(df, strict=strict)
         print('Creating input data')
         df_inputs = self.createTrainTestData(df_clean, df_ps_clean, df_sm_clean, binary, False, addons, addons_config, save=True)
         return df_inputs
@@ -146,19 +146,30 @@ class DataLoader:
         df_sm = df_clean[(df_clean["rand"] < df_clean["wt_cp_sm"]/2)]
         return df_clean, df_ps, df_sm
 
-    def cleanRecoData(self, df):
+    def cleanRecoData(self, df, strict=False):
         """
         Selects correct channel for reco data, whilst seperating sm/ps distributions as well
         """
+        if strict:
+            print('Using strict mode!')
         if self.channel == 'rho_rho':
             # select only rho-rho events
-            df_clean = df[(df['mva_dm_1'] == 1) & (df['mva_dm_2'] == 1) & (df["tau_decay_mode_1"] == 1) & (df["tau_decay_mode_2"] == 1)]
+            if not strict:
+                df_clean = df[(df['mva_dm_1'] == 1) & (df['mva_dm_2'] == 1) & (df["tau_decay_mode_1"] == 1) & (df["tau_decay_mode_2"] == 1)]
+            else:
+                df_clean = df[(df['mva_dm_1'] == 1) & (df['mva_dm_2'] == 1) & (df["tau_decay_mode_1"] == 1) & (df["tau_decay_mode_2"] == 1) & (df['tauFlag_1'] == 1) & (df['tauFlag_2'] == 1)]
             # drop unnecessary labels
             # df_clean = df.drop(["mva_dm_1", "mva_dm_2", "tau_decay_mode_1", "tau_decay_mode_2", "wt_cp_sm", "wt_cp_ps", "wt_cp_mm", "rand"], axis=1).reset_index(drop=True)
         elif self.channel == 'rho_a1':
-            df_clean = df[(df['mva_dm_1'] == 1) & (df['mva_dm_2'] == 10) & (df["tau_decay_mode_1"] == 1)]
+            if not strict:
+                df_clean = df[(df['mva_dm_1'] == 1) & (df['mva_dm_2'] == 10) & (df["tau_decay_mode_1"] == 1)]
+            else:
+                df_clean = df[(df['mva_dm_1'] == 1) & (df['mva_dm_2'] == 10) & (df["tau_decay_mode_1"] == 1) & (df['tauFlag_1'] == 1) & (df['tauFlag_2'] == 10)]
         elif self.channel == 'a1_a1':
-            df_clean = df[(df['mva_dm_1'] == 10) & (df['mva_dm_2'] == 10)]
+            if not strict:
+                df_clean = df[(df['mva_dm_1'] == 10) & (df['mva_dm_2'] == 10)]
+            else:
+                df_clean = df[(df['mva_dm_1'] == 10) & (df['mva_dm_2'] == 10) & (df['tauFlag_1'] == 10) & (df['tauFlag_2'] == 10)]
             # removing events with 0s in them
             # df_clean = df_clean.loc[~(df_clean['pi_px_1'] == 0)]
         else:
