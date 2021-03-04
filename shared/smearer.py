@@ -5,6 +5,7 @@ import uproot
 from pylorentz import Momentum4
 from data_loader import DataLoader
 import os
+import config
 # import scipy.interpolate as interpolate
 
 class Smearer(DataLoader):
