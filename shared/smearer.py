@@ -7,6 +7,7 @@ from data_loader import DataLoader
 import os
 import config
 # import scipy.interpolate as interpolate
+import config
 
 class Smearer(DataLoader):
     """SAVING DF IS NOT SUPPORTED """

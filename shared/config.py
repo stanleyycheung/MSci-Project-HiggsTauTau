@@ -8,6 +8,7 @@ selectors_reco = [
     "wt_cp_sm", "wt_cp_ps", "wt_cp_mm", "rand",
     "mva_dm_1", "mva_dm_2",
     "tau_decay_mode_1", "tau_decay_mode_2",
+    "tauFlag_1", "tauFlag_2"
 ]
 selectors_gen = [
     "wt_cp_sm", "wt_cp_ps", "wt_cp_mm", "rand",

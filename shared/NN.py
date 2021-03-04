@@ -61,9 +61,9 @@ class NeuralNetwork:
         self.write_dir = 'NN_output'
         self.model = None
 
-    def run(self, config_num, read=True, from_hdf=True, epochs=50, batch_size=1024, patience=15):
+    def run(self, config_num, read=True, from_hdf=True, epochs=50, batch_size=1024, patience=15, strict=False):
         if not self.gen:
-            df = self.initialize(self.addons_config_reco, read=read, from_hdf=from_hdf)
+            df = self.initialize(self.addons_config_reco, read=read, from_hdf=from_hdf, strict=strict)
         else:
             df = self.initialize(self.addons_config_gen, read=read, from_hdf=from_hdf)
         X_train, X_test, y_train, y_test = self.configure(df, config_num)
@@ -267,7 +267,7 @@ class NeuralNetwork:
         f.write('-'.join(features_list) + ',' + str(degradation_auc) + ',' + str(optimal_auc) + '\n')
         f.close()
 
-    def initialize(self, addons_config={}, read=True, from_hdf=True):
+    def initialize(self, addons_config={}, read=True, from_hdf=True, strict=False):
         """
         Initialize NN by loading/ creating the input data for NN via DataLoader
         Params:
@@ -309,7 +309,7 @@ class NeuralNetwork:
                 df = self.DL.loadGenData(self.binary, addons)
         else:
             if not self.gen:
-                df = self.DL.createRecoData(self.binary, from_hdf, addons, addons_config)
+                df = self.DL.createRecoData(self.binary, from_hdf, addons, addons_config, strict=strict)
             else:
                 df = self.DL.createGenData(self.binary, from_hdf, addons, addons_config)
         return df
@@ -520,6 +520,7 @@ def parser():
     parser.add_argument('-la', '--load_alpha', action='store_false', default=True, help='if load alpha')
     parser.add_argument('-ter', '--termination', type=int, default=1000, help='termination number for alpha')
     parser.add_argument('-imp', '--imputer_mode', default='remove', choices=['pass', 'flag', 'bayesian_ridge', 'decision_tree', 'extra_trees', 'kn_reg', 'knn', 'mean', 'remove'], help='imputation mode for neutrino information')
+    parser.add_argument('-st', '--strict', action='store_true', default=False, help='if show strict tau selector mode')
 
     args = parser.parse_args()
     return args
@@ -548,6 +549,7 @@ if __name__ == '__main__':
             load_alpha = args.load_alpha
             termination = args.termination
             imputer_mode = args.imputer_mode
+            strict = args.strict
             NN = NeuralNetwork(channel=channel, gen=gen, binary=binary, write_filename='NN_output', show_graph=show_graph)
             if not gen:
                 NN.addons_config_reco['neutrino']['load_alpha'] = load_alpha
@@ -589,7 +591,7 @@ if __name__ == '__main__':
                 # NN.runSmearAnalysis(features, from_hdf=from_hdf)
                 # NN.runWithSmearing(features, from_hdf=from_hdf) # !!! commented out to run my smearing instead
             else:
-                NN.run(config_num, read=read, from_hdf=from_hdf, epochs=epochs, batch_size=batch_size)
+                NN.run(config_num, read=read, from_hdf=from_hdf, epochs=epochs, batch_size=batch_size, strict=strict)
             
         else:
             NN = NeuralNetwork(channel='rho_rho', gen=True, binary=True, write_filename='NN_output', show_graph=False)

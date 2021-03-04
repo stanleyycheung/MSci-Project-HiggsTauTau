@@ -224,7 +224,7 @@ class NeutrinoReconstructor:
             sol_2 = self.ANSolution(a1_2.m, a1_2.p, theta_f_2)
             # tau_p_2_1 = sol_2[0][:, None]*sv_norm_2
             # tau_p_2_2 = sol_2[1][:, None]*sv_norm_2
-            tau_p_dir_2 = np.cos(theta_f_2)*a1_p_norm + np.sin(theta_f_2)*a1_p_norm
+            tau_p_dir_2 = np.cos(theta_f_2)[:, None]*a1_p_norm + np.sin(theta_f_2)[:, None]*a1_p_norm
             tau_p_2_1 = sol_2[0][:, None]*tau_p_dir_2
             tau_p_2_2 = sol_2[1][:, None]*tau_p_dir_2
             E_tau_2_1 = np.sqrt(np.linalg.norm(tau_p_2_1, axis=1)**2 + self.m_tau**2)
