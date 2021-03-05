@@ -192,8 +192,8 @@ class NeutrinoReconstructor:
             idx1 = max_theta < theta
             theta_f = theta
             theta_f[idx1] = max_theta[idx1]
-            # return theta_f, sv_norm
-            return theta_f, a1_p_norm
+            return theta_f, sv_norm
+            # return theta_f, a1_p_norm
         
         if self.channel == 'rho_rho':
             print("No estimated tau/neutrino information in this channel!")
@@ -220,13 +220,13 @@ class NeutrinoReconstructor:
             a1_2 = pi_2 + pi3_2 + pi2_2
             a1_2 = pi_2 + pi3_2 + pi2_2
             sv_2 = np.c_[df['sv_x_2'], df['sv_y_2'], df['sv_z_2']]
-            theta_f_2, a1_p_norm = getPhiTauForOne(a1_2, sv_2)
+            theta_f_2, sv_norm_2 = getPhiTauForOne(a1_2, sv_2)
             sol_2 = self.ANSolution(a1_2.m, a1_2.p, theta_f_2)
-            # tau_p_2_1 = sol_2[0][:, None]*sv_norm_2
-            # tau_p_2_2 = sol_2[1][:, None]*sv_norm_2
-            tau_p_dir_2 = np.cos(theta_f_2)[:, None]*a1_p_norm + np.sin(theta_f_2)[:, None]*a1_p_norm
-            tau_p_2_1 = sol_2[0][:, None]*tau_p_dir_2
-            tau_p_2_2 = sol_2[1][:, None]*tau_p_dir_2
+            tau_p_2_1 = sol_2[0][:, None]*sv_norm_2
+            tau_p_2_2 = sol_2[1][:, None]*sv_norm_2
+            # tau_p_dir_2 = np.cos(theta_f_2)[:, None]*a1_p_norm + np.sin(theta_f_2)[:, None]*a1_p_norm
+            # tau_p_2_1 = sol_2[0][:, None]*tau_p_dir_2
+            # tau_p_2_2 = sol_2[1][:, None]*tau_p_dir_2
             E_tau_2_1 = np.sqrt(np.linalg.norm(tau_p_2_1, axis=1)**2 + self.m_tau**2)
             E_tau_2_2 = np.sqrt(np.linalg.norm(tau_p_2_2, axis=1)**2 + self.m_tau**2)
             tau_sol_2_1 = Momentum4(E_tau_2_1, *tau_p_2_1.T)
