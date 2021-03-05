@@ -1,9 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-channel = 'a1_a1'
+channel = 'rho_a1'
 config_num = 3.6
-skip_beginning = 0
+skip_beginning = 10
 f = open(f'{channel}_{config_num}_smearing_aucs.txt', 'r')
 data = f.read().split('\n')
 f.close()
@@ -19,7 +19,7 @@ for iline, line in enumerate(data):
         break
     if len(elements[0].split('-')) >= 10:
         variables.append('all features')
-    elif iline == 0:
+    elif iline == 10:
         variables.append('charged pions')
     else:
         variables.append(elements[0])
