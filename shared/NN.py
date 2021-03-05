@@ -575,10 +575,12 @@ if __name__ == '__main__':
                 # features = [['sv_1', 'sv_2']] # for extra run for rhoa1
                 # features = [['pi_1', 'pi_2'], ['pi0_1', 'pi0_2']]
                 # features = [['pi_1', 'pi_2', 'pi2_2', 'pi3_2']]
-                features = [['metx', 'mety'], ['ip_1', 'ip_2'], ['sv_1', 'sv_2']]
+                # features = [['metx', 'mety'], ['ip_1', 'ip_2'], ['sv_1', 'sv_2']]
                 # features = ['pi_1', 'pi2_1', 'pi3_1', 'pi_2'] # first run for a1a1
                 # features = ['pi2_2', 'pi3_2', 'metx', 'mety'] # second run for a1a1
                 # features = ['ip_1', 'ip_2', 'sv_1', 'sv_2'] # third run for a1a1
+
+                features = [['pi_1', 'pi_2', 'pi2_2', 'pi3_2', 'pi0_1', 'metx', 'mety', 'ip_1', 'ip_2', 'sv_1', 'sv_2']]
 
                 NN.runSingleSmearAnalysis(features, from_hdf=from_hdf)
                 # NN.runSmearAnalysis(features, from_hdf=from_hdf)
