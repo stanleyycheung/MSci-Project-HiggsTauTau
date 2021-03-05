@@ -362,10 +362,11 @@ class NeuralNetwork:
         df_smeared_transformed = self.DL.createTrainTestData(df_smeared, df_ps_smeared, df_sm_smeared, binary, True, addons, addons_config, save=False)
         # df_orig_transformed = self.DL.createTrainTestData(df_clean, df_ps_clean, df_sm_clean, binary, True, addons, addons_config, save=False)
         # deal with imaginary numbers from boosting
-        df_smeared_transformed = df_smeared_transformed.apply(np.real)
-        m_features = [x for x in df_smeared_transformed.columns if x.startswith('m')]
-        for m_feature in m_features:
-            df_smeared_transformed = df_smeared_transformed[df_smeared_transformed[m_feature]!=0]
+        df_smeared_transformed = df_smeared_transformed.dropna()
+        # df_smeared_transformed = df_smeared_transformed.apply(np.real)
+        # m_features = [x for x in df_smeared_transformed.columns if x.startswith('m')]
+        # for m_feature in m_features:
+        #     df_smeared_transformed = df_smeared_transformed[df_smeared_transformed[m_feature]!=0]
         # debugging part
         # df.to_hdf('smearing/df_smeared.h5', 'df')
         # df_smeared.to_hdf('./smearing/df_smeared.h5', 'df')

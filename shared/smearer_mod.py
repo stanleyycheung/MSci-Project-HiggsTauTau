@@ -45,7 +45,7 @@ class Smearer(DataLoader):
                         print("SMEARER: NO SV IN RHO_RHO CHANNEL")
                         continue
                     if self.channel == 'rho_a1' and '1' in f:
-                        print("SMEARER: NO SV_1 IN RHO_RHO CHANNEL")
+                        print("SMEARER: NO SV_1 IN RHO_A1 CHANNEL")
                         continue
                     base_feature = 'sv'
                 elif f.startswith('pi0'):
@@ -111,7 +111,7 @@ class Smearer(DataLoader):
         else:
             raise ValueError('Incorrect channel inputted')
         df_clean = df_clean.dropna()
-        # df_clean = df_clean.loc[~(df_clean == 0).all(axis=1)]
+        # df_clean = df.dropna()
         # df_clean = df_clean[(df_clean == -9999.0).sum(1) < 2]
         # df_ps = df_clean[(df_clean["rand"] < df_clean["wt_cp_ps"]/2)]
         # df_sm = df_clean[(df_clean["rand"] < df_clean["wt_cp_sm"]/2)]
@@ -124,7 +124,6 @@ class Smearer(DataLoader):
         return df_ps, df_sm
 
     def createSmearedData(self, df_to_smear, from_hdf=False, plot=False, sample=False):
-        print(f'To smear: {self.features_to_smear}')
         df_to_smear_copy = df_to_smear.copy()
         print(f'(Smearer) Loading .root info with using HDF5 as {from_hdf}')
         df_gen_reco = self.readSmearingData(from_hdf=from_hdf)
@@ -133,8 +132,9 @@ class Smearer(DataLoader):
         df_gen_reco_clean = self.cleanSmearingData(df_gen_reco)
         print('(Smearer) Creating smearing distribution')
         for base_feature in self.features_to_smear:
-            print(f'Smearing: {base_feature}')
+            print(f'(Smearer) Smearing: {base_feature}')
             self.createSmearedDataForOneBaseFeature(df_gen_reco_clean, df_to_smear_copy, base_feature, self.features_to_smear[base_feature], plot=plot)
+        print(f'Smeared: {self.features_to_smear}')
         if not sample:
             return df_to_smear_copy
         else:
@@ -152,8 +152,8 @@ class Smearer(DataLoader):
             # energy smearing
             for feature in features:
                 if feature == 'metx':
-                    df_temp = df_gen_reco[(df_gen_reco['metx'] != -9999) & (df_gen_reco['reco_metx'] != -9999)]
-                    metx_dist = df_temp['reco_metx'] - df_temp['metx']
+                    df_gen_reco_temp = df_gen_reco[(df_gen_reco['metx'] != -9999) & (df_gen_reco['reco_metx'] != -9999)]
+                    metx_dist = df_gen_reco_temp['reco_metx'] - df_gen_reco_temp['metx']
                     metx_sample = self.inverseTransformSampling(metx_dist, df.shape[0])
                     smeared_metx = df['metx'] + metx_sample
                     if plot:
@@ -167,8 +167,8 @@ class Smearer(DataLoader):
                         plt.savefig('./smearing/fig/metx_hexbin.PNG')
                     df['metx'] = smeared_metx
                 elif feature == 'mety':
-                    df_temp = df_gen_reco[(df_gen_reco['mety'] != -9999) & (df_gen_reco['reco_mety'] != -9999)]
-                    mety_dist = df_temp['reco_mety'] - df_temp['mety']
+                    df_gen_reco_temp = df_gen_reco[(df_gen_reco['mety'] != -9999) & (df_gen_reco['reco_mety'] != -9999)]
+                    mety_dist = df_gen_reco_temp['reco_mety'] - df_gen_reco_temp['mety']
                     mety_sample = self.inverseTransformSampling(mety_dist, df.shape[0])
                     smeared_mety = df['mety'] + mety_sample
                     if plot:
@@ -182,22 +182,28 @@ class Smearer(DataLoader):
                         plt.savefig('./smearing/fig/mety_hexbin.PNG')
                     df['mety'] = smeared_mety
         elif base_feature == 'ip' or base_feature == 'sv':
+            df_gen_reco_temp = df_gen_reco[(df_gen_reco[base_feature+'_x_1'] != -9999) & (df_gen_reco['reco_'+base_feature+'_x_1'] != -9999)
+                                           & (df_gen_reco[base_feature+'_y_1'] != -9999) & (df_gen_reco['reco_'+base_feature+'_y_1'] != -9999)
+                                           & (df_gen_reco[base_feature+'_z_1'] != -9999) & (df_gen_reco['reco_'+base_feature+'_z_1'] != -9999)]
 
-            df_temp = df_gen_reco[(df_gen_reco[base_feature+'_x_1'] != -9999) & (df_gen_reco['reco_'+base_feature+'_x_1'] != -9999)
-                                  & (df_gen_reco[base_feature+'_y_1'] != -9999) & (df_gen_reco['reco_'+base_feature+'_y_1'] != -9999)
-                                  & (df_gen_reco[base_feature+'_z_1'] != -9999) & (df_gen_reco['reco_'+base_feature+'_z_1'] != -9999)]
             # don't smear p_t -> only smear phi and eta
-            reco_vertex = Momentum4(np.zeros(df.shape[0]), df_temp['reco_'+base_feature+'_x_1'], df_temp['reco_'+base_feature+'_y_1'], df_temp['reco_'+base_feature+'_z_1'])
+            reco_vertex = Momentum4(np.zeros(df.shape[0]), df_gen_reco_temp['reco_'+base_feature+'_x_1'], df_gen_reco_temp['reco_'+base_feature+'_y_1'], df_gen_reco_temp['reco_'+base_feature+'_z_1'])
             # if '1' in base_feature:
             #     gen_vertex = Momentum4(np.zeros(df.shape[0]),  df_gen_reco[base_feature+'_x_1'], df_gen_reco[base_feature+'_y_1'], df_gen_reco[base_feature+'_z_1'])
             # else:
             #     gen_vertex = Momentum4(np.zeros(df.shape[0]),  df_gen_reco[base_feature+'_x_2'], df_gen_reco[base_feature+'_y_2'], df_gen_reco[base_feature+'_z_2'])
-            gen_vertex = Momentum4(np.zeros(df.shape[0]),  df_temp[base_feature+'_x_1'], df_temp[base_feature+'_y_1'], df_temp[base_feature+'_z_1'])
+            gen_vertex = Momentum4(np.zeros(df.shape[0]), df_gen_reco_temp[base_feature+'_x_1'], df_gen_reco_temp[base_feature+'_y_1'], df_gen_reco_temp[base_feature+'_z_1'])
+            # mask_eta = ~np.isfinite(reco_vertex.eta)|~np.isfinite(gen_vertex.eta)
+            # reco_eta = reco_vertex.eta[~mask_eta]
+            # gen_eta = gen_vertex.eta[~mask_eta]
             eta_dist = reco_vertex.eta - gen_vertex.eta
+            # mask_phi = ~np.isfinite(reco_vertex.phi)|~np.isfinite(gen_vertex.phi)
+            # reco_phi = reco_vertex.eta[~mask_phi]
+            # gen_phi = gen_vertex.eta[~mask_phi]
             phi_dist = reco_vertex.phi - gen_vertex.phi
             # p_t_dist = reco_vertex.p_t - gen_vertex.p_t
-            eta_dist_sample = self.inverseTransformSampling(eta_dist, df.shape[0])
-            phi_dist_sample = self.inverseTransformSampling(phi_dist, df.shape[0])
+            eta_dist_sample = self.inverseTransformSampling(eta_dist[np.isfinite(eta_dist)], df.shape[0])
+            phi_dist_sample = self.inverseTransformSampling(phi_dist[np.isfinite(phi_dist)], df.shape[0])
             # p_t_dist_sample = self.inverseTransformSampling(p_t_dist, df.shape[0])
             for feature in features:
                 label_parts = feature.split('_')
@@ -252,20 +258,21 @@ class Smearer(DataLoader):
             # 1) smear energy
             # 2) fix mass and recompute p_mag
             # 3) smear phi, eta to get direction
-            df_temp = df_gen_reco[(df_gen_reco[base_feature+'_E_1'] != -9999) & (df_gen_reco['reco_'+base_feature+'_E_1'] != -9999)
-                                  & (df_gen_reco[base_feature+'_px_1'] != -9999) & (df_gen_reco['reco_'+base_feature+'_px_1'] != -9999)
-                                  & (df_gen_reco[base_feature+'_py_1'] != -9999) & (df_gen_reco['reco_'+base_feature+'_py_1'] != -9999)
-                                  & (df_gen_reco[base_feature+'_pz_1'] != -9999) & (df_gen_reco['reco_'+base_feature+'_pz_1'] != -9999)]
+            df_gen_reco_temp = df_gen_reco[(df_gen_reco[base_feature+'_E_1'] != -9999) & (df_gen_reco['reco_'+base_feature+'_E_1'] != -9999)
+                                           & (df_gen_reco[base_feature+'_px_1'] != -9999) & (df_gen_reco['reco_'+base_feature+'_px_1'] != -9999)
+                                           & (df_gen_reco[base_feature+'_py_1'] != -9999) & (df_gen_reco['reco_'+base_feature+'_py_1'] != -9999)
+                                           & (df_gen_reco[base_feature+'_pz_1'] != -9999) & (df_gen_reco['reco_'+base_feature+'_pz_1'] != -9999)]
             particle_mass = self.pi_mass[base_feature]
-            reco_particle = Momentum4(df_temp['reco_'+base_feature+'_E_1'], df_temp['reco_'+base_feature+'_px_1'],
-                                      df_temp['reco_'+base_feature+'_py_1'], df_temp['reco_'+base_feature+'_pz_1'])
-            gen_particle = Momentum4(df_temp[base_feature+'_E_1'], df_temp[base_feature+'_px_1'], df_temp[base_feature+'_py_1'], df_temp[base_feature+'_pz_1'])
+            reco_particle = Momentum4(df_gen_reco_temp['reco_'+base_feature+'_E_1'], df_gen_reco_temp['reco_'+base_feature+'_px_1'],
+                                      df_gen_reco_temp['reco_'+base_feature+'_py_1'], df_gen_reco_temp['reco_'+base_feature+'_pz_1'])
+            gen_particle = Momentum4(df_gen_reco_temp[base_feature+'_E_1'], df_gen_reco_temp[base_feature+'_px_1'],
+                                     df_gen_reco_temp[base_feature+'_py_1'], df_gen_reco_temp[base_feature+'_pz_1'])
             e_dist = (reco_particle.e - gen_particle.e)/gen_particle.e
             eta_dist = reco_particle.eta - gen_particle.eta
             phi_dist = reco_particle.phi - gen_particle.phi
-            e_dist_sample = self.inverseTransformSampling(e_dist, df.shape[0])
-            eta_dist_sample = self.inverseTransformSampling(eta_dist, df.shape[0])
-            phi_dist_sample = self.inverseTransformSampling(phi_dist, df.shape[0])
+            e_dist_sample = self.inverseTransformSampling(e_dist[np.isfinite(e_dist)], df.shape[0])
+            eta_dist_sample = self.inverseTransformSampling(eta_dist[np.isfinite(eta_dist)], df.shape[0])
+            phi_dist_sample = self.inverseTransformSampling(phi_dist[np.isfinite(phi_dist)], df.shape[0])
             for feature in features:
                 label_parts = feature.split('_')
                 E_label = label_parts[0]+'_E_'+label_parts[1]
@@ -395,10 +402,10 @@ class Smearer(DataLoader):
 
 if __name__ == '__main__':
     import config
-    variables = config.variables_smearing_rho_rho
-    channel = 'rho_rho'
+    variables = config.variables_smearing_rho_a1
+    channel = 'rho_a1'
     gen = True
-    DL = DataLoader(config.variables_gen_rho_rho, channel, gen)
+    DL = DataLoader(config.variables_gen_rho_a1, channel, gen)
     # df = DL.loadRecoData(binary=True, addons=['neutrino', 'met', 'ip', 'sv'])
     # df = DL.readRecoData(from_hdf=True)
     # df_clean, _, _ = DL.cleanRecoData(df)
@@ -406,15 +413,16 @@ if __name__ == '__main__':
     df_to_smear_clean, _, _ = DL.cleanGenData(df_to_smear)
     # particles = ['pi_2', 'metx', 'mety',]
     # particles = ['metx', 'mety']
+    # particles = ['metx']
     # particles = ['sv_1', 'sv_2']
     # particles = ['ip_1', 'ip_2']
-    particles = ['pi_1', 'pi0_1']
-    # particles = ['pi_1', 'pi0_1', 'pi_2', 'pi2_2', 'pi3_2']
+    particles = ['pi_1', 'pi0_1', 'pi_2', 'pi2_2', 'pi3_2']
     # particles = ['pi_2', 'pi2_2', 'pi3_2', 'pi_1', 'pi2_1', 'pi3_1']
     # particles = ['pi_1']
     s = Smearer(variables, channel, particles)
-    # print(s.features_to_smear)
-    df = s.createSmearedData(df_to_smear_clean, from_hdf=True, plot=True, sample=False)
+    print(s.features_to_smear)
+    print(df_to_smear_clean.columns)
+    df = s.createSmearedData(df_to_smear_clean, from_hdf=True, plot=True, sample=True)
     print(df.shape)
     # results = s.plotSmeared(df_to_smear_clean, from_hdf=True)
     # df.to_hdf('./smearing/df_smeared_2.h5', 'df')

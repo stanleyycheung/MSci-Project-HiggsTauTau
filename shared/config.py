@@ -87,7 +87,7 @@ variables_smearing_rho_a1 = [
     'reco_metx', 'reco_mety',
     'reco_pi_E_1', 'reco_pi_px_1', 'reco_pi_py_1', 'reco_pi_pz_1',
     'reco_pi0_E_1', 'reco_pi0_px_1', 'reco_pi0_py_1', 'reco_pi0_pz_1'
-] + particles_rho_a1 + selectors_gen + met_gen + sv_2 + ip
+] + particles_rho_a1 + selectors_gen + met_gen + sv_1 + ip
 
 variables_smearing_a1_a1 = [
     'reco_dm_1',
