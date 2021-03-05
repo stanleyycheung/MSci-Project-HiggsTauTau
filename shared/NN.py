@@ -245,7 +245,7 @@ class NeuralNetwork:
         for feature in tqdm(features_list):
             # auc, optimal_auc = self.runWithSmearing(1.6, [feature], from_hdf=from_hdf)
             if isinstance(feature, list):
-                auc, optimal_auc = self.runWithSmearing(config_num, feature, from_hdf=from_hdf) # sample=True taken out now
+                auc, optimal_auc = self.runWithSmearing(config_num, feature, from_hdf=from_hdf, sample=True) # sample=True taken out now
                 degradation_auc = optimal_auc - auc
                 f.write('-'.join(feature) + ',' + str(degradation_auc) + ',' + str(optimal_auc) + '\n')
                 print('-'.join(feature) + ',' + str(degradation_auc) + ',' + str(auc) + ',' + str(optimal_auc) + '\n')
