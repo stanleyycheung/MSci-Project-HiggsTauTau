@@ -182,13 +182,11 @@ class Smearer(DataLoader):
                         plt.savefig('./smearing/fig/mety_hexbin.PNG')
                     df['mety'] = smeared_mety
         elif base_feature == 'ip' or base_feature == 'sv':
-
             df_temp = df_gen_reco[(df_gen_reco[base_feature+'_x_1'] != -9999) & (df_gen_reco['reco_'+base_feature+'_x_1'] != -9999)
                                   & (df_gen_reco[base_feature+'_y_1'] != -9999) & (df_gen_reco['reco_'+base_feature+'_y_1'] != -9999)
                                   & (df_gen_reco[base_feature+'_z_1'] != -9999) & (df_gen_reco['reco_'+base_feature+'_z_1'] != -9999)]
             df_temp = df_temp[~((df_temp[base_feature+'_x_1']<1e-20) & (df_temp[base_feature+'_y_1']<1e-20) & (df_temp[base_feature+'_z_1']<1e-20))]
             df_temp = df_temp[~((df_temp['reco_'+base_feature+'_x_1']<1e-20) & (df_temp['reco_'+base_feature+'_y_1']<1e-20) & (df_temp['reco_'+base_feature+'_z_1']<1e-20))]
-
             # don't smear p_t -> only smear phi and eta
             reco_vertex = Momentum4(np.zeros(df_temp.shape[0]), df_temp['reco_'+base_feature+'_x_1'], df_temp['reco_'+base_feature+'_y_1'], df_temp['reco_'+base_feature+'_z_1'])
             # if '1' in base_feature:
@@ -265,7 +263,8 @@ class Smearer(DataLoader):
             reco_particle = Momentum4(df_temp['reco_'+base_feature+'_E_1'], df_temp['reco_'+base_feature+'_px_1'],
                                       df_temp['reco_'+base_feature+'_py_1'], df_temp['reco_'+base_feature+'_pz_1'])
             gen_particle = Momentum4(df_temp[base_feature+'_E_1'], df_temp[base_feature+'_px_1'], df_temp[base_feature+'_py_1'], df_temp[base_feature+'_pz_1'])
-            e_dist = (reco_particle.e - gen_particle.e)/gen_particle.e
+            # e_dist = (reco_particle.e - gen_particle.e)/gen_particle.e
+            e_dist = reco_particle.e - gen_particle.e
             eta_dist = reco_particle.eta - gen_particle.eta
             phi_dist = reco_particle.phi - gen_particle.phi
             e_dist_sample = self.inverseTransformSampling(e_dist, df.shape[0])
@@ -278,7 +277,8 @@ class Smearer(DataLoader):
                 y_label = label_parts[0]+'_py_'+label_parts[1]
                 z_label = label_parts[0]+'_pz_'+label_parts[1]
                 particle = Momentum4(df[E_label], df[x_label], df[y_label], df[z_label])
-                smeared_e = particle.e*(1+e_dist_sample)
+                # smeared_e = particle.e*(1+e_dist_sample)
+                smeared_e = particle.e + e_dist_sample
                 smeared_eta = particle.eta + eta_dist_sample
                 smeared_phi = particle.phi + phi_dist_sample
                 smeared_p_mag = np.sqrt(smeared_e**2 - particle_mass**2)
@@ -409,13 +409,14 @@ if __name__ == '__main__':
     # df_clean, _, _ = DL.cleanRecoData(df)
     df_to_smear = DL.readGenData(from_hdf=True)
     df_to_smear_clean, _, _ = DL.cleanGenData(df_to_smear)
+    # df_to_smear_clean.to_hdf('./smearing/df_to_smear.h5', 'df')
     # particles = ['pi_2', 'metx', 'mety',]
     # particles = ['metx', 'mety']
     # particles = ['sv_1', 'sv_2']
-    particles = ['ip_1', 'ip_2']
+    # particles = ['ip_1', 'ip_2']
     # particles = ['pi_1', 'pi0_1']
     # particles = ['pi_1', 'pi0_1', 'pi_2', 'pi2_2', 'pi3_2']
-    # particles = ['pi_2', 'pi2_2', 'pi3_2', 'pi_1', 'pi2_1', 'pi3_1']
+    particles = ['pi_2', 'pi2_2', 'pi3_2', 'pi_1', 'pi2_1', 'pi3_1']
     # particles = ['pi_1']
     s = Smearer(variables, channel, particles)
     # print(s.features_to_smear)
