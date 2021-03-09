@@ -385,10 +385,10 @@ class AlphaCalculator:
             alpha_1 = (E_miss_x - alpha_2*had_2[1])/had_1[1]
         elif mode == 2:
             alpha_1 = (E_miss_y*had_2[1]-E_miss_x*had_2[2])/(had_1[2]*had_2[1]-had_1[1]*had_2[2])
-            alpha_2 = (self.m_higgs**2/2 - self.m_tau**2)/(had_1[0]*had_2[0]-had_1[1]*had_2[1]-had_1[2]*had_1[2]-had_1[3]*had_1[3])/(1+alpha_1) - 1
+            alpha_2 = (self.m_higgs**2/2 - self.m_tau**2)/(had_1[0]*had_2[0]-had_1[1]*had_2[1]-had_1[2]*had_2[2]-had_1[3]*had_2[3])/(1+alpha_1) - 1
         elif mode == 3:
             alpha_2 = (E_miss_y*had_1[1]-E_miss_x*had_1[2])/(had_2[2]*had_1[1]-had_2[1]*had_1[2])
-            alpha_1 = (self.m_higgs**2/2 - self.m_tau**2)/(had_1[0]*had_2[0]-had_1[1]*had_2[1]-had_1[2]*had_1[2]-had_1[3]*had_1[3])/(1+alpha_2) - 1
+            alpha_1 = (self.m_higgs**2/2 - self.m_tau**2)/(had_1[0]*had_2[0]-had_1[1]*had_2[1]-had_1[2]*had_2[2]-had_1[3]*had_2[3])/(1+alpha_2) - 1
         else:
             raise ValueError('incorrect mode in parameters')
         return alpha_1, alpha_2 
