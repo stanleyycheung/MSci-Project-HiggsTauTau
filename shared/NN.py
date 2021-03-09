@@ -240,12 +240,12 @@ class NeuralNetwork:
         stick with 1.6
         - feature 'pi_1' flag
         """
-        config_num = 3.6
+        config_num = 1.6
         f = open(self.save_dir + '/' + self.channel + '_' + str(config_num) +  '_smearing_aucs.txt', 'a')
         for feature in tqdm(features_list):
             # auc, optimal_auc = self.runWithSmearing(1.6, [feature], from_hdf=from_hdf)
             if isinstance(feature, list):
-                auc, optimal_auc = self.runWithSmearing(config_num, feature, from_hdf=from_hdf)
+                auc, optimal_auc = self.runWithSmearing(config_num, feature, from_hdf=from_hdf, sample=True) # sample=True should it be turned on?
                 degradation_auc = optimal_auc - auc
                 f.write('-'.join(feature) + ',' + str(degradation_auc) + ',' + str(optimal_auc) + '\n')
                 print('-'.join(feature) + ',' + str(degradation_auc) + ',' + str(auc) + ',' + str(optimal_auc) + '\n')
@@ -575,10 +575,13 @@ if __name__ == '__main__':
                 # features = [['sv_1', 'sv_2']] # for extra run for rhoa1
                 # features = [['pi_1', 'pi_2'], ['pi0_1', 'pi0_2']]
                 # features = [['pi_1', 'pi_2', 'pi2_2', 'pi3_2']]
-                features = [['metx', 'mety'], ['ip_1', 'ip_2'], ['sv_1', 'sv_2']]
+                # features = [['metx', 'mety'], ['ip_1', 'ip_2'], ['sv_1', 'sv_2']]
                 # features = ['pi_1', 'pi2_1', 'pi3_1', 'pi_2'] # first run for a1a1
                 # features = ['pi2_2', 'pi3_2', 'metx', 'mety'] # second run for a1a1
                 # features = ['ip_1', 'ip_2', 'sv_1', 'sv_2'] # third run for a1a1
+
+                # features = [['pi_1', 'pi_2', 'pi2_2', 'pi3_2', 'pi0_1', 'metx', 'mety', 'ip_1', 'ip_2', 'sv_1', 'sv_2']] # rho-a1
+                features = [['pi_1', 'pi2_1', 'pi3_1', 'pi_2', 'pi2_2', 'pi3_2', 'metx', 'mety', 'ip_1', 'ip_2', 'sv_1', 'sv_2']] # a1-a1
 
                 NN.runSingleSmearAnalysis(features, from_hdf=from_hdf)
                 # NN.runSmearAnalysis(features, from_hdf=from_hdf)
