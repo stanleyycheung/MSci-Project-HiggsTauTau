@@ -154,7 +154,7 @@ class Smearer(DataLoader):
             for feature in features:
                 if feature == 'metx':
                     df_temp = df_gen_reco[(df_gen_reco['metx'] != -9999) & (df_gen_reco['reco_metx'] != -9999)]
-                    metx_dist = df_temp['reco_metx'] - df_temp['metx']
+                    metx_dist = df_temp['metx'] - df_temp['reco_metx']
                     metx_sample = self.inverseTransformSampling(metx_dist, df.shape[0])
                     smeared_metx = df['metx'] + metx_sample
                     if plot:
@@ -169,7 +169,7 @@ class Smearer(DataLoader):
                     df['metx'] = smeared_metx
                 elif feature == 'mety':
                     df_temp = df_gen_reco[(df_gen_reco['mety'] != -9999) & (df_gen_reco['reco_mety'] != -9999)]
-                    mety_dist = df_temp['reco_mety'] - df_temp['mety']
+                    mety_dist = df_temp['mety'] - df_temp['reco_mety']
                     mety_sample = self.inverseTransformSampling(mety_dist, df.shape[0])
                     smeared_mety = df['mety'] + mety_sample
                     if plot:
@@ -195,23 +195,47 @@ class Smearer(DataLoader):
             # else:
             #     gen_vertex = Momentum4(np.zeros(df.shape[0]),  df_gen_reco[base_feature+'_x_2'], df_gen_reco[base_feature+'_y_2'], df_gen_reco[base_feature+'_z_2'])
             gen_vertex = Momentum4(np.zeros(df_temp.shape[0]),  df_temp[base_feature+'_x_1'], df_temp[base_feature+'_y_1'], df_temp[base_feature+'_z_1'])
-            eta_dist = reco_vertex.eta - gen_vertex.eta
-            phi_dist = reco_vertex.phi - gen_vertex.phi
-            # p_t_dist = reco_vertex.p_t - gen_vertex.p_t
-            eta_dist_sample = self.inverseTransformSampling(eta_dist, df.shape[0])
-            phi_dist_sample = self.inverseTransformSampling(phi_dist, df.shape[0])
+            # eta_dist = gen_vertex.eta - reco_vertex.eta
+            # phi_dist = gen_vertex.phi - reco_vertex.phi
+            # p_t_dist = gen_vertex.p_t - reco_vertex.p_t
+            # p_mag_dist = gen_vertex.p - reco_vertex.p
+            # gen_vertex_theta = 2*np.arctan(np.exp(-gen_vertex.eta))
+            # reco_vertex_theta = 2*np.arctan(np.exp(-reco_vertex.eta))
+            # gen_vertex_theta = gen_vertex.p_z/gen_vertex.p
+            # reco_vertex_theta = reco_vertex.p_z/reco_vertex.p
+            # theta_dist = gen_vertex_theta - reco_vertex_theta
+            # eta_dist_sample = self.inverseTransformSampling(eta_dist, df.shape[0])
+            # phi_dist_sample = self.inverseTransformSampling(phi_dist, df.shape[0])
             # p_t_dist_sample = self.inverseTransformSampling(p_t_dist, df.shape[0])
+            # theta_dist_sample = self.inverseTransformSampling(theta_dist, df.shape[0])
+            # p_mag_dist_sample = self.inverseTransformSampling(p_mag_dist, df.shape[0])
+
+            p_x_dist = gen_vertex.p_x - reco_vertex.p_x
+            p_y_dist = gen_vertex.p_y - reco_vertex.p_y
+            p_z_dist = gen_vertex.p_z - reco_vertex.p_z
+            p_x_dist_sample = self.inverseTransformSampling(p_x_dist, df.shape[0])
+            p_y_dist_sample = self.inverseTransformSampling(p_y_dist, df.shape[0])
+            p_z_dist_sample = self.inverseTransformSampling(p_z_dist, df.shape[0])
             for feature in features:
                 label_parts = feature.split('_')
                 x_label = label_parts[0]+'_x_'+label_parts[1]
                 y_label = label_parts[0]+'_y_'+label_parts[1]
                 z_label = label_parts[0]+'_z_'+label_parts[1]
                 vertex = Momentum4(np.zeros(df.shape[0]), df[x_label], df[y_label], df[z_label])
-                smeared_eta = vertex.eta + eta_dist_sample
-                smeared_phi = vertex.phi + phi_dist_sample
+                # smeared_eta = vertex.eta + eta_dist_sample
+                # smeared_phi = vertex.phi + phi_dist_sample
                 # smeared_p_t = vertex.p_t + p_t_dist_sample
+                # smeared_theta = 2*np.arctan(np.exp(-vertex.eta)) + theta_dist_sample
+                # smeared_p_mag = vertex.p + p_mag_dist_sample
                 # smeared_vertex = Momentum4.e_eta_phi_pt(np.zeros(df.shape[0]), smeared_eta, smeared_phi, smeared_p_t)
-                smeared_vertex = Momentum4.e_eta_phi_pt(np.zeros(df.shape[0]), smeared_eta, smeared_phi, vertex.p_t)
+                # smeared_vertex = Momentum4.e_eta_phi_pt(np.zeros(df.shape[0]), smeared_eta, smeared_phi, vertex.p_t)
+                # smeared_p_x = smeared_p_mag*np.sin(smeared_theta)*np.cos(smeared_phi)
+                # smeared_p_y = smeared_p_mag*np.sin(smeared_theta)*np.sin(smeared_phi)
+                # smeared_p_z = smeared_p_mag*np.cos(smeared_theta)
+                smeared_p_x = vertex.p_x + p_x_dist_sample
+                smeared_p_y = vertex.p_x + p_y_dist_sample
+                smeared_p_z = vertex.p_x + p_z_dist_sample
+                smeared_vertex = Momentum4(np.zeros(df.shape[0]), smeared_p_x, smeared_p_y, smeared_p_z)
                 if plot:
                     plt.figure()
                     d = pd.DataFrame(np.c_[df[x_label], smeared_vertex.p_x])
@@ -265,9 +289,9 @@ class Smearer(DataLoader):
                                       df_temp['reco_'+base_feature+'_py_1'], df_temp['reco_'+base_feature+'_pz_1'])
             gen_particle = Momentum4(df_temp[base_feature+'_E_1'], df_temp[base_feature+'_px_1'], df_temp[base_feature+'_py_1'], df_temp[base_feature+'_pz_1'])
             # e_dist = (reco_particle.e - gen_particle.e)/gen_particle.e
-            e_dist = reco_particle.e - gen_particle.e
-            eta_dist = reco_particle.eta - gen_particle.eta
-            phi_dist = reco_particle.phi - gen_particle.phi
+            e_dist = gen_particle.e - reco_particle.e
+            eta_dist = gen_particle.eta - reco_particle.eta
+            phi_dist = gen_particle.phi - reco_particle.phi
             e_dist_sample = self.inverseTransformSampling(e_dist, df.shape[0])
             eta_dist_sample = self.inverseTransformSampling(eta_dist, df.shape[0])
             phi_dist_sample = self.inverseTransformSampling(phi_dist, df.shape[0])
@@ -410,14 +434,14 @@ if __name__ == '__main__':
     # df_clean, _, _ = DL.cleanRecoData(df)
     df_to_smear = DL.readGenData(from_hdf=True)
     df_to_smear_clean, _, _ = DL.cleanGenData(df_to_smear)
-    # df_to_smear_clean.to_hdf('./smearing/df_to_smear.h5', 'df')
+    df_to_smear_clean.to_hdf('./smearing/df_to_smear.h5', 'df')
     # particles = ['pi_2', 'metx', 'mety',]
     # particles = ['metx', 'mety']
-    # particles = ['sv_1', 'sv_2']
+    particles = ['sv_1', 'sv_2', 'ip_1', 'ip_2']
     # particles = ['ip_1', 'ip_2']
     # particles = ['pi_1', 'pi0_1']
     # particles = ['pi_1', 'pi0_1', 'pi_2', 'pi2_2', 'pi3_2']
-    particles = ['pi_2', 'pi2_2', 'pi3_2', 'pi_1', 'pi2_1', 'pi3_1']
+    # particles = ['pi_2', 'pi2_2', 'pi3_2', 'pi_1', 'pi2_1', 'pi3_1']
     # particles = ['pi_1']
     s = Smearer(variables, channel, particles)
     # print(s.features_to_smear)
