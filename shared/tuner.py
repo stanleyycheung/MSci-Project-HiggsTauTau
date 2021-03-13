@@ -316,7 +316,7 @@ class Tuner:
         lrate = params['learning_rate']
         optimizer = tf.keras.optimizers.Adam(learning_rate=lrate)
         model.compile(loss='binary_crossentropy', optimizer=optimizer, metrics=metrics)
-        early_stop = tf.keras.callbacks.EarlyStopping(monitor='auc', patience=20)
+        early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_auc', patience=20)
         return model, early_stop
 
     def hyperOptObjNN(self, params):

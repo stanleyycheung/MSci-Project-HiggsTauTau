@@ -436,11 +436,11 @@ if __name__ == '__main__':
     df_to_smear_clean.to_hdf('./smearing/df_to_smear.h5', 'df')
     # particles = ['pi_2', 'metx', 'mety',]
     # particles = ['metx', 'mety']
-    particles = ['sv_1', 'sv_2', 'ip_1', 'ip_2']
+    # particles = ['sv_1', 'sv_2', 'ip_1', 'ip_2']
     # particles = ['ip_1', 'ip_2']
     # particles = ['pi_1', 'pi0_1']
     # particles = ['pi_1', 'pi0_1', 'pi_2', 'pi2_2', 'pi3_2']
-    # particles = ['pi_2', 'pi2_2', 'pi3_2', 'pi_1', 'pi2_1', 'pi3_1']
+    particles = ['pi_2', 'pi2_2', 'pi3_2', 'pi_1', 'pi2_1', 'pi3_1']
     # particles = ['pi_1']
     s = Smearer(variables, channel, particles)
     # print(s.features_to_smear)

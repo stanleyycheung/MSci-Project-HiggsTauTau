@@ -129,6 +129,11 @@ class NeutrinoReconstructor:
                 features = [str(x)+'_br' for x in config.particles_rho_a1] + neutrino_features
             else:
                 features = [str(x)+'_br' for x in config.particles_a1_a1] + neutrino_features
+            features_left = []
+            for f in df_br.columns:
+                if f in features:
+                    continue
+                features_left.append(f)
             df_br_red = df_br[features]
             print(df_br_red.columns)
             if mode == 'bayesian_ridge':
@@ -139,7 +144,7 @@ class NeutrinoReconstructor:
                 # itImp = IterativeImputer(missing_values=alpha_flag, random_state=0, verbose=1)
                 itImp = IterativeImputer(missing_values=NeutrinoReconstructor.DEFAULT_VALUE, random_state=config.seed_value, verbose=2, max_iter=10)
                 df_br_imputed = pd.DataFrame(itImp.fit_transform(df_br_red), columns=df_br_red.columns)
-                return df_br_imputed
+                return pd.concat([df_br_imputed, df_br[features_left]], axis=1)
                 # return self.calculateFromAlpha(df_br_imputed, df_br_imputed['alpha_1'], df_br_imputed['alpha_2'])
             elif mode == 'decision_tree':
                 itImp = IterativeImputer(estimator=DecisionTreeRegressor(max_features='sqrt', random_state=config.seed_value),

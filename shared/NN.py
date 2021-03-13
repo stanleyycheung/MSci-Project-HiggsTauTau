@@ -61,7 +61,7 @@ class NeuralNetwork:
         self.write_dir = 'NN_output'
         self.model = None
 
-    def run(self, config_num, read=True, from_hdf=True, epochs=50, batch_size=1024, patience=15, strict=False):
+    def run(self, config_num, read=True, from_hdf=True, epochs=50, batch_size=1024, patience=20, strict=False):
         if not self.gen:
             df = self.initialize(self.addons_config_reco, read=read, from_hdf=from_hdf, strict=strict)
         else:
@@ -392,7 +392,7 @@ class NeuralNetwork:
             print('Using Kristof model')
             self.model = self.kristof_model(X_train.shape[1])
         self.history = tf.keras.callbacks.History()
-        early_stop = tf.keras.callbacks.EarlyStopping(monitor='auc', patience=patience)
+        early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_auc', patience=patience)
         if not self.gen:
             log_dir = f"logs/fit/{self.channel}_reco/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + f'_{self.config_num}_{self.layers}_{self.epochs}_{self.batch_size}_{self.model_str}'
         else:
