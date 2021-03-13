@@ -240,16 +240,12 @@ class NeuralNetwork:
         stick with 1.6
         - feature 'pi_1' flag
         """
-        config_num = 1.6
+        config_num = 3.6
         f = open(self.save_dir + '/' + self.channel + '_' + str(config_num) +  '_smearing_aucs.txt', 'a')
         for feature in tqdm(features_list):
             # auc, optimal_auc = self.runWithSmearing(1.6, [feature], from_hdf=from_hdf)
             if isinstance(feature, list):
-<<<<<<< HEAD
-                auc, optimal_auc = self.runWithSmearing(config_num, feature, from_hdf=from_hdf, sample=True) # sample=True taken out now
-=======
                 auc, optimal_auc = self.runWithSmearing(config_num, feature, from_hdf=from_hdf, sample=True) # sample=True should it be turned on?
->>>>>>> 62deaddf4b2168b0dc8041a5dd84bb3ac2f19427
                 degradation_auc = optimal_auc - auc
                 f.write('-'.join(feature) + ',' + str(degradation_auc) + ',' + str(optimal_auc) + '\n')
                 print('-'.join(feature) + ',' + str(degradation_auc) + ',' + str(auc) + ',' + str(optimal_auc) + '\n')
@@ -482,7 +478,10 @@ class NeuralNetwork:
         self.model_str = "kristof_model"
         metrics = ['AUC', 'accuracy']
         model.add(tf.keras.layers.Dense(300, input_dim=dimensions, kernel_initializer='normal', activation='relu'))
-        model.add(tf.keras.layers.Dense(300, kernel_initializer='normal', activation='relu'))
+        model.add(tf.keras.layers.Dense(300, kernel_initializer='normal', activation='relu')) # !!! originally there were just 2 hidden layers
+        #model.add(tf.keras.layers.Dense(300, kernel_initializer='normal', activation='relu'))
+        #model.add(tf.keras.layers.Dense(300, kernel_initializer='normal', activation='relu'))
+        #model.add(tf.keras.layers.Dense(300, kernel_initializer='normal', activation='relu'))
         model.add(tf.keras.layers.Dense(1, activation="sigmoid"))
         opt = tf.keras.optimizers.Adam(learning_rate=0.001)
         model.compile(loss='binary_crossentropy', optimizer=opt, metrics=metrics)
