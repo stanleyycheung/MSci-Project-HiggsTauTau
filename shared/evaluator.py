@@ -18,6 +18,7 @@ class Evaluator:
         self.binary = binary
         self.save_dir = save_dir
         self.config_str = config_str
+        self.write_roc = False # !!! set this to False if you don't want to write out fpr and tpr to files
 
     def evaluate(self, X_test, y_test, history, plot=True, show=True, **kwargs):
         # use test dataset for evaluation
@@ -33,6 +34,15 @@ class Evaluator:
             _, w_a_test, _, w_b_test = train_test_split(w_a, w_b, test_size=0.2, random_state=123456)
             auc, y_label_roc, y_pred_roc = self.customROCScore(y_pred_test, w_a_test, w_b_test)
             fpr, tpr, _ = roc_curve(y_label_roc, y_pred_roc, sample_weight=np.r_[w_a_test, w_b_test])
+        if self.write_roc:
+            f = open(f'{self.save_dir}/fpr_{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}_{self.config_str}.txt', 'w')
+            for fpr_i in fpr:
+                f.write(str(fpr_i)+' ')
+            f.close()
+            f = open(f'{self.save_dir}/tpr_{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}_{self.config_str}.txt', 'w')
+            for tpr_i in tpr:
+                f.write(str(tpr_i)+' ')
+            f.close()
         if plot:
             self.plotROCCurve(fpr, tpr, auc)
             try:
