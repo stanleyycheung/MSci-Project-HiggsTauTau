@@ -1,7 +1,6 @@
 from multiprocessing import Value
 import numpy as np
 from sklearn.model_selection import train_test_split
-from neutrino_reconstructor import NeutrinoReconstructor
 
 
 class ConfigLoader:

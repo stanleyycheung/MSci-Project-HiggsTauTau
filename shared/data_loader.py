@@ -905,11 +905,13 @@ class DataLoader:
                 # df_inputs['p_t_nu_2'] = p_t_nu_2
                 # df_inputs['p_z_nu_1'] = p_z_nu_1
                 # df_inputs['p_z_nu_2'] = p_z_nu_2
+                print(df_inputs.columns)
                 if imputer_mode == 'remove':
                     # modifies the original df by removing events
                     df_inputs, df = self.addonNeutrinos(df, df_inputs, binary, load_alpha, imputer_mode, save_alpha, termination=termination)
                 else:
                     df_inputs = self.addonNeutrinos(df, df_inputs, binary, load_alpha, imputer_mode, save_alpha, termination=termination)
+                    print(df_inputs.columns)
             if addon == 'ip':
                 print('Impact paramter loaded')
                 boost = self.createBoostAndRotationMatrices(df)
@@ -968,9 +970,9 @@ class DataLoader:
         if imputer_mode == 'remove':
             df_inputs_imputed, df = NR.dealWithMissingData(df_inputs, imputer_mode, df=df)
             return df_inputs_imputed, df
-        # return df_inputs_imputed
-        df_inputs_imputed = NR.dealWithMissingData(df_inputs, imputer_mode)
-        return df_inputs_imputed
+        else:
+            df_inputs_imputed = NR.dealWithMissingData(df_inputs, imputer_mode)
+            return df_inputs_imputed
 
     def addonIP(self, df, boost):
         N = len(df.ip_x_1)

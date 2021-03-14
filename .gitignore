@@ -166,4 +166,4 @@ shared/core.*
 !shared/alpha_analysis/a1_a1/placeholder.txt
 shared/run_scripts/nohup.out
 stanley/figures/figures.ipynb
-stanley/figures/*.pdf
+*.pdf

@@ -61,7 +61,7 @@ class NeuralNetwork:
         self.write_dir = 'NN_output'
         self.model = None
 
-    def run(self, config_num, read=True, from_hdf=True, epochs=50, batch_size=1024, patience=15, strict=False):
+    def run(self, config_num, read=True, from_hdf=True, epochs=50, batch_size=1024, patience=20, strict=False):
         if not self.gen:
             df = self.initialize(self.addons_config_reco, read=read, from_hdf=from_hdf, strict=strict)
         else:
@@ -245,7 +245,7 @@ class NeuralNetwork:
         for feature in tqdm(features_list):
             # auc, optimal_auc = self.runWithSmearing(1.6, [feature], from_hdf=from_hdf)
             if isinstance(feature, list):
-                auc, optimal_auc = self.runWithSmearing(config_num, feature, from_hdf=from_hdf)
+                auc, optimal_auc = self.runWithSmearing(config_num, feature, from_hdf=from_hdf, sample=True) # sample=True should it be turned on?
                 degradation_auc = optimal_auc - auc
                 f.write('-'.join(feature) + ',' + str(degradation_auc) + ',' + str(optimal_auc) + '\n')
                 print('-'.join(feature) + ',' + str(degradation_auc) + ',' + str(auc) + ',' + str(optimal_auc) + '\n')
@@ -362,10 +362,11 @@ class NeuralNetwork:
         df_smeared_transformed = self.DL.createTrainTestData(df_smeared, df_ps_smeared, df_sm_smeared, binary, True, addons, addons_config, save=False)
         # df_orig_transformed = self.DL.createTrainTestData(df_clean, df_ps_clean, df_sm_clean, binary, True, addons, addons_config, save=False)
         # deal with imaginary numbers from boosting
-        df_smeared_transformed = df_smeared_transformed.apply(np.real)
-        m_features = [x for x in df_smeared_transformed.columns if x.startswith('m')]
-        for m_feature in m_features:
-            df_smeared_transformed = df_smeared_transformed[df_smeared_transformed[m_feature]!=0]
+        df_smeared_transformed = df_smeared_transformed.dropna()
+        # df_smeared_transformed = df_smeared_transformed.apply(np.real)
+        # m_features = [x for x in df_smeared_transformed.columns if x.startswith('m')]
+        # for m_feature in m_features:
+        #     df_smeared_transformed = df_smeared_transformed[df_smeared_transformed[m_feature]!=0]
         # debugging part
         # df.to_hdf('smearing/df_smeared.h5', 'df')
         # df_smeared.to_hdf('./smearing/df_smeared.h5', 'df')
@@ -391,7 +392,7 @@ class NeuralNetwork:
             print('Using Kristof model')
             self.model = self.kristof_model(X_train.shape[1])
         self.history = tf.keras.callbacks.History()
-        early_stop = tf.keras.callbacks.EarlyStopping(monitor='auc', patience=patience)
+        early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_auc', patience=patience)
         if not self.gen:
             log_dir = f"logs/fit/{self.channel}_reco/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + f'_{self.config_num}_{self.layers}_{self.epochs}_{self.batch_size}_{self.model_str}'
         else:
@@ -477,7 +478,10 @@ class NeuralNetwork:
         self.model_str = "kristof_model"
         metrics = ['AUC', 'accuracy']
         model.add(tf.keras.layers.Dense(300, input_dim=dimensions, kernel_initializer='normal', activation='relu'))
-        model.add(tf.keras.layers.Dense(300, kernel_initializer='normal', activation='relu'))
+        model.add(tf.keras.layers.Dense(300, kernel_initializer='normal', activation='relu')) # !!! originally there were just 2 hidden layers
+        #model.add(tf.keras.layers.Dense(300, kernel_initializer='normal', activation='relu'))
+        #model.add(tf.keras.layers.Dense(300, kernel_initializer='normal', activation='relu'))
+        #model.add(tf.keras.layers.Dense(300, kernel_initializer='normal', activation='relu'))
         model.add(tf.keras.layers.Dense(1, activation="sigmoid"))
         opt = tf.keras.optimizers.Adam(learning_rate=0.001)
         model.compile(loss='binary_crossentropy', optimizer=opt, metrics=metrics)
@@ -574,10 +578,19 @@ if __name__ == '__main__':
                 # features = [['sv_1', 'sv_2']] # for extra run for rhoa1
                 # features = [['pi_1', 'pi_2'], ['pi0_1', 'pi0_2']]
                 # features = [['pi_1', 'pi_2', 'pi2_2', 'pi3_2']]
-                features = [['metx', 'mety'], ['ip_1', 'ip_2'], ['sv_1', 'sv_2']]
+                # features = [['metx', 'mety'], ['ip_1', 'ip_2'], ['sv_1', 'sv_2']]
                 # features = ['pi_1', 'pi2_1', 'pi3_1', 'pi_2'] # first run for a1a1
                 # features = ['pi2_2', 'pi3_2', 'metx', 'mety'] # second run for a1a1
                 # features = ['ip_1', 'ip_2', 'sv_1', 'sv_2'] # third run for a1a1
+
+                # features = [['pi_1', 'pi_2', 'pi0_1', 'pi0_2']] # for rho-rho groups
+                # features = [['pi_1', 'pi_2', 'pi2_2', 'pi3_2', 'pi0_1']] # for rho-a1 groups
+                # features = [['pi_1', 'pi2_1', 'pi3_1', 'pi_2', 'pi2_2', 'pi3_2']] # for a1-a1 groups
+
+                # for config 3.6
+                # features = [['pi_1', 'pi_2', 'pi0_1', 'pi0_2', 'ip_1', 'ip_2', 'metx', 'mety', 'sv_1', 'sv_2']] # rho-rho
+                features = [['pi_1', 'pi_2', 'pi2_2', 'pi3_2', 'pi0_1', 'ip_1', 'ip_2', 'metx', 'mety', 'sv_1', 'sv_2']] # rho-a1
+                # features = [['pi_1', 'pi2_1', 'pi3_1', 'pi_2', 'pi2_2', 'pi3_2', 'metx', 'mety', 'ip_1', 'ip_2', 'sv_1', 'sv_2']] # a1-a1
 
                 NN.runSingleSmearAnalysis(features, from_hdf=from_hdf)
                 # NN.runSmearAnalysis(features, from_hdf=from_hdf)
